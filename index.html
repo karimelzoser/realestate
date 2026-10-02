@@ -18,45 +18,70 @@
   </main>
   <script>
   (async function(){
-    const extractedIds=[
-      'rev607-horizontal-scroll-flow-style','rev607-horizontal-scroll-flow-script',
-      'rev608-readability-scroll-polish','rev608-scroll-controls-script',
-      'rev609-click-label-home-fix-style',
-      'rev611-stable-home-navigation-script',
-      'rev612-flow-preview-mode-style','rev612-flow-preview-mode-script',
-      'rev615-flow-page-audit-style','rev615-flow-page-audit-script',
-      'rev616-metro-final-style','rev616-metro-final-script'
-    ];
-    const css=[
-      'src/features/live-allocation/index.css',
-      'src/core/flow-navigation.css',
-      'src/features/how-it-works/index.css'
-    ];
-    const js=[
-      'src/features/live-allocation/index.js',
-      'src/core/flow-navigation.js',
-      'src/features/how-it-works/index.js'
-    ];
     try{
       const response=await fetch('app/index.html',{cache:'no-store'});
       if(!response.ok) throw new Error('Could not load app/index.html');
       const html=await response.text();
       const doc=new DOMParser().parseFromString(html,'text/html');
 
-      extractedIds.forEach(id=>doc.getElementById(id)?.remove());
+      let base=doc.querySelector('base');
+      if(!base){
+        base=doc.createElement('base');
+        doc.head.prepend(base);
+      }
+      base.setAttribute('href','app/');
 
-      css.forEach(href=>{
+      function replaceStyle(anchorId,href,removeIds){
+        const anchor=doc.getElementById(anchorId);
+        if(!anchor) throw new Error('Missing style anchor: '+anchorId);
         const link=doc.createElement('link');
         link.rel='stylesheet';
         link.href='../'+href;
-        doc.head.appendChild(link);
-      });
+        anchor.replaceWith(link);
+        (removeIds||[]).forEach(id=>doc.getElementById(id)?.remove());
+      }
 
-      js.forEach(src=>{
+      function replaceScript(anchorId,src,removeIds){
+        const anchor=doc.getElementById(anchorId);
+        if(!anchor) throw new Error('Missing script anchor: '+anchorId);
         const script=doc.createElement('script');
         script.src='../'+src;
-        doc.body.appendChild(script);
-      });
+        anchor.replaceWith(script);
+        (removeIds||[]).forEach(id=>doc.getElementById(id)?.remove());
+      }
+
+      replaceStyle(
+        'rev607-horizontal-scroll-flow-style',
+        'src/features/live-allocation/index.css',
+        ['rev608-readability-scroll-polish']
+      );
+      replaceScript(
+        'rev607-horizontal-scroll-flow-script',
+        'src/features/live-allocation/index.js',
+        ['rev608-scroll-controls-script']
+      );
+
+      replaceStyle(
+        'rev609-click-label-home-fix-style',
+        'src/core/flow-navigation.css',
+        ['rev612-flow-preview-mode-style']
+      );
+      replaceScript(
+        'rev611-stable-home-navigation-script',
+        'src/core/flow-navigation.js',
+        ['rev612-flow-preview-mode-script']
+      );
+
+      replaceStyle(
+        'rev615-flow-page-audit-style',
+        'src/features/how-it-works/index.css',
+        ['rev616-metro-final-style']
+      );
+      replaceScript(
+        'rev615-flow-page-audit-script',
+        'src/features/how-it-works/index.js',
+        ['rev616-metro-final-script']
+      );
 
       document.open();
       document.write('<!doctype html>'+doc.documentElement.outerHTML);
