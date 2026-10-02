@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PRENEURA Real Estate OS</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f4f7fb;color:#172331;margin:0;padding:32px}
+    .boot{max-width:720px;margin:12vh auto;background:#fff;border:1px solid #dbe3ec;border-radius:16px;padding:24px}
+    .boot h1{margin:0 0 8px}.boot p{color:#667386;line-height:1.5}.boot a{color:#235fde;font-weight:700}
+  </style>
+</head>
+<body>
+  <main class="boot" id="boot">
+    <h1>PRENEURA Real Estate OS</h1>
+    <p>Loading the modular development build…</p>
+    <p><a href="app/index.html">Open the stable standalone build</a></p>
+  </main>
+  <script>
+  (async function(){
+    const activeIds=[
+      'rev607-horizontal-scroll-flow-style','rev607-horizontal-scroll-flow-script',
+      'rev608-readability-scroll-polish','rev608-scroll-controls-script',
+      'rev609-click-label-home-fix-style',
+      'rev611-stable-home-navigation-script',
+      'rev612-flow-preview-mode-style','rev612-flow-preview-mode-script',
+      'rev613-role-clarity-voice-advisor-style','rev613-role-clarity-voice-advisor-script',
+      'rev614-page-audit-myproperty-bilingual-ai-style','rev614-page-audit-myproperty-bilingual-ai-script',
+      'rev615-flow-page-audit-style','rev615-flow-page-audit-script',
+      'rev616-metro-final-style','rev616-metro-final-script'
+    ];
+    const css=[
+      'src/features/live-allocation/index.css',
+      'src/core/flow-navigation.css',
+      'src/features/buyer-experience/index.css',
+      'src/features/how-it-works/index.css'
+    ];
+    const js=[
+      'src/features/live-allocation/index.js',
+      'src/core/flow-navigation.js',
+      'src/features/buyer-experience/index.js',
+      'src/features/how-it-works/index.js'
+    ];
+    try{
+      const response=await fetch('app/index.html',{cache:'no-store'});
+      if(!response.ok) throw new Error('Could not load app/index.html');
+      const html=await response.text();
+      const doc=new DOMParser().parseFromString(html,'text/html');
+      activeIds.forEach(id=>doc.getElementById(id)?.remove());
+      css.forEach(href=>{
+        const link=doc.createElement('link');
+        link.rel='stylesheet';
+        link.href='../'+href;
+        doc.head.appendChild(link);
+      });
+      js.forEach(src=>{
+        const script=doc.createElement('script');
+        script.src='../'+src;
+        doc.body.appendChild(script);
+      });
+      document.open();
+      document.write('<!doctype html>'+doc.documentElement.outerHTML);
+      document.close();
+    }catch(err){
+      const boot=document.getElementById('boot');
+      boot.innerHTML='<h1>Modular build could not start</h1><p>'+String(err)+'</p><p>Run this repository through <code>npm run dev</code>, or use the stable standalone build.</p><p><a href="app/index.html">Open stable build</a></p>';
+    }
+  })();
+  </script>
+</body>
+</html>
