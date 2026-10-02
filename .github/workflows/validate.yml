@@ -32,3 +32,5 @@ jobs:
         run: node scripts/validate-role-policy.mjs
       - name: Validate shared state facade
         run: node scripts/validate-state.mjs
+      - name: Validate release UX and functional contract
+        run: node scripts/validate-release.mjs
