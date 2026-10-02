@@ -21,12 +21,32 @@ const requiredRoutes=[
   'm-permissions','m-replay'
 ];
 
+const requiredLegacyAnchors=[
+  'rev607-horizontal-scroll-flow-style',
+  'rev607-horizontal-scroll-flow-script',
+  'rev609-click-label-home-fix-style',
+  'rev611-stable-home-navigation-script',
+  'rev615-flow-page-audit-style',
+  'rev615-flow-page-audit-script'
+];
+
 const failures=[];
 for(const rel of [stable,entry]) if(!fs.existsSync(rel)) failures.push('Missing '+path.relative(root,rel));
 for(const rel of requiredAssets) if(!fs.existsSync(path.join(root,rel))) failures.push('Missing '+rel);
 
+const stableHtml=fs.existsSync(stable)?fs.readFileSync(stable,'utf8'):'';
+const entryHtml=fs.existsSync(entry)?fs.readFileSync(entry,'utf8'):'';
+
+for(const anchor of requiredLegacyAnchors){
+  if(!stableHtml.includes('id="'+anchor+'"')) failures.push('Stable shell anchor missing: '+anchor);
+}
+
+for(const asset of requiredAssets){
+  if(!entryHtml.includes(asset)) failures.push('Modular loader does not reference: '+asset);
+}
+
 const combined=[
-  fs.existsSync(stable)?fs.readFileSync(stable,'utf8'):'',
+  stableHtml,
   ...requiredAssets.filter(x=>x.endsWith('.js')&&fs.existsSync(path.join(root,x))).map(x=>fs.readFileSync(path.join(root,x),'utf8'))
 ].join('\n');
 
@@ -40,4 +60,7 @@ if(failures.length){
   process.exit(1);
 }
 
-console.log('PRENEURA validation passed: '+requiredAssets.length+' modular assets and '+requiredRoutes.length+' flow destinations checked.');
+console.log('PRENEURA validation passed');
+console.log('- '+requiredAssets.length+' modular assets');
+console.log('- '+requiredLegacyAnchors.length+' stable-shell extraction anchors');
+console.log('- '+requiredRoutes.length+' required flow destinations');
