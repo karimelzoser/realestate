@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "validate": "node scripts/validate.mjs && node scripts/validate-model.mjs && node scripts/validate-role-policy.mjs",
+    "validate": "node scripts/validate.mjs && node scripts/validate-model.mjs && node scripts/validate-role-policy.mjs && node scripts/validate-state.mjs",
     "check": "npm run validate"
   },
   "devDependencies": {
