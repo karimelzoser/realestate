@@ -63,12 +63,12 @@
       '<div class="p616-zone p616-z-entry">ENTRY CHANNELS</div><div class="p616-zone p616-z-qualify">REGISTER & QUALIFY</div><div class="p616-zone p616-z-attend">ATTENDANCE</div><div class="p616-zone p616-z-queue">SHARED QUEUE</div><div class="p616-zone p616-z-assist">ALLOCATION ASSISTANCE</div><div class="p616-zone p616-z-select">SELECT & RESERVE</div><div class="p616-zone p616-z-complete">COMPLETE & AFTER SALE</div>'+
       '<svg viewBox="0 0 3340 500" aria-hidden="true"><defs><marker id="p616a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#91a6be"/></marker></defs><g fill="none" stroke="#91a6be" stroke-width="2" marker-end="url(#p616a)">'+
         '<path d="M230 130 H248 Q262 130 262 244 H282"/><path d="M230 267 H282"/><path d="M230 404 H248 Q262 404 262 291 H282"/>'+
-        '<path d="M502 267 H548"/><path d="M658 263 H708"/>'+
-        '<path d="M818 263 H856 Q902 263 902 142"/><path d="M818 263 H856 Q902 263 902 392"/>'+
-        '<path d="M1112 142 H1135 Q1160 142 1160 242"/><path d="M1112 392 H1135 Q1160 392 1160 292"/>'+
-        '<path d="M1378 267 H1418"/>'+
-        '<path d="M1638 267 H1660 Q1686 267 1686 142"/><path d="M1638 267 H1660 Q1686 267 1686 392"/>'+
-        '<path d="M1910 142 H1934 Q1958 142 1958 242"/><path d="M1910 392 H1934 Q1958 392 1958 292"/>'+
+        '<path d="M512 264 H548"/><path d="M658 263 H708"/>'+
+        '<path d="M818 263 H856 Q902 263 902 136"/><path d="M818 263 H856 Q902 263 902 388"/>'+
+        '<path d="M1122 136 H1140 Q1160 136 1160 238"/><path d="M1122 388 H1140 Q1160 388 1160 290"/>'+
+        '<path d="M1388 264 H1428"/>'+
+        '<path d="M1658 264 H1676 Q1700 264 1700 136"/><path d="M1658 264 H1676 Q1700 264 1700 388"/>'+
+        '<path d="M1938 136 H1955 Q1980 136 1980 238"/><path d="M1938 388 H1955 Q1980 388 1980 290"/>'+
         '<path d="M2250 264 H2290"/><path d="M2510 264 H2550"/><path d="M2785 264 H2825"/><path d="M3045 264 H3080"/>'+
         '<path d="M603 318 V360"/><path d="M525 388 H510 V263 H548"/>'+
       '</g><g font-size="7" font-weight="850" fill="#6f8196"><text x="665" y="253">YES</text><text x="607" y="349">NO</text><text x="858" y="135">ONLINE</text><text x="844" y="402">SALES CENTER</text><text x="1650" y="135">ONLINE</text><text x="1643" y="402">OFFLINE</text></g></svg>'+
