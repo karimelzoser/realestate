@@ -1,6 +1,8 @@
 // extracted from rev607-horizontal-scroll-flow-script
 (function(){
  if(typeof app==='undefined'||typeof P==='undefined'||typeof rtEnterRole==='undefined')return;
+ var PRODUCT=window.PRENEURA&&window.PRENEURA.model?window.PRENEURA.model:null;
+ var ALLOCATION=PRODUCT&&PRODUCT.allocation?PRODUCT.allocation:null;
  function tags(items){return items&&items.length?'<div class="p607-mini">'+items.map(function(x){return '<span>'+x+'</span>';}).join('')+'</div>':'';}
  function openPage(role,page){
    if(typeof p604OpenPage==='function'){p604OpenPage(role,page);return;}
@@ -16,7 +18,11 @@
      if(!t){t={token:token,buyer:name,customerId:'P607-'+token,eoi:'ELIGIBLE',eligible:['R2-STD','R3-MID'],preferred:['R2-STD'],state:'WAITING',attendanceMode:mode,priorityTier:'A',registeredAt:new Date(Date.now()-offset*60000).toISOString()};q.push(t)}
      else{t.attendanceMode=mode;t.priorityTier=t.priorityTier||'A';t.registeredAt=t.registeredAt||new Date(Date.now()-offset*60000).toISOString()}
    }
-   add(233,'Mona Adel','SALES_CENTER',96);add(234,'Youssef Nabil','ONLINE',95);
+   var demos=ALLOCATION&&Array.isArray(ALLOCATION.demoBuyers)?ALLOCATION.demoBuyers:[
+     {token:233,name:'Mona Adel',attendanceMode:'SALES_CENTER'},
+     {token:234,name:'Youssef Nabil',attendanceMode:'ONLINE'}
+   ];
+   demos.forEach(function(d,i){add(Number(d.token),d.name,d.attendanceMode,96-i)});
    if(app.fx.rt&&Array.isArray(app.fx.rt.registry)){
      if(!app.fx.rt.registry.some(function(r){return r.customerId==='P607-233'}))app.fx.rt.registry.push({customerId:'P607-233',name:'Mona Adel',nationalId:'29601011223344',phone:'+201000000233',eoi:'EOI-233',eoiState:'ELIGIBLE',eoiPaid:true,docs:'VERIFIED',eligible:['R2-STD','R3-MID'],allocationEntered:true,attendanceMode:'SALES_CENTER',priorityTier:'A'});
      if(!app.fx.rt.registry.some(function(r){return r.customerId==='P607-234'}))app.fx.rt.registry.push({customerId:'P607-234',name:'Youssef Nabil',nationalId:'29601011223444',phone:'+201000000234',eoi:'EOI-234',eoiState:'ELIGIBLE',eoiPaid:true,docs:'VERIFIED',eligible:['R2-STD','R3-MID'],allocationEntered:true,attendanceMode:'ONLINE',priorityTier:'A'});
@@ -29,8 +35,9 @@
  }
  function allocationDayPage(){
    ensureAllocationDemo();
-   var q=orderedDemoQueue(),preview=q.slice(0,10),seats=(app.fx.queue&&app.fx.queue.stations?app.fx.queue.stations:[]).slice(0,10);
-   while(seats.length<10)seats.push({id:'S'+String(seats.length+1).padStart(2,'0'),name:'Allocator '+String(seats.length+1).padStart(2,'0'),token:null,buyer:null,state:'FREE'});
+   var capacity=ALLOCATION&&ALLOCATION.defaultCapacity?ALLOCATION.defaultCapacity:{salesCenterSeats:10,onlineSlots:3};
+   var q=orderedDemoQueue(),preview=q.slice(0,10),seats=(app.fx.queue&&app.fx.queue.stations?app.fx.queue.stations:[]).slice(0,capacity.salesCenterSeats);
+   while(seats.length<capacity.salesCenterSeats)seats.push({id:'S'+String(seats.length+1).padStart(2,'0'),name:'Allocator '+String(seats.length+1).padStart(2,'0'),token:null,buyer:null,state:'FREE'});
    var demo233=q.find(function(x){return Number(x.token)===233}),demo234=q.find(function(x){return Number(x.token)===234});
    return '<div class="p607-live">'+
      '<section class="p607-live-head"><div class="p607-live-card"><small style="font-size:7px;font-weight:950;color:#235fde;letter-spacing:.12em">LIVE ALLOCATION DAY</small><h3>One shared queue. One allocator pool.</h3><p>Online and Sales Center attendance are service modes only. They do not create separate priority lists. Buyers stay in one ordered queue and are assigned to the same allocator-seat pool when their turn arrives.</p></div><div class="p607-live-rule"><b>Demo rule</b><br>#233 is OFFLINE / Sales Center and #234 is ONLINE. They remain consecutive in the same queue and both feed the same allocator seats.</div></section>'+
