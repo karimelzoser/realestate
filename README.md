@@ -48,6 +48,7 @@ The root `index.html` keeps the stable application shell but replaces extracted 
 ## Current modular source
 
 - `src/core/product-model.js` — canonical roles, flow routes, allocation policy and action boundaries
+- `src/core/role-policy.js` — real-role navigation and capability boundaries
 - `src/features/live-allocation/` — shared queue and Live Allocation Day
 - `src/core/flow-navigation.*` — How It Works return navigation and overview controls
 - `src/core/router.*` — OPEN direct preview vs ROLE-restricted navigation
