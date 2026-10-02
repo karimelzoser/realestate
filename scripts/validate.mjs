@@ -30,6 +30,8 @@ const requiredLegacyAnchors=[
   'rev611-stable-home-navigation-script',
   'rev613-role-clarity-voice-advisor-style',
   'rev613-role-clarity-voice-advisor-script',
+  'rev614-page-audit-myproperty-bilingual-ai-style',
+  'rev614-page-audit-myproperty-bilingual-ai-script',
   'rev615-flow-page-audit-style',
   'rev615-flow-page-audit-script'
 ];
