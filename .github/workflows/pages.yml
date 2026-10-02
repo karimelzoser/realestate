@@ -34,7 +34,7 @@ jobs:
           cp -R app _site/app
           cp -R src _site/src
           touch _site/.nojekyll
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: _site
 
