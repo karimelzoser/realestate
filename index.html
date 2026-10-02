@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PRENEURA Real Estate OS</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f4f7fb;color:#172331;margin:0;padding:32px}
+    .boot{max-width:720px;margin:12vh auto;background:#fff;border:1px solid #dbe3ec;border-radius:16px;padding:24px}
+    .boot h1{margin:0 0 8px}.boot p{color:#667386;line-height:1.5}.boot a{color:#235fde;font-weight:700}
+  </style>
+</head>
+<body>
+  <main class="boot" id="boot">
+    <h1>PRENEURA Real Estate OS</h1>
+    <p>Loading the modular development build…</p>
+    <p><a href="app/index.html">Open the stable standalone build</a></p>
+  </main>
+  <script>
+  (async function(){
+    try{
+      const response=await fetch('app/index.html',{cache:'no-store'});
+      if(!response.ok) throw new Error('Could not load app/index.html');
+      const html=await response.text();
+      const doc=new DOMParser().parseFromString(html,'text/html');
+
+      let base=doc.querySelector('base');
+      if(!base){
+        base=doc.createElement('base');
+        doc.head.prepend(base);
+      }
+      base.setAttribute('href','app/');
+
+      function replaceStyle(anchorId,href,removeIds){
+        const anchor=doc.getElementById(anchorId);
+        if(!anchor) throw new Error('Missing style anchor: '+anchorId);
+        const link=doc.createElement('link');
+        link.rel='stylesheet';
+        link.href='../'+href;
+        anchor.replaceWith(link);
+        (removeIds||[]).forEach(id=>doc.getElementById(id)?.remove());
+      }
+
+      function replaceScript(anchorId,src,removeIds){
+        const anchor=doc.getElementById(anchorId);
+        if(!anchor) throw new Error('Missing script anchor: '+anchorId);
+        const script=doc.createElement('script');
+        script.src='../'+src;
+        anchor.replaceWith(script);
+        (removeIds||[]).forEach(id=>doc.getElementById(id)?.remove());
+      }
+
+      replaceStyle(
+        'rev607-horizontal-scroll-flow-style',
+        'src/features/live-allocation/index.css',
+        ['rev608-readability-scroll-polish']
+      );
+      replaceScript(
+        'rev607-horizontal-scroll-flow-script',
+        'src/features/live-allocation/index.js',
+        ['rev608-scroll-controls-script']
+      );
+
+      replaceStyle(
+        'rev609-click-label-home-fix-style',
+        'src/core/flow-navigation.css',
+        ['rev612-flow-preview-mode-style']
+      );
+      replaceScript(
+        'rev611-stable-home-navigation-script',
+        'src/core/flow-navigation.js',
+        ['rev612-flow-preview-mode-script']
+      );
+
+      replaceStyle(
+        'rev615-flow-page-audit-style',
+        'src/features/how-it-works/index.css',
+        ['rev616-metro-final-style']
+      );
+      replaceScript(
+        'rev615-flow-page-audit-script',
+        'src/features/how-it-works/index.js',
+        ['rev616-metro-final-script']
+      );
+
+      document.open();
+      document.write('<!doctype html>'+doc.documentElement.outerHTML);
+      document.close();
+    }catch(err){
+      const boot=document.getElementById('boot');
+      boot.innerHTML='<h1>Modular build could not start</h1><p>'+String(err)+'</p><p>Run this repository through <code>npm run dev</code>, or use the stable standalone build.</p><p><a href="app/index.html">Open stable build</a></p>';
+    }
+  })();
+  </script>
+</body>
+</html>

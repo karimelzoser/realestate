@@ -1,0 +1,23 @@
+name: Validate PRENEURA
+
+on:
+  push:
+    branches: [main, develop, "refactor/**"]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check src/features/live-allocation/index.js
+          node --check src/core/flow-navigation.js
+          node --check src/features/how-it-works/index.js
+      - name: Validate routes and assets
+        run: node scripts/validate.mjs
