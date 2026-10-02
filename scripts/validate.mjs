@@ -11,6 +11,8 @@ const requiredAssets=[
   'src/features/live-allocation/index.js',
   'src/core/flow-navigation.css',
   'src/core/flow-navigation.js',
+  'src/core/router.css',
+  'src/core/router.js',
   'src/features/buyer-experience/index.css',
   'src/features/buyer-experience/index.js',
   'src/features/how-it-works/index.css',
