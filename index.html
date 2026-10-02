@@ -31,6 +31,14 @@
       }
       base.setAttribute('href','app/');
 
+      function insertScriptBefore(anchorId,src){
+        const anchor=doc.getElementById(anchorId);
+        if(!anchor) throw new Error('Missing script anchor: '+anchorId);
+        const script=doc.createElement('script');
+        script.src='../'+src;
+        anchor.parentNode.insertBefore(script,anchor);
+      }
+
       function replaceStyle(anchorId,href,removeIds){
         const anchor=doc.getElementById(anchorId);
         if(!anchor) throw new Error('Missing style anchor: '+anchorId);
@@ -50,6 +58,11 @@
         (removeIds||[]).forEach(id=>doc.getElementById(id)?.remove());
       }
 
+      insertScriptBefore(
+        'rev607-horizontal-scroll-flow-script',
+        'src/core/product-model.js'
+      );
+
       replaceStyle(
         'rev607-horizontal-scroll-flow-style',
         'src/features/live-allocation/index.css',
@@ -63,13 +76,19 @@
 
       replaceStyle(
         'rev609-click-label-home-fix-style',
-        'src/core/flow-navigation.css',
-        ['rev612-flow-preview-mode-style']
+        'src/core/flow-navigation.css'
       );
       replaceScript(
         'rev611-stable-home-navigation-script',
-        'src/core/flow-navigation.js',
-        ['rev612-flow-preview-mode-script']
+        'src/core/flow-navigation.js'
+      );
+      replaceStyle(
+        'rev612-flow-preview-mode-style',
+        'src/core/router.css'
+      );
+      replaceScript(
+        'rev612-flow-preview-mode-script',
+        'src/core/router.js'
       );
 
       replaceStyle(

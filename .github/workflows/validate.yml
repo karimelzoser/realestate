@@ -16,9 +16,13 @@ jobs:
           node-version: 22
       - name: Check JavaScript syntax
         run: |
+          node --check src/core/product-model.js
           node --check src/features/live-allocation/index.js
           node --check src/core/flow-navigation.js
+          node --check src/core/router.js
           node --check src/features/buyer-experience/index.js
           node --check src/features/how-it-works/index.js
       - name: Validate routes and assets
         run: node scripts/validate.mjs
+      - name: Validate canonical product model
+        run: node scripts/validate-model.mjs

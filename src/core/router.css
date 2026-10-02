@@ -1,0 +1,8 @@
+/* ===== PRENEURA REV 6.1.2 — FLOW BOX DIRECT PREVIEW VS ROLE WORKFLOW ===== */
+.p612-preview-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #bfd1f7;background:#f3f7ff;border-radius:11px;padding:9px 11px;margin:0 0 11px;color:#31547e}
+.p612-preview-banner>div{min-width:0}.p612-preview-banner b{display:block;font-size:9px;color:#1e4f96;margin-bottom:2px}.p612-preview-banner span{display:block;font-size:7.5px;line-height:1.4;color:#607590}
+.p612-preview-banner button{border:1px solid #bfd1f7;background:#fff;color:#235fde;border-radius:999px;padding:7px 10px;font-size:7px;font-weight:950;white-space:nowrap;cursor:pointer}
+.p612-flow-key{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-left:auto;font-size:7px;color:#667386;font-weight:800}
+.p612-flow-key em{font-style:normal;border-radius:999px;padding:4px 7px;border:1px solid #d8e1ec;background:#fff;white-space:nowrap}
+.p612-flow-key em.open{border-color:#d7e1ec;color:#52657a}.p612-flow-key em.role{border-color:#c8d9f8;background:#f2f7ff;color:#2858a6}
+@media(max-width:700px){.p612-preview-banner{align-items:flex-start;flex-direction:column}.p612-flow-key{margin-left:0}}
