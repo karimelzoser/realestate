@@ -10,6 +10,8 @@ const requiredAssets=[
   'src/features/live-allocation/index.js',
   'src/core/flow-navigation.css',
   'src/core/flow-navigation.js',
+  'src/features/buyer-experience/index.css',
+  'src/features/buyer-experience/index.js',
   'src/features/how-it-works/index.css',
   'src/features/how-it-works/index.js'
 ];
@@ -26,6 +28,8 @@ const requiredLegacyAnchors=[
   'rev607-horizontal-scroll-flow-script',
   'rev609-click-label-home-fix-style',
   'rev611-stable-home-navigation-script',
+  'rev613-role-clarity-voice-advisor-style',
+  'rev613-role-clarity-voice-advisor-script',
   'rev615-flow-page-audit-style',
   'rev615-flow-page-audit-script'
 ];
