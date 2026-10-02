@@ -5,7 +5,8 @@ Persistent source repository for the PRENEURA Real Estate Operating System proto
 ## Current baseline
 
 - Product: PRENEURA Real Estate OS
-- Stable standalone baseline: Rev 6.1.6
+- Stable standalone fallback: Rev 6.1.6
+- Modular online release: 6.2.0
 - Main experience: Metro-style "How PRENEURA Works" system overview
 - Core operating model:
   - Buyer Direct / Broker / Sales Center entry
@@ -21,6 +22,12 @@ Persistent source repository for the PRENEURA Real Estate Operating System proto
   - Transaction Operator
   - Contract & Sign
   - My Property / installments / documents / support
+
+## Live demo
+
+https://karimelzoser.github.io/realestate/
+
+The public demo is deployed from `main` by GitHub Pages. The online entry uses the modular source while `app/index.html` remains the stable standalone fallback.
 
 ## Run the project
 
