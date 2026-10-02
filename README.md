@@ -5,7 +5,8 @@ Persistent source repository for the PRENEURA Real Estate Operating System proto
 ## Current baseline
 
 - Product: PRENEURA Real Estate OS
-- Stable standalone fallback: Rev 6.1.6\n- Modular online release: 6.2.0
+- Stable standalone fallback: Rev 6.1.6
+- Modular online release: 6.2.0
 - Main experience: Metro-style "How PRENEURA Works" system overview
 - Core operating model:
   - Buyer Direct / Broker / Sales Center entry
