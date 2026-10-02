@@ -7,6 +7,8 @@ const entry=path.join(root,'index.html');
 
 const requiredAssets=[
   'src/core/product-model.js',
+  'src/core/role-policy.js',
+  'src/core/state.js',
   'src/features/live-allocation/index.css',
   'src/features/live-allocation/index.js',
   'src/core/flow-navigation.css',

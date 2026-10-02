@@ -26,6 +26,33 @@ Canonical metadata and policy contract for:
 
 This is deliberately a product/domain contract rather than another UI revision. Extracted features can now consume the same definitions instead of hard-coding them independently.
 
+### `src/core/role-policy.js`
+
+Canonical six-role navigation/capability policy:
+- real ROLE workflows are restricted to their configured surfaces
+- direct OPEN previews bypass role navigation restrictions by design
+- Broker can enter selected Buyer pages only under delegated-buyer context
+- Manager can access governed Manager surfaces and hardware
+- denied navigation is explicit and auditable in the browser console
+
+### `src/core/state.js`
+
+Stable state facade over the still-migrating legacy application state:
+- page registry
+- unit inventory
+- role configuration
+- shared queue
+- buyer registry/session
+- current transaction
+- contract
+- buyer properties
+- installment ledger
+- allocation capacity
+- immutable snapshot helper
+- lightweight event subscription API
+
+Extracted features should prefer this facade instead of reaching directly into deeply nested legacy state.
+
 ### `src/features/live-allocation/`
 Owns the shared-queue / Live Allocation Day example, including:
 - #233 Offline / Sales Center
@@ -66,7 +93,7 @@ Owns:
 
 ## Still in the stable shell for now
 
-The older core page implementations, shared state, router, and role workspaces remain in `app/index.html`. They will be extracted incrementally only after the active experience layers are parity-tested.
+The older core page implementations and raw legacy state still remain in `app/index.html`, but extracted features now access shared state through `src/core/state.js`. They will be extracted incrementally only after the active experience layers are parity-tested.
 
 ## Migration rule
 
@@ -74,16 +101,15 @@ Do not rewrite the 2 MB legacy core in one step. Extract one stable domain at a 
 
 Recommended next extraction order:
 
-1. Shared app state and demo data
-2. Role permission enforcement
-3. Buyer core pages
-4. Queue Receptionist
-5. Allocator
-6. Transaction Operator
-7. Broker
-8. Manager
-9. Shared UI components
-10. Remove obsolete historical revision blocks
+1. Demo / seed data extraction
+2. Buyer core pages
+3. Queue Receptionist
+4. Allocator
+5. Transaction Operator
+6. Broker
+7. Manager
+8. Shared UI components
+9. Remove obsolete historical revision blocks
 
 ## Non-regression contracts
 

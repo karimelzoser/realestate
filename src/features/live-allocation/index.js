@@ -2,6 +2,7 @@
 (function(){
  if(typeof app==='undefined'||typeof P==='undefined'||typeof rtEnterRole==='undefined')return;
  var PRODUCT=window.PRENEURA&&window.PRENEURA.model?window.PRENEURA.model:null;
+ var STATE=window.PRENEURA&&window.PRENEURA.state?window.PRENEURA.state:null;
  var ALLOCATION=PRODUCT&&PRODUCT.allocation?PRODUCT.allocation:null;
  function tags(items){return items&&items.length?'<div class="p607-mini">'+items.map(function(x){return '<span>'+x+'</span>';}).join('')+'</div>':'';}
  function openPage(role,page){
@@ -11,8 +12,8 @@
  }
  window.p607OpenPage=openPage;
  function ensureAllocationDemo(){
-   if(!app.fx||!app.fx.queue||!Array.isArray(app.fx.queue.waiting))return;
-   var q=app.fx.queue.waiting;
+   var q=STATE?STATE.queueWaiting():(app.fx&&app.fx.queue&&Array.isArray(app.fx.queue.waiting)?app.fx.queue.waiting:null);
+   if(!q)return;
    function add(token,name,mode,offset){
      var t=q.find(function(x){return Number(x.token)===token});
      if(!t){t={token:token,buyer:name,customerId:'P607-'+token,eoi:'ELIGIBLE',eligible:['R2-STD','R3-MID'],preferred:['R2-STD'],state:'WAITING',attendanceMode:mode,priorityTier:'A',registeredAt:new Date(Date.now()-offset*60000).toISOString()};q.push(t)}
@@ -23,19 +24,23 @@
      {token:234,name:'Youssef Nabil',attendanceMode:'ONLINE'}
    ];
    demos.forEach(function(d,i){add(Number(d.token),d.name,d.attendanceMode,96-i)});
-   if(app.fx.rt&&Array.isArray(app.fx.rt.registry)){
-     if(!app.fx.rt.registry.some(function(r){return r.customerId==='P607-233'}))app.fx.rt.registry.push({customerId:'P607-233',name:'Mona Adel',nationalId:'29601011223344',phone:'+201000000233',eoi:'EOI-233',eoiState:'ELIGIBLE',eoiPaid:true,docs:'VERIFIED',eligible:['R2-STD','R3-MID'],allocationEntered:true,attendanceMode:'SALES_CENTER',priorityTier:'A'});
-     if(!app.fx.rt.registry.some(function(r){return r.customerId==='P607-234'}))app.fx.rt.registry.push({customerId:'P607-234',name:'Youssef Nabil',nationalId:'29601011223444',phone:'+201000000234',eoi:'EOI-234',eoiState:'ELIGIBLE',eoiPaid:true,docs:'VERIFIED',eligible:['R2-STD','R3-MID'],allocationEntered:true,attendanceMode:'ONLINE',priorityTier:'A'});
+   var registry=STATE?STATE.registry():(app.fx&&app.fx.rt&&Array.isArray(app.fx.rt.registry)?app.fx.rt.registry:null);
+   if(registry){
+     if(!registry.some(function(r){return r.customerId==='P607-233'}))registry.push({customerId:'P607-233',name:'Mona Adel',nationalId:'29601011223344',phone:'+201000000233',eoi:'EOI-233',eoiState:'ELIGIBLE',eoiPaid:true,docs:'VERIFIED',eligible:['R2-STD','R3-MID'],allocationEntered:true,attendanceMode:'SALES_CENTER',priorityTier:'A'});
+     if(!registry.some(function(r){return r.customerId==='P607-234'}))registry.push({customerId:'P607-234',name:'Youssef Nabil',nationalId:'29601011223444',phone:'+201000000234',eoi:'EOI-234',eoiState:'ELIGIBLE',eoiPaid:true,docs:'VERIFIED',eligible:['R2-STD','R3-MID'],allocationEntered:true,attendanceMode:'ONLINE',priorityTier:'A'});
    }
+   if(STATE)STATE.emit('allocation:demo-ready',{tokens:demos.map(function(d){return d.token})});
  }
  ensureAllocationDemo();
  function orderedDemoQueue(){
    ensureAllocationDemo();
-   return (app.fx.queue.waiting||[]).filter(function(t){return ['WAITING','CALLED','CALL_GRACE','IN_ALLOCATION'].includes(t.state)}).slice().sort(function(a,b){var at=String(a.registeredAt||''),bt=String(b.registeredAt||'');return at.localeCompare(bt)||Number(a.token)-Number(b.token)});
+   var waiting=STATE?STATE.queueWaiting():(app.fx.queue.waiting||[]);
+   return waiting.filter(function(t){return ['WAITING','CALLED','CALL_GRACE','IN_ALLOCATION'].includes(t.state)}).slice().sort(function(a,b){var at=String(a.registeredAt||''),bt=String(b.registeredAt||'');return at.localeCompare(bt)||Number(a.token)-Number(b.token)});
  }
  function allocationDayPage(){
    ensureAllocationDemo();
-   var capacity=ALLOCATION&&ALLOCATION.defaultCapacity?ALLOCATION.defaultCapacity:{salesCenterSeats:10,onlineSlots:3};
+   var runtimeCapacity=STATE?STATE.allocationConfig():null;
+   var capacity=runtimeCapacity?{salesCenterSeats:runtimeCapacity.physicalSeats,onlineSlots:runtimeCapacity.onlineSlots}:(ALLOCATION&&ALLOCATION.defaultCapacity?ALLOCATION.defaultCapacity:{salesCenterSeats:10,onlineSlots:3});
    var q=orderedDemoQueue(),preview=q.slice(0,10),seats=(app.fx.queue&&app.fx.queue.stations?app.fx.queue.stations:[]).slice(0,capacity.salesCenterSeats);
    while(seats.length<capacity.salesCenterSeats)seats.push({id:'S'+String(seats.length+1).padStart(2,'0'),name:'Allocator '+String(seats.length+1).padStart(2,'0'),token:null,buyer:null,state:'FREE'});
    var demo233=q.find(function(x){return Number(x.token)===233}),demo234=q.find(function(x){return Number(x.token)===234});
