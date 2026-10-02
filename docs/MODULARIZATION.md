@@ -13,6 +13,19 @@ This gives us a safe migration path: the known-good standalone build stays recov
 
 ## Extracted now
 
+### `src/core/product-model.js`
+
+Canonical metadata and policy contract for:
+- six user roles and their responsibilities
+- How It Works stage/page routing
+- one-shared-queue policy
+- #233 Offline / #234 Online demonstration
+- Human Allocator vs AI Allocation Advisor responsibility
+- OPEN preview vs ROLE-restricted navigation semantics
+- irreversible-action confirmation boundaries
+
+This is deliberately a product/domain contract rather than another UI revision. Extracted features can now consume the same definitions instead of hard-coding them independently.
+
 ### `src/features/live-allocation/`
 Owns the shared-queue / Live Allocation Day example, including:
 - #233 Offline / Sales Center
@@ -58,7 +71,8 @@ Do not rewrite the 2 MB legacy core in one step. Extract one stable domain at a 
 Recommended next extraction order:
 
 1. Shared app state and demo data
-2. Router and role permissions
+2. Router implementation (using the new product contract)
+3. Role permission enforcement
 3. Buyer core pages
 4. Queue Receptionist
 5. Allocator
