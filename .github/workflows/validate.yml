@@ -16,6 +16,7 @@ jobs:
           node-version: 22
       - name: Check JavaScript syntax
         run: |
+          node --check src/core/product-model.js
           node --check src/features/live-allocation/index.js
           node --check src/core/flow-navigation.js
           node --check src/features/buyer-experience/index.js
