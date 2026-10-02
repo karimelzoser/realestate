@@ -36,10 +36,14 @@ Owns the shared-queue / Live Allocation Day example, including:
 - allocator-seat visualization
 
 ### `src/core/flow-navigation.*`
+Owns the How It Works return path, button relabeling and overview navigation.
+
+### `src/core/router.*`
 Owns navigation semantics:
 - **OPEN** = direct page preview for demo inspection
-- **ROLE** = real role workflow with permissions, login, eligibility, queue, and transaction restrictions
-- **How It Works** = stable return path to the system overview
+- **ROLE** = real role workflow with permissions, login, eligibility, queue and transaction restrictions
+- preview-only buyer/session state is restored before entering a real role
+- preview pages get a clear return path to How It Works
 
 ### `src/features/buyer-experience/`
 Owns the current Buyer-facing active enhancement layer:
@@ -71,8 +75,7 @@ Do not rewrite the 2 MB legacy core in one step. Extract one stable domain at a 
 Recommended next extraction order:
 
 1. Shared app state and demo data
-2. Router implementation (using the new product contract)
-3. Role permission enforcement
+2. Role permission enforcement
 3. Buyer core pages
 4. Queue Receptionist
 5. Allocator
