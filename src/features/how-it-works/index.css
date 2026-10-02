@@ -55,3 +55,6 @@
 .p616-map:before{content:"";position:absolute;left:24px;right:24px;top:45px;height:1px;background:linear-gradient(90deg,#d9e4ef 0%,#d9e4ef 100%);z-index:0}
 .p616-zone{background:#fbfcfe;padding:0 7px;border-radius:999px}
 .p616-node:focus-visible,.p616-decision:focus-visible,.p616-manager button:focus-visible,.p616-guide-actions button:focus-visible{outline:3px solid rgba(35,95,222,.28);outline-offset:3px}
+
+/* Release readability polish */
+.p616-map:before{content:"";position:absolute;left:24px;right:24px;top:45px;height:1px;background:#d9e4ef;z-index:0}.p616-zone{background:#fbfcfe;padding:0 7px;border-radius:999px}.p616-node:focus-visible,.p616-decision:focus-visible,.p616-manager button:focus-visible,.p616-guide-actions button:focus-visible{outline:3px solid rgba(35,95,222,.28);outline-offset:3px}
