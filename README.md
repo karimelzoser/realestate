@@ -49,6 +49,7 @@ The root `index.html` keeps the stable application shell but replaces extracted 
 
 - `src/features/live-allocation/` — shared queue and Live Allocation Day
 - `src/core/flow-navigation.*` — OPEN preview vs ROLE restricted navigation
+- `src/features/buyer-experience/` — bilingual AI Allocation Advisor, functional My Property, buyer examples and post-sale UI
 - `src/features/how-it-works/` — Metro system map and flow-route audit
 - `docs/MODULARIZATION.md` — safe migration plan for the remaining legacy domains
 
