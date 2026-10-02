@@ -1,0 +1,48 @@
+/* extracted from rev609-click-label-home-fix-style */
+/* ===== PRENEURA REV 6.0.9 — CLICK LABEL ALIGNMENT + HOW-IT-WORKS HOME ===== */
+/* Keep OPEN / ROLE action labels in their own reserved top-right zone. */
+.p607-open{
+  position:absolute!important;
+  top:8px!important;
+  right:8px!important;
+  z-index:5!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:18px!important;
+  padding:3px 6px!important;
+  border:1px solid #d7e1ec!important;
+  border-radius:999px!important;
+  background:rgba(248,250,252,.98)!important;
+  color:#64758a!important;
+  font-size:6.2px!important;
+  font-weight:950!important;
+  line-height:1!important;
+  letter-spacing:.035em!important;
+  white-space:nowrap!important;
+  box-sizing:border-box!important;
+  pointer-events:none!important;
+}
+/* Reserve horizontal room for the action chip so titles never sit underneath it. */
+.p607-entry-card>b{padding-right:58px!important;min-height:18px}
+.p607-card>h3{padding-right:62px!important;min-height:21px}
+.p607-sub>h4{padding-right:58px!important;min-height:20px}
+/* Long role names need a little more width without colliding with ROLE chip. */
+.p607-complete .p607-sub:first-child>h4{padding-right:62px!important}
+/* Give the action chip a semantic tint without competing with the card. */
+.p607-entry-card .p607-open,.p607-sub.role .p607-open{border-color:#c8d9f8!important;background:#f2f7ff!important;color:#2858a6!important}
+.p607-card .p607-open,.p607-sub.system .p607-open,.p607-sub.rule .p607-open,.p607-sub.outcome .p607-open{background:#fff!important}
+/* Keep hover effects behind the action chip. */
+.p607-click,.p607-sub.clickable,.p607-entry-card{overflow:hidden}
+/* Header action: this button is now the return path to the How PRENEURA Works overview. */
+.p607-actions button[data-how-it-works="1"]{border-color:#bfd1f7;background:#f4f8ff;color:#235fde}
+
+/* extracted from rev612-flow-preview-mode-style */
+/* ===== PRENEURA REV 6.1.2 — FLOW BOX DIRECT PREVIEW VS ROLE WORKFLOW ===== */
+.p612-preview-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #bfd1f7;background:#f3f7ff;border-radius:11px;padding:9px 11px;margin:0 0 11px;color:#31547e}
+.p612-preview-banner>div{min-width:0}.p612-preview-banner b{display:block;font-size:9px;color:#1e4f96;margin-bottom:2px}.p612-preview-banner span{display:block;font-size:7.5px;line-height:1.4;color:#607590}
+.p612-preview-banner button{border:1px solid #bfd1f7;background:#fff;color:#235fde;border-radius:999px;padding:7px 10px;font-size:7px;font-weight:950;white-space:nowrap;cursor:pointer}
+.p612-flow-key{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-left:auto;font-size:7px;color:#667386;font-weight:800}
+.p612-flow-key em{font-style:normal;border-radius:999px;padding:4px 7px;border:1px solid #d8e1ec;background:#fff;white-space:nowrap}
+.p612-flow-key em.open{border-color:#d7e1ec;color:#52657a}.p612-flow-key em.role{border-color:#c8d9f8;background:#f2f7ff;color:#2858a6}
+@media(max-width:700px){.p612-preview-banner{align-items:flex-start;flex-direction:column}.p612-flow-key{margin-left:0}}
