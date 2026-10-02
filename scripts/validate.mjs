@@ -6,6 +6,7 @@ const stable=path.join(root,'app','index.html');
 const entry=path.join(root,'index.html');
 
 const requiredAssets=[
+  'src/core/product-model.js',
   'src/features/live-allocation/index.css',
   'src/features/live-allocation/index.js',
   'src/core/flow-navigation.css',

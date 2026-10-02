@@ -47,6 +47,7 @@ The root `index.html` keeps the stable application shell but replaces extracted 
 
 ## Current modular source
 
+- `src/core/product-model.js` — canonical roles, flow routes, allocation policy and action boundaries
 - `src/features/live-allocation/` — shared queue and Live Allocation Day
 - `src/core/flow-navigation.*` — OPEN preview vs ROLE restricted navigation
 - `src/features/buyer-experience/` — bilingual AI Allocation Advisor, functional My Property, buyer examples and post-sale UI

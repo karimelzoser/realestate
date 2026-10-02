@@ -31,6 +31,14 @@
       }
       base.setAttribute('href','app/');
 
+      function insertScriptBefore(anchorId,src){
+        const anchor=doc.getElementById(anchorId);
+        if(!anchor) throw new Error('Missing script anchor: '+anchorId);
+        const script=doc.createElement('script');
+        script.src='../'+src;
+        anchor.parentNode.insertBefore(script,anchor);
+      }
+
       function replaceStyle(anchorId,href,removeIds){
         const anchor=doc.getElementById(anchorId);
         if(!anchor) throw new Error('Missing style anchor: '+anchorId);
@@ -49,6 +57,11 @@
         anchor.replaceWith(script);
         (removeIds||[]).forEach(id=>doc.getElementById(id)?.remove());
       }
+
+      insertScriptBefore(
+        'rev607-horizontal-scroll-flow-script',
+        'src/core/product-model.js'
+      );
 
       replaceStyle(
         'rev607-horizontal-scroll-flow-style',

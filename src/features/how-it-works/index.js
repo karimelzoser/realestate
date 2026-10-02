@@ -1,6 +1,7 @@
 // extracted from rev615-flow-page-audit-script
 (function(){
  if(typeof P==='undefined')return;
+ var PRODUCT=window.PRENEURA&&window.PRENEURA.model?window.PRENEURA.model:null;
  function box(k,title,text,badge){return '<section class="p615-role-example"><div><small>'+k+'</small><b>'+title+'</b><span>'+text+'</span></div><em>'+badge+'</em></section>'}
  var defs={
   'm-home':['MANAGER EXAMPLE','Live launch-day overview','Monitor buyer demand, queue pressure, allocator capacity, exceptions and transactions without changing buyer priority.','Manager'],
@@ -15,9 +16,20 @@
   'b-browse':['BUYER EXAMPLE','Self-service buyer journey','Buyer can explore before login. Real workflow gates appear only when the buyer enters EOI, allocation and transaction stages.','Buyer']
  };
  Object.keys(defs).forEach(function(id){if(!P[id]||typeof P[id].render!=='function')return;var base=P[id].render,d=defs[id];P[id].render=function(){return box(d[0],d[1],d[2],d[3])+base.apply(this,arguments)}});
- window.p615FlowRouteAudit=function(){return [
-  ['Buyer role','buyer','b-browse','ROLE'],['Broker role','broker','br-dashboard','ROLE'],['Queue Receptionist','registrar','r-checkin','ROLE'],['Manager','manager','m-home','ROLE'],['EOI & Eligibility','buyer','b-eoi','OPEN'],['Allocation Day','buyer','b-allocation-day','OPEN'],['Offline Check-in','registrar','r-checkin','OPEN'],['Shared Queue / Parallel Allocation','manager','m-allocation-live','OPEN'],['Human Allocator','operator','a-desk','ROLE'],['Online AI Advisor','buyer','b-site','OPEN'],['Master Plan','buyer','b-site','OPEN'],['Building','buyer','b-building','OPEN'],['Floor','buyer','b-floor','OPEN'],['Exact Unit','buyer','b-unit','OPEN'],['Unit Lock','operator','a-handoff','OPEN'],['Transaction Operator','finance','t-inbox','ROLE'],['Contract & Sign','buyer','b-contract','OPEN'],['My Property','buyer','b-properties','OPEN']
- ]};
+ window.p615FlowRouteAudit=function(){
+   if(PRODUCT&&PRODUCT.flow&&Array.isArray(PRODUCT.flow.stages)){
+     var rows=[];
+     PRODUCT.flow.stages.forEach(function(stage){
+       if(stage.page)rows.push([stage.title,stage.role,stage.page,stage.mode||'OPEN']);
+       (stage.routes||[]).forEach(function(r){rows.push([r.label,r.role,r.page,r.mode||'OPEN'])});
+       (stage.subroutes||[]).forEach(function(r){rows.push([r.label,stage.role,r.page,'OPEN'])});
+     });
+     return rows;
+   }
+   return [
+    ['Buyer role','buyer','b-browse','ROLE'],['Broker role','broker','br-dashboard','ROLE'],['Queue Receptionist','registrar','r-checkin','ROLE'],['Manager','manager','m-home','ROLE'],['EOI & Eligibility','buyer','b-eoi','OPEN'],['Allocation Day','buyer','b-allocation-day','OPEN'],['Offline Check-in','registrar','r-checkin','OPEN'],['Shared Queue / Parallel Allocation','manager','m-allocation-live','OPEN'],['Human Allocator','operator','a-desk','ROLE'],['Online AI Advisor','buyer','b-site','OPEN'],['Master Plan','buyer','b-site','OPEN'],['Building','buyer','b-building','OPEN'],['Floor','buyer','b-floor','OPEN'],['Exact Unit','buyer','b-unit','OPEN'],['Unit Lock','operator','a-handoff','OPEN'],['Transaction Operator','finance','t-inbox','ROLE'],['Contract & Sign','buyer','b-contract','OPEN'],['My Property','buyer','b-properties','OPEN']
+   ];
+ };
 })();
 
 // extracted from rev616-metro-final-script
