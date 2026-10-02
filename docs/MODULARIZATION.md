@@ -7,42 +7,55 @@ PRENEURA grew through rapid additive revisions in one large standalone HTML file
 The repository now has two runtime paths:
 
 - `app/index.html` — stable standalone baseline (Rev 6.1.6)
-- `index.html` — modular development entry. It loads the stable application shell, removes the currently-active inline Rev 6.0.7–6.1.6 overlay blocks at runtime, and replaces them with source modules under `src/`.
+- `index.html` — modular development entry. It loads the stable application shell, removes the extracted active inline blocks at runtime, and replaces them with source modules under `src/`.
 
-This lets us continue improving the product without rewriting the proven legacy core all at once.
+This gives us a safe migration path: the known-good standalone build stays recoverable while active development moves into maintainable source files.
 
-## Active modules
+## Extracted now
 
 ### `src/features/live-allocation/`
-Owns the shared-queue / live Allocation Day demo, #233 Offline + #234 Online example, allocator-seat visualization, and horizontal-flow support.
+Owns the shared-queue / Live Allocation Day example, including:
+- #233 Offline / Sales Center
+- #234 Online
+- one ordered queue
+- one priority engine
+- parallel service capacity
+- allocator-seat visualization
 
 ### `src/core/flow-navigation.*`
 Owns navigation semantics:
 - **OPEN** = direct page preview for demo inspection
 - **ROLE** = real role workflow with permissions, login, eligibility, queue, and transaction restrictions
-
-### `src/features/buyer-experience/`
-Owns the current online AI allocation advisor, bilingual English/Egyptian-Arabic experience, My Property post-sale experience, examples, and buyer-facing enhancements.
+- **How It Works** = stable return path to the system overview
 
 ### `src/features/how-it-works/`
-Owns the route audit and current Metro-style How PRENEURA Works experience.
+Owns:
+- Metro-style How PRENEURA Works view
+- flow route audit examples
+- role/system/rule/outcome map semantics
+- direct page destinations from the flow
+
+## Still in the stable shell for now
+
+The Buyer experience, My Property, and bilingual AI Advisor remain in `app/index.html` during this first safe extraction. They are the next extraction target after this branch is validated.
 
 ## Migration rule
 
 Do not rewrite the 2 MB legacy core in one step. Extract one stable domain at a time behind the same page IDs / public globals, verify parity, then delete the superseded legacy implementation.
 
-Recommended extraction order:
+Recommended next extraction order:
 
-1. Shared state and demo data
-2. Router and role permissions
-3. Buyer pages
-4. Queue Receptionist
-5. Allocator
-6. Transaction Operator
-7. Broker
-8. Manager
-9. Shared UI components
-10. Remove obsolete revision blocks
+1. Buyer experience + My Property + AI Advisor
+2. Shared app state and demo data
+3. Router and role permissions
+4. Buyer pages
+5. Queue Receptionist
+6. Allocator
+7. Transaction Operator
+8. Broker
+9. Manager
+10. Shared UI components
+11. Remove obsolete historical revision blocks
 
 ## Non-regression contracts
 
