@@ -18,27 +18,23 @@
   </main>
   <script>
   (async function(){
-    const activeIds=[
+    const extractedIds=[
       'rev607-horizontal-scroll-flow-style','rev607-horizontal-scroll-flow-script',
       'rev608-readability-scroll-polish','rev608-scroll-controls-script',
       'rev609-click-label-home-fix-style',
       'rev611-stable-home-navigation-script',
       'rev612-flow-preview-mode-style','rev612-flow-preview-mode-script',
-      'rev613-role-clarity-voice-advisor-style','rev613-role-clarity-voice-advisor-script',
-      'rev614-page-audit-myproperty-bilingual-ai-style','rev614-page-audit-myproperty-bilingual-ai-script',
       'rev615-flow-page-audit-style','rev615-flow-page-audit-script',
       'rev616-metro-final-style','rev616-metro-final-script'
     ];
     const css=[
       'src/features/live-allocation/index.css',
       'src/core/flow-navigation.css',
-      'src/features/buyer-experience/index.css',
       'src/features/how-it-works/index.css'
     ];
     const js=[
       'src/features/live-allocation/index.js',
       'src/core/flow-navigation.js',
-      'src/features/buyer-experience/index.js',
       'src/features/how-it-works/index.js'
     ];
     try{
@@ -46,18 +42,22 @@
       if(!response.ok) throw new Error('Could not load app/index.html');
       const html=await response.text();
       const doc=new DOMParser().parseFromString(html,'text/html');
-      activeIds.forEach(id=>doc.getElementById(id)?.remove());
+
+      extractedIds.forEach(id=>doc.getElementById(id)?.remove());
+
       css.forEach(href=>{
         const link=doc.createElement('link');
         link.rel='stylesheet';
         link.href='../'+href;
         doc.head.appendChild(link);
       });
+
       js.forEach(src=>{
         const script=doc.createElement('script');
         script.src='../'+src;
         doc.body.appendChild(script);
       });
+
       document.open();
       document.write('<!doctype html>'+doc.documentElement.outerHTML);
       document.close();
