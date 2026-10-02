@@ -20,7 +20,7 @@
 .p616-guide{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;color:#65768a;font-size:8px}
 .p616-guide b{color:#26394d}.p616-guide-actions{display:flex;align-items:center;gap:6px;white-space:nowrap}.p616-guide-actions button{border:1px solid #d8e0ea;background:#fff;border-radius:999px;padding:6px 9px;font-size:7.1px;font-weight:900;color:#405369;cursor:pointer}
 .p616-viewport{overflow-x:auto;overflow-y:hidden;padding:2px 0 14px;scrollbar-color:#8ea4bb #e7edf4;scroll-snap-type:x proximity}
-.p616-map{position:relative;width:3230px;height:500px;background:#fbfcfe;border:1px solid #dbe3ec;border-radius:16px;overflow:hidden}
+.p616-map{position:relative;width:3340px;height:500px;background:#fbfcfe;border:1px solid #dbe3ec;border-radius:16px;overflow:hidden}
 .p616-map svg{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
 .p616-zone{position:absolute;z-index:4;top:12px;font-size:7.4px;letter-spacing:.13em;font-weight:950;color:#7b8ba0;text-transform:uppercase;white-space:nowrap}
 .p616-z-entry{left:32px}.p616-z-qualify{left:282px}.p616-z-attend{left:680px}.p616-z-queue{left:1110px}.p616-z-assist{left:1545px}.p616-z-select{left:1845px}.p616-z-complete{left:2475px}
@@ -48,7 +48,7 @@
 .p616-assist-note{position:absolute;z-index:3;left:1665px;top:251px;width:305px;border:1px solid #dbe3ec;background:#fff;border-radius:999px;padding:7px 10px;text-align:center;font-size:6.8px;font-weight:850;color:#52657a}
 .p616-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:9px;font-size:7.2px;color:#607184;font-weight:850}.p616-legend span{display:flex;align-items:center;gap:4px}.p616-legend i{display:inline-block;width:11px;height:7px;border-radius:999px}
 @media(max-width:900px){
- .p616-shell{width:min(100% - 16px,860px)}.p616-head{display:block}.p616-head-actions{justify-content:flex-start;margin-top:7px}.p616-manager{grid-template-columns:1fr}.p616-manager-grid{grid-template-columns:repeat(3,1fr)}.p616-map{width:3230px}.p616-guide{align-items:flex-start;flex-direction:column}
+ .p616-shell{width:min(100% - 16px,860px)}.p616-head{display:block}.p616-head-actions{justify-content:flex-start;margin-top:7px}.p616-manager{grid-template-columns:1fr}.p616-manager-grid{grid-template-columns:repeat(3,1fr)}.p616-map{width:3340px}.p616-guide{align-items:flex-start;flex-direction:column}
 }
 
 /* Release visual QA polish */
