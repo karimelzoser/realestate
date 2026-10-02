@@ -23,3 +23,5 @@ jobs:
           node --check src/features/how-it-works/index.js
       - name: Validate routes and assets
         run: node scripts/validate.mjs
+      - name: Validate canonical product model
+        run: node scripts/validate-model.mjs
