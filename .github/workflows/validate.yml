@@ -17,6 +17,7 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check src/core/product-model.js
+          node --check src/core/role-policy.js
           node --check src/features/live-allocation/index.js
           node --check src/core/flow-navigation.js
           node --check src/core/router.js
@@ -26,3 +27,5 @@ jobs:
         run: node scripts/validate.mjs
       - name: Validate canonical product model
         run: node scripts/validate-model.mjs
+      - name: Validate role policy
+        run: node scripts/validate-role-policy.mjs
