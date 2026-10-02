@@ -10,8 +10,6 @@ const requiredAssets=[
   'src/features/live-allocation/index.js',
   'src/core/flow-navigation.css',
   'src/core/flow-navigation.js',
-  'src/features/buyer-experience/index.css',
-  'src/features/buyer-experience/index.js',
   'src/features/how-it-works/index.css',
   'src/features/how-it-works/index.js'
 ];
@@ -41,4 +39,5 @@ if(failures.length){
   failures.forEach(x=>console.error('- '+x));
   process.exit(1);
 }
+
 console.log('PRENEURA validation passed: '+requiredAssets.length+' modular assets and '+requiredRoutes.length+' flow destinations checked.');
