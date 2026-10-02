@@ -2,12 +2,13 @@
 
 The current application still exposes legacy globals such as `app`, `P`, `go`, `render`, and `rtEnterRole`.
 
-The first safe extraction moves the features we are actively changing most often into dedicated source modules:
+The safe extraction now moves the active product layers we change most often into dedicated source modules:
 
-- `features/live-allocation/`
-- `core/flow-navigation.*`
-- `features/how-it-works/`
+- `features/live-allocation/` — shared queue and Live Allocation Day
+- `core/flow-navigation.*` — OPEN preview vs ROLE restricted navigation
+- `features/buyer-experience/` — bilingual AI Allocation Advisor, My Property, buyer examples and post-sale experience
+- `features/how-it-works/` — Metro overview and route audit
 
-The Buyer experience / My Property / bilingual AI Advisor remain in the stable shell for the moment and are the next extraction target.
+The stable `app/index.html` still contains the older core application, shared state, page registry and role implementations. We keep those in place while extracting one domain at a time behind the same public page IDs and globals.
 
-New How It Works, routing, and live-allocation changes should be made in these source modules instead of appending more inline revisions to `app/index.html`.
+New work for an extracted area should be made in its `src/` module instead of appending another inline revision block to `app/index.html`.

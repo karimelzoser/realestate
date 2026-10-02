@@ -28,6 +28,18 @@ Owns navigation semantics:
 - **ROLE** = real role workflow with permissions, login, eligibility, queue, and transaction restrictions
 - **How It Works** = stable return path to the system overview
 
+### `src/features/buyer-experience/`
+Owns the current Buyer-facing active enhancement layer:
+- professional bilingual English + Egyptian-Arabic AI Allocation Advisor
+- voice / typed guidance and safe navigation actions
+- screen highlighting and decision assistance
+- functional My Property portfolio
+- property details
+- installment schedule
+- contract / documents / receipts
+- updates and support
+- buyer-facing flow examples
+
 ### `src/features/how-it-works/`
 Owns:
 - Metro-style How PRENEURA Works view
@@ -37,7 +49,7 @@ Owns:
 
 ## Still in the stable shell for now
 
-The Buyer experience, My Property, and bilingual AI Advisor remain in `app/index.html` during this first safe extraction. They are the next extraction target after this branch is validated.
+The older core page implementations, shared state, router, and role workspaces remain in `app/index.html`. They will be extracted incrementally only after the active experience layers are parity-tested.
 
 ## Migration rule
 
@@ -45,17 +57,16 @@ Do not rewrite the 2 MB legacy core in one step. Extract one stable domain at a 
 
 Recommended next extraction order:
 
-1. Buyer experience + My Property + AI Advisor
-2. Shared app state and demo data
-3. Router and role permissions
-4. Buyer pages
-5. Queue Receptionist
-6. Allocator
-7. Transaction Operator
-8. Broker
-9. Manager
-10. Shared UI components
-11. Remove obsolete historical revision blocks
+1. Shared app state and demo data
+2. Router and role permissions
+3. Buyer core pages
+4. Queue Receptionist
+5. Allocator
+6. Transaction Operator
+7. Broker
+8. Manager
+9. Shared UI components
+10. Remove obsolete historical revision blocks
 
 ## Non-regression contracts
 
