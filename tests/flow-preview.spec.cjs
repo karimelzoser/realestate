@@ -57,7 +57,6 @@ test('How It Works is clean, horizontally scrollable and every OPEN destination 
   for (const row of audited.filter(x => x.mode === 'OPEN')) {
     if (!seen.has(row.page)) { seen.add(row.page); direct.push(row); }
   }
-  // Manager control buttons are direct page previews too, even though they are governance controls above the Metro.
   for (const x of [
     {label:'Rules',role:'manager',page:'m-workflow'},
     {label:'Pricing',role:'manager',page:'m-pricing'},
@@ -97,7 +96,17 @@ test('Contract direct preview completes requirements, generates, signs and conti
 
   await page.locator('.p620-preview-helper').getByRole('button', { name: 'Generate Exact Contract' }).click();
   await page.waitForFunction(() => app.fx.contract.generated === true);
-  await expect(page.getByRole('button', { name: /Send Signer OTP|Open Signer \/ Send OTP/ })).toBeVisible();
+  const generatedState = await page.evaluate(() => ({
+    page: app.page,
+    generated: app.fx.contract.generated,
+    status: app.fx.contract.status,
+    otpSent: app.fx.contract.otpSent,
+    renderName: P['b-contract'] && P['b-contract'].render ? (P['b-contract'].render.name || 'anonymous') : 'missing',
+    buttons: Array.from(document.querySelectorAll('#pageRoot button')).map(x => (x.textContent || '').trim()).filter(Boolean),
+    text: (document.querySelector('#pageRoot')?.innerText || '').slice(0,5000)
+  }));
+  console.log('CONTRACT_GENERATED_STATE '+JSON.stringify(generatedState));
+  expect(generatedState.buttons.some(x => /Send Signer OTP|Open Signer \/ Send OTP/.test(x)), 'Generated contract must expose OTP action. Buttons: '+generatedState.buttons.join(' | ')).toBeTruthy();
   await page.getByRole('button', { name: /Send Signer OTP|Open Signer \/ Send OTP/ }).click();
 
   await page.waitForSelector('#fxContractOTP');
