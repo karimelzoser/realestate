@@ -49,7 +49,7 @@
       appendScript('src/features/flow-preview/index.js');
       appendScript('src/features/flow-preview/contract.js');
 
-      // Local Egyptian live allocation agent.
+      // Local allocation voice transport and recommendation engine.
       appendStyle('src/features/local-voice-agent/index.css');
       appendScript('src/features/local-voice-agent/engine.js');
       appendScript('src/features/local-voice-agent/config64.js');
@@ -65,10 +65,16 @@
       appendStyle('src/features/manager-live/index.css');
       appendScript('src/features/manager-live/index.js');
 
-      // 6.6 presentation release loads last so prepared scenarios can wrap the final manager surfaces.
+      // 6.6 presentation release loads after operational modules.
       appendStyle('src/features/presentation/index.css');
       appendScript('src/features/presentation/index.js');
       appendScript('src/features/presentation/voice-polish.js');
+
+      // 6.7 owns the current English-only live advisor and two-stage lock grace workflow.
+      appendStyle('src/features/local-voice-agent/english-only.css');
+      appendScript('src/features/local-voice-agent/english-only.js');
+      appendStyle('src/features/lock-grace/index.css');
+      appendScript('src/features/lock-grace/index.js');
 
       document.open();
       document.write('<!doctype html>'+doc.documentElement.outerHTML);
