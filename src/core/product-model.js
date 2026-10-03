@@ -141,12 +141,23 @@
     languages:['en','ar-EG'],
     arabicDialect:'Egyptian Arabic',
     channel:'ONLINE_ALLOCATION',
+    interactionMode:'FULL_DUPLEX_LOCAL',
+    localStack:{
+      asr:'CohereLabs/cohere-transcribe-arabic-07-2026',
+      asrFallback:'dev-ahmedhany/whisper-large-v3-turbo-arabic-ft-ct2-int8',
+      brain:'Qwen/Qwen3-30B-A3B-Instruct-2507',
+      tts:'mohammedaly22/VoiceTut-TTS',
+      defaultVoice:'Omnia'
+    },
     allowed:[
       'explain-current-state',
       'compare-units',
       'recommend-by-buyer-preferences',
       'navigate',
       'highlight-controls',
+      'scroll-follow',
+      'show-ranked-units',
+      'barge-in-live-turns',
       'safe-reversible-actions'
     ],
     requiresBuyerConfirmation:[

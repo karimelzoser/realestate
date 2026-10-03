@@ -1,0 +1,19 @@
+# PRENEURA local Egyptian voice agent runtime
+# Install the CUDA-compatible PyTorch build for your machine first when using NVIDIA GPU.
+fastapi>=0.116,<1
+uvicorn[standard]>=0.35,<1
+python-multipart>=0.0.20
+python-dotenv>=1.1
+httpx>=0.28,<1
+numpy>=1.26
+soundfile>=0.13
+librosa>=0.11
+sentencepiece>=0.2
+protobuf>=5
+accelerate>=1.10
+huggingface_hub>=0.35
+transformers>=5.4.0
+faster-whisper>=1.2
+# VoiceTut's OmniVoice backbone is not published on PyPI.
+git+https://github.com/k2-fsa/OmniVoice.git
+voicetut-tts
