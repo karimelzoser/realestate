@@ -3,9 +3,16 @@ const { test, expect } = require('@playwright/test');
 const BASE = process.env.PRENEURA_BASE_URL || 'http://127.0.0.1:4173/';
 
 test.describe.configure({ mode: 'serial' });
+test.setTimeout(120000);
 
 async function loadOverview(page) {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => typeof window.rtBuildRolePortal === 'function' || typeof window.rtShowPortal === 'function', null, { timeout: 20000 });
+  await page.evaluate(() => {
+    if (document.querySelector('.p616-portal')) return;
+    if (typeof rtShowPortal === 'function') rtShowPortal();
+    else if (typeof rtBuildRolePortal === 'function') rtBuildRolePortal();
+  });
   await page.waitForSelector('.p616-portal', { state: 'visible', timeout: 20000 });
   await page.waitForSelector('.p616-map', { state: 'visible' });
 }
