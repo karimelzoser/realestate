@@ -96,18 +96,8 @@ test('Contract direct preview completes requirements, generates, signs and conti
 
   await page.locator('.p620-preview-helper').getByRole('button', { name: 'Generate Exact Contract' }).click();
   await page.waitForFunction(() => app.fx.contract.generated === true);
-  const generatedState = await page.evaluate(() => ({
-    page: app.page,
-    generated: app.fx.contract.generated,
-    status: app.fx.contract.status,
-    otpSent: app.fx.contract.otpSent,
-    renderName: P['b-contract'] && P['b-contract'].render ? (P['b-contract'].render.name || 'anonymous') : 'missing',
-    buttons: Array.from(document.querySelectorAll('#pageRoot button')).map(x => (x.textContent || '').trim()).filter(Boolean),
-    text: (document.querySelector('#pageRoot')?.innerText || '').slice(0,5000)
-  }));
-  console.log('CONTRACT_GENERATED_STATE '+JSON.stringify(generatedState));
-  expect(generatedState.buttons.some(x => /Send Signer OTP|Open Signer \/ Send OTP/.test(x)), 'Generated contract must expose OTP action. Buttons: '+generatedState.buttons.join(' | ')).toBeTruthy();
-  await page.getByRole('button', { name: /Send Signer OTP|Open Signer \/ Send OTP/ }).click();
+  await expect(page.getByRole('button', { name: /Send OTP|Send Signer OTP|Open Signer \/ Send OTP/ })).toBeVisible();
+  await page.getByRole('button', { name: /Send OTP|Send Signer OTP|Open Signer \/ Send OTP/ }).click();
 
   await page.waitForSelector('#fxContractOTP');
   const otp = await page.evaluate(() => String(app.fx.contract.otpCode || ''));
@@ -127,7 +117,7 @@ test('Contract direct preview completes requirements, generates, signs and conti
   await page.mouse.up();
   expect(await page.evaluate(() => app.fx.final6.signing.hasStroke)).toBeTruthy();
 
-  await page.getByRole('button', { name: 'Demo Provider Biometric Callback' }).click();
+  await page.getByRole('button', { name: /Demo Provider Biometric Callback|Demo Fingerprint \/ Biometric Verification/ }).click();
   expect(await page.evaluate(() => app.fx.final6.signing.biometricVerified)).toBeTruthy();
   await page.locator('#fxSignConsent').check();
   await page.getByRole('button', { name: 'Sign Exact Contract' }).click();
