@@ -25,6 +25,7 @@ jobs:
           node --check src/features/buyer-experience/index.js
           node --check src/features/how-it-works/index.js
           node --check src/features/flow-preview/index.js
+          node --check src/features/flow-preview/contract.js
       - name: Validate routes and assets
         run: node scripts/validate.mjs
       - name: Validate canonical product model
