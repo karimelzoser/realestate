@@ -26,6 +26,16 @@ base.legacy.ASR_FALLBACK_MODEL = os.getenv("PRENEURA_ASR_FALLBACK_MODEL", "Systr
 base.legacy._asr = None
 base.legacy._asr_processor = None
 base.legacy._asr_backend_loaded = None
+_original_transcribe = base.legacy.transcribe_file
+
+
+async def _transcribe_english(path, language: str = "en") -> str:
+    # server64's websocket transport historically passed "ar" explicitly.
+    # Ignore that legacy hint in 6.7 so microphone turns are always decoded as English.
+    return await _original_transcribe(path, "en")
+
+
+base.legacy.transcribe_file = _transcribe_english
 
 base.SYSTEM_PROMPT = r"""
 You are PRENEURA's live online allocation advisor for a professional real-estate developer.
@@ -85,6 +95,7 @@ def fallback_agent(message: str, context: dict[str, Any]) -> dict[str, Any]:
     if page == "b-site":
         return {"reply": "We are on the master plan. I will focus on the buildings that contain the strongest eligible options and guide you into the best one next.", "actions": [{"type": "highlight_keywords", "keywords": ["building", "tower", "block"]}]}
     return {"reply": "I can guide the master plan, compare the live available units and explain the price, area, floor and view trade-offs. Tell me what matters most to you.", "actions": []}
+
 
 base._fallback_agent = fallback_agent
 
