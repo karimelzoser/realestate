@@ -72,7 +72,9 @@ test('offline buyer can receive a 24h paperwork exception from Transaction Opera
     app.fx.rt.registry.push({customerId:'P67-OFFLINE',name:'Offline Grace Buyer',attendanceMode:'SALES_CENTER',eoiState:'ELIGIBLE',eoiPaid:true});
     p67DemoStartShortGrace('SALES_CENTER');
   });
-  await preview(page,'finance','t-readiness');
+  // The exception is an operator-level decision. Use the shared inbox instead
+  // of Contract Readiness because readiness belongs to whichever transaction is open.
+  await preview(page,'finance','t-inbox');
   const root=page.locator('#pageRoot');
   await expect(root).toContainText('GRACE DECISION INBOX');
   await expect(root).toContainText('Offline Grace Buyer');
