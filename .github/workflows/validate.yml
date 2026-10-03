@@ -2,7 +2,7 @@ name: Validate PRENEURA
 
 on:
   push:
-    branches: [main, develop, "refactor/**", "release/**"]
+    branches: [main, develop, "feature/**", "refactor/**", "release/**"]
   pull_request:
     branches: [main, develop]
 
@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Check JavaScript syntax
+      - name: Check JavaScript and Python syntax
         run: |
           node --check src/core/product-model.js
           node --check src/core/role-policy.js
@@ -26,6 +26,10 @@ jobs:
           node --check src/features/how-it-works/index.js
           node --check src/features/flow-preview/index.js
           node --check src/features/flow-preview/contract.js
+          node --check src/features/local-voice-agent/engine.js
+          node --check src/features/local-voice-agent/audio.js
+          node --check src/features/local-voice-agent/index.js
+          python3 -m py_compile local_voice_agent/server.py
       - name: Validate routes and assets
         run: node scripts/validate.mjs
       - name: Validate canonical product model
@@ -38,11 +42,13 @@ jobs:
         run: node scripts/validate-release.mjs
       - name: Validate flow previews
         run: node scripts/validate-flow-preview.mjs
+      - name: Validate local Egyptian voice agent
+        run: node scripts/validate-local-voice-agent.mjs
       - name: Install Chromium browser QA
         run: |
           npm install --no-save --package-lock=false @playwright/test@1.56.1
           npx playwright install --with-deps chromium
-      - name: Browser-test flow previews and purchase completion
+      - name: Browser-test flows, purchase completion and voice allocation
         env:
           PRENEURA_BASE_URL: http://127.0.0.1:4173/
         run: |
@@ -50,4 +56,4 @@ jobs:
           SERVER_PID=$!
           trap 'kill $SERVER_PID' EXIT
           sleep 1
-          npx playwright test tests/flow-preview.spec.cjs --reporter=line
+          npx playwright test tests/flow-preview.spec.cjs tests/local-voice-agent.spec.cjs --reporter=line
