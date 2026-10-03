@@ -1,5 +1,12 @@
 /* PRENEURA 6.2.1 — functional flow-preview polish */
 
+/* Remove explanatory chrome from How It Works immediately, before the JS cleanup runs. */
+.p616-portal .p616-head p,
+.p616-portal .p616-head-actions,
+.p616-portal .p616-truth,
+.p616-portal .p616-guide,
+.p616-portal .p616-legend{display:none!important}
+
 /* The system overview should start with the title and Manager control, not explanatory chrome. */
 .p620-flow-clean .p616-head{margin-bottom:10px;padding:2px 4px 0}
 .p620-flow-clean .p616-head h1{margin-bottom:0}
