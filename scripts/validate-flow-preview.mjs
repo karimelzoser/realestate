@@ -5,6 +5,7 @@ const fail=[];
 const entry=read('index.html');
 const stable=read('app/index.html');
 const preview=read('src/features/flow-preview/index.js');
+const contractPreview=read('src/features/flow-preview/contract.js');
 const previewCss=read('src/features/flow-preview/index.css');
 const model=read('src/core/product-model.js');
 
@@ -12,6 +13,7 @@ function must(text,needle,label){if(!text.includes(needle))fail.push(label||('Mi
 
 must(entry,'src/features/flow-preview/index.css','Root entry does not load flow-preview CSS');
 must(entry,'src/features/flow-preview/index.js','Root entry does not load flow-preview JS');
+must(entry,'src/features/flow-preview/contract.js','Root entry does not load flow-preview contract compatibility');
 
 for(const marker of [
   'ensureSelection','ensureAllocatorHandoff','ensureTransactionBase',
@@ -28,6 +30,8 @@ must(preview,'d.verified=true','Contract demo must verify documents');
 must(preview,'t.approved=true','Contract demo must satisfy configured approval gate');
 must(preview,"type:opts.type||'HANDOFF'",'Contract demo must create an active selected-unit lock');
 must(preview,"f6GenerateBuyerContract()",'Contract preview must expose exact-contract generation');
+must(contractPreview,'p620CaptureDemoSignature','Contract preview must expose deterministic demo signature capture');
+must(contractPreview,'Use Demo Signature','Contract preview must render the demo signature action');
 
 for(const sel of ['.p616-head p','.p616-head-actions','.p616-truth','.p616-guide','.p616-legend']){
   must(preview,sel,'How It Works cleanup missing '+sel);
@@ -64,6 +68,7 @@ if(fail.length){
 console.log('PRENEURA flow-preview validation passed');
 console.log('- direct preview prerequisites prepared');
 console.log('- Contract demo can complete gates and generate exact contract');
+console.log('- deterministic preview signature action available');
 console.log('- requested How It Works chrome removed');
 console.log('- Contract heading / preview text spacing protected');
 console.log('- all critical flow destinations present');
