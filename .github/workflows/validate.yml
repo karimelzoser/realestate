@@ -24,6 +24,7 @@ jobs:
           node --check src/core/router.js
           node --check src/features/buyer-experience/index.js
           node --check src/features/how-it-works/index.js
+          node --check src/features/flow-preview/index.js
       - name: Validate routes and assets
         run: node scripts/validate.mjs
       - name: Validate canonical product model
@@ -34,3 +35,5 @@ jobs:
         run: node scripts/validate-state.mjs
       - name: Validate release UX and functional contract
         run: node scripts/validate-release.mjs
+      - name: Validate flow previews
+        run: node scripts/validate-flow-preview.mjs
