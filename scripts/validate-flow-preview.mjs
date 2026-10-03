@@ -41,8 +41,8 @@ must(previewCss,'#pageRoot>.p614-example','Contract flow example padding missing
 for(const marker of [
   'function f6ContractReadyChecks',
   'function f6GenerateBuyerContract',
-  'function r52SmartContractPage',
-  'function r52CompleteSmartSignature',
+  'window.r52SmartContractPage=function',
+  'window.r52CompleteSmartSignature=function',
   "P['b-contract'].render=r52SmartContractPage",
   "P['b-properties']"
 ]) must(stable,marker,'Stable workflow missing '+marker);
