@@ -25,7 +25,8 @@ const requiredAssets=[
   'src/features/local-voice-agent/index.css',
   'src/features/local-voice-agent/engine.js',
   'src/features/local-voice-agent/audio.js',
-  'src/features/local-voice-agent/index.js'
+  'src/features/local-voice-agent/index.js',
+  'src/features/local-voice-agent/lifecycle.js'
 ];
 
 const requiredRoutes=[
