@@ -136,7 +136,7 @@ test('My Property cards, installments, contract, documents and support all open'
   await expect(page.getByText('Full installment schedule')).toBeVisible();
 
   await page.getByRole('button', { name: 'Contract', exact: true }).click();
-  await expect(page.getByText('Signed contract')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Signed contract', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'View Signed Contract' }).click();
   await expect(page.locator('.p614-modal')).toBeVisible();
   await page.locator('.p614-modal [aria-label="Close"]').click();
