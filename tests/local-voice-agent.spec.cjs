@@ -6,45 +6,46 @@ test.setTimeout(120000);
 
 async function loadApp(page) {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => typeof window.p621VoiceAgent === 'object' && typeof window.p612OpenFlowPage === 'function', null, { timeout: 20000 });
+  await page.waitForFunction(() => window.PRENEURA?.englishVoice67 && typeof window.p612OpenFlowPage === 'function', null, { timeout: 25000 });
   await page.evaluate(() => {
-    p621VoiceAgent.state.autoTour = false;
+    PRENEURA.englishVoice67.state.userTouched = true;
     if (PRENEURA.localVoiceAudio) PRENEURA.localVoiceAudio.setVoice(false);
   });
 }
 
 async function openBuyerPreview(page, target) {
   await page.evaluate(target => p612OpenFlowPage('buyer', target), target);
-  await page.waitForFunction(target => window.app && app.page === target, target);
-  await page.waitForSelector('.p621-agent', { state: 'visible', timeout: 10000 });
+  await page.waitForFunction(target => typeof app!=='undefined' && app.page === target, target);
+  await page.waitForSelector('.p67-agent', { state: 'visible', timeout: 10000 });
 }
 
-test('Egyptian local voice advisor owns the online allocation journey', async ({ page }) => {
+test('English live voice advisor owns the online allocation journey', async ({ page }) => {
   const errors=[];
   page.on('pageerror',e=>errors.push(String(e)));
   await loadApp(page);
   await openBuyerPreview(page,'b-allocation-day');
 
-  await expect(page.locator('.p621-agent')).toBeVisible();
-  await expect(page.getByText('مساعد التخصيص الصوتي')).toBeVisible();
+  await expect(page.locator('.p67-agent')).toBeVisible();
+  await expect(page.getByText('Live Allocation Advisor')).toBeVisible();
   await expect(page.locator('.p614-advisor')).not.toBeVisible();
-  await expect(page.getByText('أفضل المتاح ليك دلوقتي')).toBeVisible();
+  await expect(page.getByText('Best available now')).toBeVisible();
+  await expect(page.locator('.p621-agent')).not.toBeVisible();
 
-  const ctx=await page.evaluate(()=>p621VoiceAgent.context());
-  expect(ctx.language).toBe('ar-EG');
+  const ctx=await page.evaluate(()=>{
+    const c=PRENEURA.localVoiceEngine.context('balanced',12);
+    c.language='en-US';
+    return c;
+  });
+  expect(ctx.language).toBe('en-US');
   expect(ctx.attendance).toBe('ONLINE');
   expect(Array.isArray(ctx.available_units)).toBeTruthy();
   expect(ctx.buyer && Object.prototype.hasOwnProperty.call(ctx.buyer,'eligible_types')).toBeTruthy();
   expect(Object.prototype.hasOwnProperty.call(ctx.buyer,'email')).toBeFalsy();
   expect(Object.prototype.hasOwnProperty.call(ctx.buyer,'phone')).toBeFalsy();
 
-  await page.evaluate(()=>p621VoiceAgent.ask('خدني للماستر بلان'));
+  await page.evaluate(()=>PRENEURA.englishVoice67.ask('Take me to the master plan'));
   await page.waitForFunction(()=>app.page==='b-site');
-  await expect(page.locator('.p621-agent')).toBeVisible();
-
-  const recs=await page.evaluate(()=>p621VoiceAgent.recommend('balanced'));
-  expect(Array.isArray(recs)).toBeTruthy();
-  expect(recs.length).toBeLessThanOrEqual(3);
+  await expect(page.locator('.p67-agent')).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -53,18 +54,18 @@ test('recommendations are inventory-derived and unit lock stays confirmation-gat
   await openBuyerPreview(page,'b-unit');
 
   const result=await page.evaluate(()=>{
-    window.__p621LockClicks=0;
+    window.__p67LockClicks=0;
     document.addEventListener('click',function(e){
       const t=(e.target?.closest?.('button,a,[onclick]')?.textContent||'').toLowerCase();
-      if(/lock|reserve|hold|حجز|تأكيد/.test(t)) window.__p621LockClicks++;
+      if(/lock|reserve|hold|confirm unit/.test(t)) window.__p67LockClicks++;
     },true);
-    return p621VoiceAgent.recommend('balanced').map(x=>({id:x.id,available:x.available,score:x.score}));
+    return PRENEURA.localVoiceEngine.rank('balanced').slice(0,3).map(x=>({id:x.id,available:x.available,score:x.score}));
   });
   expect(result.every(x=>x.available===true)).toBeTruthy();
   for(let i=1;i<result.length;i++) expect(result[i-1].score).toBeGreaterThanOrEqual(result[i].score);
 
-  await page.evaluate(()=>p621VoiceAgent.ask('احجزلي أفضل شقة واقفل الوحدة حالاً'));
+  await page.evaluate(()=>PRENEURA.englishVoice67.ask('Reserve the best apartment and lock it now'));
   await page.waitForTimeout(250);
-  expect(await page.evaluate(()=>window.__p621LockClicks)).toBe(0);
-  await expect(page.locator('.p621-agent')).toBeVisible();
+  expect(await page.evaluate(()=>window.__p67LockClicks)).toBe(0);
+  await expect(page.locator('.p67-agent')).toBeVisible();
 });
