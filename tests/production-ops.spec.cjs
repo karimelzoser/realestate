@@ -6,11 +6,11 @@ test.setTimeout(120000);
 
 async function boot(page){
   await page.goto(BASE,{waitUntil:'domcontentloaded'});
-  await page.waitForFunction(()=>window.app && window.P && typeof window.p612OpenFlowPage==='function' && typeof window.p64GenerateExactContract==='function',null,{timeout:25000});
+  await page.waitForFunction(()=>typeof app!=='undefined' && typeof P!=='undefined' && typeof window.p612OpenFlowPage==='function' && typeof window.p64GenerateExactContract==='function',null,{timeout:25000});
 }
 async function preview(page,role,target){
   await page.evaluate(({role,target})=>window.p612OpenFlowPage(role,target),{role,target});
-  await page.waitForFunction(target=>window.app&&app.page===target,target);
+  await page.waitForFunction(target=>typeof app!=='undefined' && app.page===target,target);
   await expect.poll(async()=>(await page.locator('#pageRoot').innerText()).length).toBeGreaterThan(50);
 }
 
@@ -20,7 +20,7 @@ test('Contract requirements upload UI and exact generation work', async ({page})
   await expect(page.getByRole('heading',{name:'Complete requirements'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Upload payment evidence'})).toBeVisible();
   await expect(page.locator('input[type=file]').first()).toBeAttached();
-  const demo=page.getByRole('button',{name:'Complete Demo Requirements'}).first();
+  const demo=page.locator('.p620-preview-helper').getByRole('button',{name:'Complete Demo Requirements'});
   await expect(demo).toBeVisible();await demo.click();
   await expect.poll(async()=>page.evaluate(()=>f6ContractReadyChecks().every(x=>x.ok))).toBeTruthy();
   await page.evaluate(()=>p64GenerateExactContract());
