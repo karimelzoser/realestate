@@ -61,9 +61,14 @@
       appendStyle('src/features/production-ops/index.css');
       appendScript('src/features/production-ops/index.js');
 
-      // 6.5 manager live intelligence intentionally loads last to own live queue and audit surfaces.
+      // 6.5 manager live intelligence owns the live queue and detailed audit surfaces.
       appendStyle('src/features/manager-live/index.css');
       appendScript('src/features/manager-live/index.js');
+
+      // 6.6 presentation release loads last so prepared scenarios can wrap the final manager surfaces.
+      appendStyle('src/features/presentation/index.css');
+      appendScript('src/features/presentation/index.js');
+      appendScript('src/features/presentation/voice-polish.js');
 
       document.open();
       document.write('<!doctype html>'+doc.documentElement.outerHTML);

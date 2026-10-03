@@ -1,5 +1,17 @@
 # Changelog
 
+## 6.6.0 — Professional presentation release
+
+- Added a Manager Presentation Control with deterministic one-click scenarios for Normal Day, Queue Pressure, Unit Lock Conflict, Overdue Collections and Broker Performance.
+- Added Reset Demo to restore the clean in-memory presentation baseline immediately.
+- Added a Management Decision Room above the Manager Overview with drill-down KPIs for queue depth, average/longest wait, locked/reserved inventory, EOI readiness, overdue collections and broker coverage.
+- Added management attention signals for queue SLA, collections and inventory commitment.
+- Added realistic presentation data seeding for queue pressure, lock conflict, collections and broker-company / agent performance demonstrations.
+- Simplified Buyer Journey Audit presentation wording to **Recorded Event** and **Current State Snapshot** while preserving the underlying audit/state distinction.
+- Added a presentation-safe Browser Voice fallback label when the private Egyptian local inference runtime is not connected.
+- Added a professional customer-presentation runbook in `docs/PRESENTATION_6.6.md`.
+- Added static presentation validation and Chromium QA for scenario switching, reset, decision metrics, broker data and audit terminology.
+
 ## 6.5.0 — Live allocation command center & buyer journey audit
 
 - Replaced the Manager Live Allocation demo-style view with an authoritative live command center reading the full active shared queue directly from PRENEURA state.
