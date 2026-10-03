@@ -1,5 +1,19 @@
 # Changelog
 
+## 6.3.0 — Local Egyptian live allocation agent
+
+- Replaced the browser-only allocation voice experience with a modular local Egyptian Arabic voice-agent layer for online allocation.
+- Added deterministic inventory ranking against buyer eligibility, budget, rooms, area, floor, view and building preferences.
+- The advisor now guides Allocation Day → Master Plan → Building → Floor → Exact Unit and can scroll/highlight the exact UI it is discussing.
+- Added top-three live unit recommendations with reasons and price/area ranking modes.
+- Added safe auto-tour behavior for reversible Building/Floor choices while preserving explicit buyer confirmation for the exact-unit lock.
+- Added hands-free microphone VAD, live barge-in/interruption, push-to-talk and streaming PCM playback.
+- Added a fully local speech service using Cohere Transcribe Arabic as the primary ASR, a public Faster-Whisper Arabic fallback, Qwen3-30B-A3B-Instruct-2507 as the default local agent brain, and VoiceTut-TTS with the Omnia Egyptian voice.
+- Added model-action sanitization so the AI cannot execute unit lock, payment confirmation, legal signature, price override or queue-priority override.
+- Added deterministic browser fallback behavior when the local model service is unavailable.
+- Added local runtime documentation, environment template and Linux/Windows launchers.
+- Added static and Chromium browser QA for the local voice journey and unit-lock confirmation boundary.
+
 ## 6.2.1 — Functional flow previews
 
 - Made every direct **OPEN** destination from How PRENEURA Works render with the demo context it needs instead of dead-ending on missing prerequisites.

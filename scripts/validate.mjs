@@ -21,7 +21,12 @@ const requiredAssets=[
   'src/features/how-it-works/index.js',
   'src/features/flow-preview/index.css',
   'src/features/flow-preview/index.js',
-  'src/features/flow-preview/contract.js'
+  'src/features/flow-preview/contract.js',
+  'src/features/local-voice-agent/index.css',
+  'src/features/local-voice-agent/engine.js',
+  'src/features/local-voice-agent/audio.js',
+  'src/features/local-voice-agent/index.js',
+  'src/features/local-voice-agent/lifecycle.js'
 ];
 
 const requiredRoutes=[

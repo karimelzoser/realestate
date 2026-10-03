@@ -138,6 +138,13 @@
       appendScript('src/features/flow-preview/index.js');
       appendScript('src/features/flow-preview/contract.js');
 
+      // 6.3 local Egyptian voice agent loads last so it sees the final router/state facade.
+      appendStyle('src/features/local-voice-agent/index.css');
+      appendScript('src/features/local-voice-agent/engine.js');
+      appendScript('src/features/local-voice-agent/audio.js');
+      appendScript('src/features/local-voice-agent/index.js');
+      appendScript('src/features/local-voice-agent/lifecycle.js');
+
       document.open();
       document.write('<!doctype html>'+doc.documentElement.outerHTML);
       document.close();
