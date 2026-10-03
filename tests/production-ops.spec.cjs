@@ -18,7 +18,7 @@ test('Contract requirements upload UI and exact generation work', async ({page})
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
   await boot(page);await preview(page,'buyer','b-contract');
   await expect(page.getByRole('heading',{name:'Complete requirements'})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Upload payment evidence'})).toBeVisible();
+  await expect(page.locator('.p64-upload').first().getByRole('button',{name:'Upload payment evidence',exact:true})).toBeVisible();
   await expect(page.locator('input[type=file]').first()).toBeAttached();
   const demo=page.locator('.p620-preview-helper').getByRole('button',{name:'Complete Demo Requirements'});
   await expect(demo).toBeVisible();await demo.click();
