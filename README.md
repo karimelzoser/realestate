@@ -6,7 +6,7 @@ Persistent source repository for the PRENEURA Real Estate Operating System proto
 
 - Product: PRENEURA Real Estate OS
 - Stable standalone fallback: Rev 6.1.6
-- Modular online release: 6.2.0
+- Modular online release: 6.2.1
 - Main experience: Metro-style "How PRENEURA Works" system overview
 - Core operating model:
   - Buyer Direct / Broker / Sales Center entry
@@ -62,13 +62,14 @@ The root `index.html` keeps the stable application shell but replaces extracted 
 - `src/core/router.*` — OPEN direct preview vs ROLE-restricted navigation
 - `src/features/buyer-experience/` — bilingual AI Allocation Advisor, functional My Property, buyer examples and post-sale UI
 - `src/features/how-it-works/` — Metro system map and flow-route audit
+- `src/features/flow-preview/` — direct-preview fixtures and Contract demo completion helpers
 - `docs/MODULARIZATION.md` — safe migration plan for the remaining legacy domains
 
 ## Repository strategy
 
-- `main` — stable demo baseline
+- `main` — stable published demo
 - `develop` — integration branch
-- feature/refactor branches — focused work reviewed before integration
+- feature/refactor/fix branches — focused work reviewed before integration
 
 Future changes should be made in focused branches / pull requests so the current working demo remains recoverable.
 
@@ -77,7 +78,7 @@ Future changes should be made in focused branches / pull requests so the current
 - PRENEURA is authoritative for queue, exact-unit inventory, locks, payment state, contract state, and audit.
 - AI can explain, recommend, navigate, highlight, and perform safe actions.
 - AI must not silently commit legal/financial actions such as unit lock or final contract signature.
-- Direct preview from the system map may bypass demo prerequisites.
+- Direct preview from the system map may prepare deterministic demo prerequisites so the destination page can be fully tested.
 - Entering via a real role must preserve that role's permissions and workflow restrictions.
 
 See `docs/PRODUCT_ARCHITECTURE.md` and `docs/WORKING_RULES.md` for the detailed operating model.

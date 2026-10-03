@@ -27,6 +27,7 @@ jobs:
           node scripts/validate-role-policy.mjs
           node scripts/validate-state.mjs
           node scripts/validate-release.mjs
+          node scripts/validate-flow-preview.mjs
       - name: Build static site artifact
         run: |
           mkdir -p _site

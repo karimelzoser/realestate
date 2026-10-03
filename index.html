@@ -58,6 +58,19 @@
         (removeIds||[]).forEach(id=>doc.getElementById(id)?.remove());
       }
 
+      function appendStyle(href){
+        const link=doc.createElement('link');
+        link.rel='stylesheet';
+        link.href='../'+href;
+        doc.head.appendChild(link);
+      }
+
+      function appendScript(src){
+        const script=doc.createElement('script');
+        script.src='../'+src;
+        doc.body.appendChild(script);
+      }
+
       insertScriptBefore(
         'rev607-horizontal-scroll-flow-script',
         'src/core/product-model.js'
@@ -120,6 +133,10 @@
         'src/features/how-it-works/index.js',
         ['rev616-metro-final-script']
       );
+
+      appendStyle('src/features/flow-preview/index.css');
+      appendScript('src/features/flow-preview/index.js');
+      appendScript('src/features/flow-preview/contract.js');
 
       document.open();
       document.write('<!doctype html>'+doc.documentElement.outerHTML);
