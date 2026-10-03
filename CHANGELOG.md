@@ -1,5 +1,22 @@
 # Changelog
 
+## 6.4.0 — Production operations & management intelligence
+
+- Upgraded local Egyptian speech output to the Egyptian Qwen3-TTS 1.7B fine-tune with `egyptian_speaker`; retained the local Qwen3 allocation brain and Arabic ASR.
+- Reworked the agent prompt toward polite, natural Cairo Egyptian with shorter live conversational turns and less formal MSA phrasing.
+- Added an explicit Contract Requirements workspace with payment evidence upload, required-document uploads, readiness status and direct-preview helper.
+- Hardened **Generate Exact Contract** with a deterministic transaction snapshot/hash fallback.
+- Allocator now surfaces the authoritative next OFFLINE / Sales Center buyer from the shared queue instead of starting empty.
+- Added Transaction Operator Exact Contract Execution Desk: generate, print, upload returned signed/fingerprinted contract, biometric receipt and verification/completion.
+- My Property now shows paid percentage, total paid, total remaining, overdue/missed installments, next amount due and per-installment paid/remaining balance.
+- Rebuilt Manager Overview as an executive project dashboard with inventory/sell-through, buyer funnel, partner metrics, collections/outstanding balances, live transaction and decision signals.
+- Added Project Data & Uploads center for master plan, unit inventory, pricing, BIM/floor plans, buyers, brokers, payment schedules and documents.
+- Rebuilt phase setup around exact physical units: choose whole buildings/types or individual units, then set phase-specific prices and approval state.
+- Added searchable 360° buyer management showing identity, source, EOI, queue, current stage, transaction/contract state and last handler.
+- Added broker company/agent performance metrics for buyers, EOI paid/eligible, sales/commissionable outcomes and commission values.
+- Rebuilt audit view to expose role, actual user/system actor, buyer association, exact step/event and attention status.
+- Added dedicated 6.4 static validation and Chromium browser QA for these production workflows.
+
 ## 6.3.0 — Local Egyptian live allocation agent
 
 - Replaced the browser-only allocation voice experience with a modular local Egyptian Arabic voice-agent layer for online allocation.

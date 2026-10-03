@@ -18,15 +18,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/configure-pages@v5
       - name: Validate release
         run: |
+          node --check src/features/local-voice-agent/config64.js
           node --check src/features/local-voice-agent/engine.js
           node --check src/features/local-voice-agent/audio.js
           node --check src/features/local-voice-agent/index.js
           node --check src/features/local-voice-agent/lifecycle.js
-          python3 -m py_compile local_voice_agent/server.py
+          node --check src/features/production-ops/index.js
+          python3 -m py_compile local_voice_agent/server.py local_voice_agent/server64.py
           node scripts/validate.mjs
           node scripts/validate-model.mjs
           node scripts/validate-role-policy.mjs
@@ -34,6 +36,7 @@ jobs:
           node scripts/validate-release.mjs
           node scripts/validate-flow-preview.mjs
           node scripts/validate-local-voice-agent.mjs
+          node scripts/validate-production-ops.mjs
       - name: Build static site artifact
         run: |
           mkdir -p _site
