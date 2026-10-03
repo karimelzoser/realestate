@@ -34,6 +34,7 @@ jobs:
           node --check src/features/presentation/voice-polish.js
           node --check src/features/lock-grace/index.js
           node --check src/features/lock-grace/operator-inbox.js
+          node --check scripts/validate-6.7-consistency.mjs
           python3 -m py_compile local_voice_agent/server.py local_voice_agent/server64.py local_voice_agent/server67.py
           node scripts/validate.mjs
           node scripts/validate-model.mjs
@@ -46,6 +47,7 @@ jobs:
           node scripts/validate-manager-live.mjs
           node scripts/validate-presentation.mjs
           node scripts/validate-lock-grace.mjs
+          node scripts/validate-6.7-consistency.mjs
       - name: Build static site artifact
         run: |
           mkdir -p _site
