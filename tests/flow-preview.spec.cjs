@@ -89,7 +89,7 @@ test('Contract direct preview completes requirements, generates, signs and conti
   await expect(page.locator('.p620-preview-helper')).toBeVisible();
   await expect(page.getByText('Prepare a complete contract demo')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Complete Demo Requirements' }).click();
+  await page.locator('.p620-preview-helper').getByRole('button', { name: 'Complete Demo Requirements' }).click();
   await expect(page.getByText('Transaction requirements are ready')).toBeVisible();
   const readiness = await page.evaluate(() => f6ContractReadyChecks().map(x => ({name:x.name,ok:x.ok})));
   expect(readiness.every(x => x.ok)).toBeTruthy();

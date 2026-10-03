@@ -1,74 +1,59 @@
-# PRENEURA Local Egyptian Voice Allocation Agent
+# PRENEURA Local Egyptian Live Allocation Agent — 6.4
 
-This is the fully local speech/agent runtime for the **Online Allocation** journey in PRENEURA Real Estate OS. The browser remains authoritative for buyer eligibility, queue state, live inventory, exact-unit state, price, lock, transaction and contract truth. The local AI only receives decision-relevant context and may explain, rank, compare, navigate, scroll and highlight.
+This service is the local speech + AI runtime for **Online Allocation**. PRENEURA remains authoritative for queue order, buyer eligibility, live inventory, exact-unit locks, payment, contract and audit. The AI may explain, rank, compare, navigate, scroll and highlight; it cannot silently execute irreversible transaction actions.
 
-## Default model stack
+## Quality-first local stack
 
-| Layer | Default | Role |
+| Layer | Default | Purpose |
 | --- | --- | --- |
-| Speech → text | `CohereLabs/cohere-transcribe-arabic-07-2026` | Arabic/dialect ASR with local Transformers inference. |
-| ASR fallback | `dev-ahmedhany/whisper-large-v3-turbo-arabic-ft-ct2-int8` | Public CTranslate2/int8 fallback when the primary gated model is unavailable. |
-| Agent brain | `Qwen/Qwen3-30B-A3B-Instruct-2507` | Local multilingual instruction/tool-use model through an OpenAI-compatible endpoint. |
-| Egyptian voice | `mohammedaly22/VoiceTut-TTS` | Egyptian-first TTS, Arabic/English code-switching and streaming. |
-| Default speaker | `Omnia` | Female Egyptian built-in voice. Change with `PRENEURA_TTS_SPEAKER`. |
+| Speech → text | `CohereLabs/cohere-transcribe-arabic-07-2026` | Arabic/dialect ASR. |
+| ASR fallback | `dev-ahmedhany/whisper-large-v3-turbo-arabic-ft-ct2-int8` | Public local fallback. |
+| Agent brain | `Qwen/Qwen3-30B-A3B-Instruct-2507` | Multilingual local reasoning + safe UI tools through an OpenAI-compatible runner. |
+| Egyptian voice | `itshamdi404/Egy_Arabic_Qwen3-TTS-12Hz-1.7B-Base` | Egyptian Arabic Qwen3-TTS fine-tune. |
+| Speaker | `egyptian_speaker` | Egyptian custom voice embedded in that model. |
 
-The stack is configurable. `PRENEURA_LLM_BASE_URL` can point to vLLM, llama.cpp, LM Studio or another **OpenAI-compatible local** server.
+The 6.4 agent prompt is deliberately **Egyptian, polite and conversational**: short Cairo-Egyptian phrases, natural code switching, no stiff MSA sales script, and no over-familiar slang. The assistant speaks about the exact UI element currently on screen and advances one decision at a time.
 
 ## Buyer experience
 
-When an online allocation session starts, the agent introduces itself in Egyptian Arabic and guides:
+When Online Allocation begins, the advisor can guide:
 
 `Allocation Day → Master Plan → Building → Floor → Exact Unit`
 
-It can:
+It reads PRENEURA's authoritative buyer context and currently available units, ranks the best matches by eligibility/budget/rooms/area/floor/view/building, and can:
 
-- read currently available PRENEURA units instead of inventing inventory;
-- rank the best units using eligibility, budget, rooms, area, floor, view and building preferences;
-- show the top three recommendations with reasons;
-- speak about the current screen in Egyptian Arabic;
-- automatically scroll to and highlight the item it is discussing;
-- safely open a recommended building/floor during the guided tour;
+- speak naturally in Egyptian Arabic;
+- listen hands-free with VAD and barge-in;
+- show the top recommendations with reasons;
+- navigate to Master Plan / Building / Floor / Unit pages;
+- auto-scroll and highlight what it is talking about;
 - compare exact units and explain trade-offs;
-- listen hands-free with microphone VAD and barge-in, so the buyer can interrupt it while it speaks;
-- fall back to a deterministic in-browser Egyptian intent engine if the local model service is unavailable.
+- open safe reversible choices during the guided tour;
+- stop at final unit-lock confirmation and let the buyer decide.
 
-It **never** silently locks a unit, confirms payment, signs a contract, overrides price or changes queue priority. Those remain explicit buyer/authorized-role decisions.
+It **never** silently locks a unit, confirms payment, signs a legal contract, changes price or alters queue priority.
 
-## 1. Prerequisites
+## Installation
 
-Install Python 3.11/3.12, `ffmpeg`, Git and, for the full-quality profile, an NVIDIA CUDA environment.
+Python 3.11/3.12, `ffmpeg`, Git and an NVIDIA CUDA environment are recommended for the full profile.
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate            # Linux/macOS
-# .venv\Scripts\Activate.ps1         # Windows PowerShell
+source .venv/bin/activate
 python -m pip install --upgrade pip
-```
-
-Install the PyTorch build appropriate for your GPU/OS first, then:
-
-```bash
+# Install the PyTorch build appropriate for your GPU first.
 pip install -r local_voice_agent/requirements.txt
 ```
 
-## 2. Enable the primary Arabic ASR
-
-The Cohere Arabic ASR repo is downloadable from Hugging Face but requires accepting its access conditions once.
-
-1. Open `CohereLabs/cohere-transcribe-arabic-07-2026` on Hugging Face and accept the conditions.
-2. Authenticate locally:
+For the primary Arabic ASR, accept the Hugging Face model conditions once and authenticate:
 
 ```bash
 hf auth login
 ```
 
-If this is not done, PRENEURA automatically tries the public Faster-Whisper Arabic fallback.
+## Local Qwen agent brain
 
-## 3. Start the local Qwen agent brain
-
-### Best-quality profile
-
-With vLLM installed in its own environment/process:
+Run the local reasoning model through vLLM or another OpenAI-compatible server, for example:
 
 ```bash
 vllm serve Qwen/Qwen3-30B-A3B-Instruct-2507 \
@@ -77,31 +62,32 @@ vllm serve Qwen/Qwen3-30B-A3B-Instruct-2507 \
   --api-key local
 ```
 
-The voice service calls `http://127.0.0.1:8000/v1/chat/completions`.
+A smaller multilingual Qwen model can be used on smaller hardware by changing `PRENEURA_LLM_MODEL` and `PRENEURA_LLM_BASE_URL`. Unit ranking and safety boundaries remain deterministic in PRENEURA even when the LLM is unavailable.
 
-### Smaller-machine profile
+## Start the voice service
 
-Run a smaller multilingual Qwen model in any OpenAI-compatible local runner and set:
-
-```bash
-export PRENEURA_LLM_MODEL="your-local-model-name"
-export PRENEURA_LLM_BASE_URL="http://127.0.0.1:8000/v1"
-```
-
-The browser's deterministic unit ranking and safety boundary still work when the LLM server is offline.
-
-## 4. Start the voice service
-
-Optional configuration:
+Copy the example configuration if desired:
 
 ```bash
 cp local_voice_agent/.env.example .env
 ```
 
-Then:
+Linux:
 
 ```bash
-uvicorn local_voice_agent.server:app --host 127.0.0.1 --port 8765
+bash local_voice_agent/start_linux.sh
+```
+
+Windows PowerShell:
+
+```powershell
+.\local_voice_agent\start_windows.ps1
+```
+
+Direct command:
+
+```bash
+uvicorn local_voice_agent.server64:app --host 127.0.0.1 --port 8765
 ```
 
 Health check:
@@ -110,15 +96,9 @@ Health check:
 curl http://127.0.0.1:8765/health
 ```
 
-The web app probes `http://127.0.0.1:8765`. When found, the advisor badge changes to **LOCAL AI • متصل**.
+The browser probes `http://127.0.0.1:8765`. When connected the advisor reports **LOCAL AI • متصل**. GitHub Pages can host the frontend but cannot host the local GPU models; the full-quality voice requires this service on the buyer's machine or a private PRENEURA inference server reachable by the frontend.
 
-## Browser behavior
-
-For microphone capture, use `http://localhost`, `http://127.0.0.1` or HTTPS. The browser requests microphone permission. Audio autoplay policies may require an initial buyer click; the allocation navigation wrapper primes Web Audio during the user's allocation navigation click so the greeting can start as early as the browser permits.
-
-GitHub Pages cannot host GPU models. The published demo connects to this service when the visitor runs it locally. Without it, the UI remains functional through deterministic/browser fallbacks.
-
-## API / WebSocket
+## API
 
 - `GET /health`
 - `POST /v1/agent`
@@ -126,8 +106,8 @@ GitHub Pages cannot host GPU models. The published demo connects to this service
 - `POST /v1/tts`
 - `WS /ws/voice`
 
-The WebSocket accepts `text`, `audio` and `tts` turns. VoiceTut audio is returned as streaming Float32 PCM chunks so playback can begin before the full response is synthesized.
+The WebSocket supports text turns, microphone audio, actions and phrase-streamed Float32 PCM playback for lower perceived latency.
 
-## Safety boundary
+## Commercial deployment note
 
-Every model-produced action is sanitized. Allowed actions are navigation, scrolling/highlighting, focusing an inventory unit, showing recommendations and requesting that the UI expose the lock-confirmation control. The LLM cannot turn a recommendation into an authoritative unit lock, payment confirmation, legal signature, price override or queue override.
+Before production rollout, pin model revisions, review all third-party model licenses, run Arabic/Egyptian acceptance testing with the developer's target audience, and benchmark the selected GPU for first-audio latency. Keep inference private to the developer/PRENEURA environment; never expose model-control secrets in the public frontend.

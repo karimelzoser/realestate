@@ -23,127 +23,43 @@
       if(!response.ok) throw new Error('Could not load app/index.html');
       const html=await response.text();
       const doc=new DOMParser().parseFromString(html,'text/html');
-
       let base=doc.querySelector('base');
-      if(!base){
-        base=doc.createElement('base');
-        doc.head.prepend(base);
-      }
+      if(!base){base=doc.createElement('base');doc.head.prepend(base)}
       base.setAttribute('href','app/');
+      function insertScriptBefore(anchorId,src){const anchor=doc.getElementById(anchorId);if(!anchor)throw new Error('Missing script anchor: '+anchorId);const script=doc.createElement('script');script.src='../'+src;anchor.parentNode.insertBefore(script,anchor)}
+      function replaceStyle(anchorId,href,removeIds){const anchor=doc.getElementById(anchorId);if(!anchor)throw new Error('Missing style anchor: '+anchorId);const link=doc.createElement('link');link.rel='stylesheet';link.href='../'+href;anchor.replaceWith(link);(removeIds||[]).forEach(id=>doc.getElementById(id)?.remove())}
+      function replaceScript(anchorId,src,removeIds){const anchor=doc.getElementById(anchorId);if(!anchor)throw new Error('Missing script anchor: '+anchorId);const script=doc.createElement('script');script.src='../'+src;anchor.replaceWith(script);(removeIds||[]).forEach(id=>doc.getElementById(id)?.remove())}
+      function appendStyle(href){const link=doc.createElement('link');link.rel='stylesheet';link.href='../'+href;doc.head.appendChild(link)}
+      function appendScript(src){const script=doc.createElement('script');script.src='../'+src;doc.body.appendChild(script)}
 
-      function insertScriptBefore(anchorId,src){
-        const anchor=doc.getElementById(anchorId);
-        if(!anchor) throw new Error('Missing script anchor: '+anchorId);
-        const script=doc.createElement('script');
-        script.src='../'+src;
-        anchor.parentNode.insertBefore(script,anchor);
-      }
-
-      function replaceStyle(anchorId,href,removeIds){
-        const anchor=doc.getElementById(anchorId);
-        if(!anchor) throw new Error('Missing style anchor: '+anchorId);
-        const link=doc.createElement('link');
-        link.rel='stylesheet';
-        link.href='../'+href;
-        anchor.replaceWith(link);
-        (removeIds||[]).forEach(id=>doc.getElementById(id)?.remove());
-      }
-
-      function replaceScript(anchorId,src,removeIds){
-        const anchor=doc.getElementById(anchorId);
-        if(!anchor) throw new Error('Missing script anchor: '+anchorId);
-        const script=doc.createElement('script');
-        script.src='../'+src;
-        anchor.replaceWith(script);
-        (removeIds||[]).forEach(id=>doc.getElementById(id)?.remove());
-      }
-
-      function appendStyle(href){
-        const link=doc.createElement('link');
-        link.rel='stylesheet';
-        link.href='../'+href;
-        doc.head.appendChild(link);
-      }
-
-      function appendScript(src){
-        const script=doc.createElement('script');
-        script.src='../'+src;
-        doc.body.appendChild(script);
-      }
-
-      insertScriptBefore(
-        'rev607-horizontal-scroll-flow-script',
-        'src/core/product-model.js'
-      );
-      insertScriptBefore(
-        'rev607-horizontal-scroll-flow-script',
-        'src/core/role-policy.js'
-      );
-      insertScriptBefore(
-        'rev607-horizontal-scroll-flow-script',
-        'src/core/state.js'
-      );
-
-      replaceStyle(
-        'rev607-horizontal-scroll-flow-style',
-        'src/features/live-allocation/index.css',
-        ['rev608-readability-scroll-polish']
-      );
-      replaceScript(
-        'rev607-horizontal-scroll-flow-script',
-        'src/features/live-allocation/index.js',
-        ['rev608-scroll-controls-script']
-      );
-
-      replaceStyle(
-        'rev609-click-label-home-fix-style',
-        'src/core/flow-navigation.css'
-      );
-      replaceScript(
-        'rev611-stable-home-navigation-script',
-        'src/core/flow-navigation.js'
-      );
-      replaceStyle(
-        'rev612-flow-preview-mode-style',
-        'src/core/router.css'
-      );
-      replaceScript(
-        'rev612-flow-preview-mode-script',
-        'src/core/router.js'
-      );
-
-      replaceStyle(
-        'rev613-role-clarity-voice-advisor-style',
-        'src/features/buyer-experience/index.css',
-        ['rev614-page-audit-myproperty-bilingual-ai-style']
-      );
-      replaceScript(
-        'rev613-role-clarity-voice-advisor-script',
-        'src/features/buyer-experience/index.js',
-        ['rev614-page-audit-myproperty-bilingual-ai-script']
-      );
-
-      replaceStyle(
-        'rev615-flow-page-audit-style',
-        'src/features/how-it-works/index.css',
-        ['rev616-metro-final-style']
-      );
-      replaceScript(
-        'rev615-flow-page-audit-script',
-        'src/features/how-it-works/index.js',
-        ['rev616-metro-final-script']
-      );
-
+      insertScriptBefore('rev607-horizontal-scroll-flow-script','src/core/product-model.js');
+      insertScriptBefore('rev607-horizontal-scroll-flow-script','src/core/role-policy.js');
+      insertScriptBefore('rev607-horizontal-scroll-flow-script','src/core/state.js');
+      replaceStyle('rev607-horizontal-scroll-flow-style','src/features/live-allocation/index.css',['rev608-readability-scroll-polish']);
+      replaceScript('rev607-horizontal-scroll-flow-script','src/features/live-allocation/index.js',['rev608-scroll-controls-script']);
+      replaceStyle('rev609-click-label-home-fix-style','src/core/flow-navigation.css');
+      replaceScript('rev611-stable-home-navigation-script','src/core/flow-navigation.js');
+      replaceStyle('rev612-flow-preview-mode-style','src/core/router.css');
+      replaceScript('rev612-flow-preview-mode-script','src/core/router.js');
+      replaceStyle('rev613-role-clarity-voice-advisor-style','src/features/buyer-experience/index.css',['rev614-page-audit-myproperty-bilingual-ai-style']);
+      replaceScript('rev613-role-clarity-voice-advisor-script','src/features/buyer-experience/index.js',['rev614-page-audit-myproperty-bilingual-ai-script']);
+      replaceStyle('rev615-flow-page-audit-style','src/features/how-it-works/index.css',['rev616-metro-final-style']);
+      replaceScript('rev615-flow-page-audit-script','src/features/how-it-works/index.js',['rev616-metro-final-script']);
       appendStyle('src/features/flow-preview/index.css');
       appendScript('src/features/flow-preview/index.js');
       appendScript('src/features/flow-preview/contract.js');
 
-      // 6.3 local Egyptian voice agent loads last so it sees the final router/state facade.
+      // Local Egyptian live allocation agent.
       appendStyle('src/features/local-voice-agent/index.css');
       appendScript('src/features/local-voice-agent/engine.js');
+      appendScript('src/features/local-voice-agent/config64.js');
       appendScript('src/features/local-voice-agent/audio.js');
       appendScript('src/features/local-voice-agent/index.js');
       appendScript('src/features/local-voice-agent/lifecycle.js');
+
+      // 6.4 production operations loads last intentionally: it hardens final page behavior.
+      appendStyle('src/features/production-ops/index.css');
+      appendScript('src/features/production-ops/index.js');
 
       document.open();
       document.write('<!doctype html>'+doc.documentElement.outerHTML);
