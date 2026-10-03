@@ -6,6 +6,7 @@ const entry=read('index.html');
 const engine=read('src/features/local-voice-agent/engine.js');
 const audio=read('src/features/local-voice-agent/audio.js');
 const controller=read('src/features/local-voice-agent/index.js');
+const lifecycle=read('src/features/local-voice-agent/lifecycle.js');
 const css=read('src/features/local-voice-agent/index.css');
 const server=read('local_voice_agent/server.py');
 const model=read('src/core/product-model.js');
@@ -17,15 +18,18 @@ for(const asset of [
   'src/features/local-voice-agent/index.css',
   'src/features/local-voice-agent/engine.js',
   'src/features/local-voice-agent/audio.js',
-  'src/features/local-voice-agent/index.js'
+  'src/features/local-voice-agent/index.js',
+  'src/features/local-voice-agent/lifecycle.js'
 ]) must(entry,asset,'Root entry does not load '+asset);
 
 for(const marker of ['normalizeUnit','rank','focusUnit','safeClick','IRREVERSIBLE','available_units']) must(engine,marker,'Voice engine missing '+marker);
 for(const marker of ['startLive','bargeInThreshold','vadLoop','streamTts','audio_chunk','sendAudio','prime']) must(audio,marker,'Live audio layer missing '+marker);
 for(const marker of ['PRE.voiceAgent','request_lock_confirmation','autoAdvance','p621VoiceAgent','أفضل المتاح ليك دلوقتي']) must(controller,marker,'Voice controller missing '+marker);
 for(const page of ['b-allocation-day','b-site','b-building','b-floor','b-unit']) must(controller,"'"+page+"'",'Voice journey missing '+page);
+for(const marker of ['resetOnEntry','userTouched=false','p621EntryGuard']) must(lifecycle,marker,'Voice lifecycle guard missing '+marker);
 mustNot(controller,'new MutationObserver','Local voice feature must not add a broad MutationObserver');
 mustNot(audio,'new MutationObserver','Audio feature must not add a broad MutationObserver');
+mustNot(lifecycle,'new MutationObserver','Voice lifecycle feature must not add a broad MutationObserver');
 
 for(const marker of [
   'CohereLabs/cohere-transcribe-arabic-07-2026',
@@ -53,4 +57,5 @@ console.log('PRENEURA local Egyptian voice agent validated');
 console.log('- fully local Arabic ASR / agent / Egyptian TTS stack declared');
 console.log('- authoritative inventory recommendation context present');
 console.log('- live VAD, barge-in, scrolling and highlighting present');
+console.log('- first-entry guided tour survives the navigation click');
 console.log('- irreversible actions remain confirmation-gated');
