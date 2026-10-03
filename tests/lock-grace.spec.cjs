@@ -47,10 +47,14 @@ test('online lock gets short grace, buyer requests 24h and Transaction Operator 
   await page.getByRole('button',{name:'Request 24h Extended Grace'}).click();
   await expect(root).toContainText('24H EXTENSION REQUESTED');
 
+  // OPEN preview may display another deterministic transaction. The shared
+  // Transaction Operator grace inbox must still surface this buyer's request.
   await preview(page,'finance','t-inbox');
+  await expect(page.locator('#pageRoot')).toContainText('GRACE DECISION INBOX');
+  await expect(page.locator('#pageRoot')).toContainText('Online Grace Buyer');
   await expect(page.locator('#pageRoot')).toContainText('Approve 24h Extension');
   await page.getByRole('button',{name:'Approve 24h Extension'}).click();
-  await expect(page.locator('#pageRoot')).toContainText('24H EXTENDED GRACE');
+  await expect(page.locator('#pageRoot')).toContainText('APPROVED 24H');
   const snap=await page.evaluate(()=>p67GraceSnapshot());
   const rec=snap.records.find(x=>x.transaction==='TX-GRACE-ONLINE');
   expect(rec.status).toBe('EXTENDED_24H');
@@ -70,10 +74,12 @@ test('offline buyer can receive a 24h paperwork exception from Transaction Opera
   });
   await preview(page,'finance','t-readiness');
   const root=page.locator('#pageRoot');
-  await expect(root).toContainText('SHORT HANDOFF GRACE');
+  await expect(root).toContainText('GRACE DECISION INBOX');
+  await expect(root).toContainText('Offline Grace Buyer');
+  await expect(root).toContainText('Grant 24h Paperwork Exception');
   page.once('dialog',d=>d.accept('Buyer must return with the remaining signed paperwork.'));
   await page.getByRole('button',{name:'Grant 24h Paperwork Exception'}).click();
-  await expect(root).toContainText('24H EXTENDED GRACE');
+  await expect(root).toContainText('APPROVED 24H');
   const rec=await page.evaluate(()=>p67GraceSnapshot().records.find(x=>x.transaction==='TX-GRACE-OFFLINE'));
   expect(rec.status).toBe('EXTENDED_24H');
   expect(rec.request.requestedBy).toContain('Transaction Operator');
