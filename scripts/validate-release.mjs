@@ -3,6 +3,7 @@ import fs from 'node:fs';
 const read=p=>fs.readFileSync(p,'utf8');
 const fail=[];
 const stable=read('app/index.html');
+const entry=read('index.html');
 const model=read('src/core/product-model.js');
 const roles=read('src/core/role-policy.js');
 const router=read('src/core/router.js');
@@ -10,8 +11,12 @@ const flowJs=read('src/features/how-it-works/index.js');
 const flowCss=read('src/features/how-it-works/index.css');
 const queueJs=read('src/features/live-allocation/index.js');
 const buyerJs=read('src/features/buyer-experience/index.js');
+const englishVoice=read('src/features/local-voice-agent/english-only.js');
+const englishServer=read('local_voice_agent/server67.py');
+const grace=read('src/features/lock-grace/index.js');
 
 function must(text,needle,label){ if(!text.includes(needle)) fail.push(label||('Missing '+needle)); }
+function mustNot(text,needle,label){ if(text.includes(needle)) fail.push(label||('Unexpected '+needle)); }
 
 for(const page of ['b-browse','br-dashboard','r-checkin','m-home','b-eoi','b-allocation-day','m-allocation-live','a-desk','b-site','b-building','b-floor','b-unit','a-handoff','t-inbox','b-contract','b-properties']){
   if(!stable.includes("'"+page+"'")&&!stable.includes('"'+page+'"')) fail.push('Stable app missing routed page '+page);
@@ -32,8 +37,17 @@ must(roles,'opts.preview===true','Role policy must allow explicit preview bypass
 must(roles,'isDelegatedBrokerBuyerPage','Delegated Broker rules missing');
 
 for(const marker of ["P['b-properties']",'window.p614OpenProperty','window.p614PropertyTab','window.p614ShowDoc','installments','documents','updates']) must(buyerJs,marker,'My Property missing '+marker);
-for(const marker of ['PRENEURA_AI_ENDPOINT','ar-EG','SpeechRecognition','webkitSpeechRecognition','compare','highlight','navigate']) must(buyerJs,marker,'AI advisor missing '+marker);
-if(!/[\u0600-\u06ff]/.test(buyerJs)) fail.push('AI advisor does not contain Arabic copy');
+
+// 6.7 active allocation advisor contract. Older multilingual source remains in the
+// repository for future re-enablement, but the buyer-facing layer is English-only.
+for(const marker of ['Live Allocation Advisor','English live guidance','Best available now',"c.language='en-US'","u.lang='en-US'",'Final lock and signing stay under your control','Master Plan']) must(englishVoice,marker,'Active English advisor missing '+marker);
+for(const marker of ['English only for this release','Never answer in Arabic','_transcribe_english','_run_agent_english']) must(englishServer,marker,'Active English local runtime missing '+marker);
+mustNot(englishVoice,"lang='ar-EG'",'Active English advisor must not set Arabic speech output');
+const oldVoicePos=entry.indexOf("src/features/local-voice-agent/index.js");
+const englishVoicePos=entry.indexOf("src/features/local-voice-agent/english-only.js");
+if(oldVoicePos<0||englishVoicePos<0||englishVoicePos<=oldVoicePos) fail.push('English-only advisor must load after the retained legacy voice foundation');
+
+for(const marker of ['shortMinutes:15','extendedHours:24','Short Handoff Grace','24h Extended Grace','Online buyer extension','Sales Center paperwork exception']) must(grace,marker,'Two-stage unit-lock grace missing '+marker);
 
 must(flowCss,'width:3340px','Metro canvas width must support full horizontal flow');
 must(flowCss,'.p616-property{left:3080px;top:202px;width:220px}','My Property must remain on the horizontal completion row');
@@ -52,5 +66,6 @@ console.log('- core routes present');
 console.log('- shared queue / assistance invariants');
 console.log('- OPEN vs ROLE behavior');
 console.log('- My Property functional markers');
-console.log('- bilingual AI advisor contract');
+console.log('- active English allocation advisor contract');
+console.log('- two-stage unit-lock grace contract');
 console.log('- Metro geometry / readability');
