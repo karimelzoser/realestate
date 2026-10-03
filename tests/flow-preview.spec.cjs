@@ -30,7 +30,7 @@ async function openPreview(page, role, target) {
     if (typeof p612OpenFlowPage !== 'function') throw new Error('Direct preview router is unavailable');
     p612OpenFlowPage(role, target);
   }, { role, target });
-  await page.waitForFunction(target => window.app && app.page === target, target);
+  await page.waitForFunction(target => window.app && app.page === target, target, { timeout: 10000 });
   await page.waitForSelector('#pageRoot');
   await expect.poll(async () => (await page.locator('#pageRoot').innerText()).trim().length).toBeGreaterThan(20);
 }
@@ -66,6 +66,7 @@ test('How It Works is clean, horizontally scrollable and every OPEN destination 
     {label:'Audit',role:'manager',page:'m-replay'}
   ]) if(!seen.has(x.page)){seen.add(x.page);direct.push({...x,mode:'OPEN'});}
 
+  const advisorPreviewPages = new Set(['b-allocation-day','b-site','b-building','b-floor','b-unit']);
   for (const row of direct) {
     await backToOverview(page);
     await openPreview(page, row.role, row.page);
@@ -75,6 +76,13 @@ test('How It Works is clean, horizontally scrollable and every OPEN destination 
     if (row.page === 'a-handoff') expect(root).not.toContain('No active selected-unit lock yet');
     if (row.page === 't-inbox') expect(root).toContain('TX-PREVIEW-234');
     if (row.page === 'r-checkin') expect(root).toMatch(/Mona Adel|ELIGIBLE|Queue Reception/i);
+
+    /* OPEN means exact destination preview. The live allocation advisor may
+       render here, but it must not auto-advance to another allocation page. */
+    if (advisorPreviewPages.has(row.page)) {
+      await page.waitForTimeout(950);
+      expect(await page.evaluate(() => app.page)).toBe(row.page);
+    }
   }
 
   expect(errors).toEqual([]);
@@ -82,7 +90,7 @@ test('How It Works is clean, horizontally scrollable and every OPEN destination 
 
 test('Contract direct preview completes requirements, generates, signs and continues to My Property', async ({ page }) => {
   const errors = [];
-  page.on('pageerror', e => errors.push(String(e)));
+  page.on('pageerror',e=>errors.push(String(e)));
   await loadOverview(page);
   await openPreview(page, 'buyer', 'b-contract');
 
@@ -122,7 +130,7 @@ test('Contract direct preview completes requirements, generates, signs and conti
 
 test('My Property cards, installments, contract, documents and support all open', async ({ page }) => {
   const errors = [];
-  page.on('pageerror', e => errors.push(String(e)));
+  page.on('pageerror',e=>errors.push(String(e)));
   await loadOverview(page);
   await openPreview(page, 'buyer', 'b-properties');
 
