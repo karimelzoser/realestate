@@ -44,18 +44,30 @@
     if(typeof render==='function')render();
   };
 
-  function injectPreviewSignatureAction(html){
-    if(!app.__flowDirectPreview||app.page!=='b-contract'||!app.fx?.contract?.otpVerified)return html;
-    if(html.indexOf('p620CaptureDemoSignature')>=0)return html;
-    var needle='<button class="btn" onclick="r52ClearSignature()">Clear Signature</button>';
-    if(html.indexOf(needle)<0)return html;
-    return html.replace(needle,needle+'<button class="btn" onclick="p620CaptureDemoSignature()">Use Demo Signature</button>');
+  function ensurePreviewSignatureAction(){
+    if(!app.__flowDirectPreview||app.page!=='b-contract'||!app.fx?.contract?.otpVerified)return;
+    var canvas=document.getElementById('r52SignatureCanvas');
+    if(!canvas||document.getElementById('p620DemoSignatureBtn'))return;
+    var sigpad=canvas.closest('.r52-sigpad')||canvas.parentElement;
+    if(!sigpad)return;
+    var actions=sigpad.nextElementSibling;
+    if(!actions||!actions.classList||!actions.classList.contains('fx-actions')){
+      actions=document.createElement('div');
+      actions.className='fx-actions';
+      sigpad.insertAdjacentElement('afterend',actions);
+    }
+    var btn=document.createElement('button');
+    btn.type='button';
+    btn.id='p620DemoSignatureBtn';
+    btn.className='btn';
+    btn.textContent='Use Demo Signature';
+    btn.addEventListener('click',window.p620CaptureDemoSignature);
+    actions.appendChild(btn);
   }
 
-  if(window.P&&P['b-contract']&&typeof P['b-contract'].render==='function'){
-    var previewContractRender=P['b-contract'].render;
-    P['b-contract'].render=function(){
-      return injectPreviewSignatureAction(previewContractRender.apply(this,arguments));
-    };
-  }
+  // The contract page rerenders after Generate, OTP, biometric and helper actions.
+  // Observe those DOM changes and keep the preview-only helper available.
+  var observer=new MutationObserver(function(){ensurePreviewSignatureAction()});
+  observer.observe(document.documentElement,{childList:true,subtree:true});
+  setTimeout(ensurePreviewSignatureAction,0);
 })();
