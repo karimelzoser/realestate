@@ -5,4 +5,4 @@ if [[ ! -d .venv ]]; then python3 -m venv .venv; fi
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r local_voice_agent/requirements.txt
-exec python -m uvicorn local_voice_agent.server64:app --host 127.0.0.1 --port "${PRENEURA_VOICE_PORT:-8765}"
+exec python -m uvicorn local_voice_agent.server67:app --host 127.0.0.1 --port "${PRENEURA_VOICE_PORT:-8765}"

@@ -1,5 +1,20 @@
 # Changelog
 
+## 6.7.0 — English live allocation advisor & two-stage unit-lock grace
+
+- Switched the active Online Allocation voice experience to **English only** for the current release while keeping the underlying local-model architecture available for future multilingual re-enablement.
+- Added a dedicated English advisor UI with English speech fallback, live recommendations, guided Master Plan → Building → Floor → Exact Unit navigation, scrolling/highlighting and confirmation-gated unit locking.
+- Added `local_voice_agent/server67.py` with an English-only local-agent prompt and English Faster-Whisper ASR profile; Linux/Windows launchers now start the 6.7 runtime.
+- Preserved the core AI authority boundary: recommendations, navigation and comparison are allowed; exact-unit lock, payment confirmation and legal signing remain explicit human actions.
+- Added a **short exact-unit lock grace** immediately after allocation while responsibility hands off to Transaction Operations. Demo default: 15 minutes; configurable for new locks.
+- Added **Online 24-hour extension requests**: the buyer requests more time with a reason, and the Transaction Operator must explicitly approve or reject it.
+- Added **Offline / Sales Center 24-hour paperwork exceptions**: only the Transaction Operator can grant the exception when the buyer needs more time to complete physical paperwork.
+- Added live countdown, buyer, exact unit, lock reference, channel, status, request reason and decision visibility across Buyer, Allocator, Transaction Operator and Manager surfaces.
+- Added a shared **Transaction Operator Grace Decision Inbox** so pending extension requests remain visible even when the operator is currently viewing another transaction.
+- Added Manager Live Allocation grace control with current short/extended grace records, expiry state and configurable short-grace demo policy.
+- Added audit events for short-grace start, extension request, approval/rejection, Offline paperwork exception, grace completion, expiry and lock release.
+- Added static 6.7 validation and Chromium QA for English-only live allocation, confirmation-gated locks, Online extension approval, Offline exception handling and Manager visibility.
+
 ## 6.6.0 — Professional presentation release
 
 - Added a Manager Presentation Control with deterministic one-click scenarios for Normal Day, Queue Pressure, Unit Lock Conflict, Overdue Collections and Broker Performance.
