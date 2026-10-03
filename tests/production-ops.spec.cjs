@@ -99,7 +99,7 @@ test('Manager overview drills into project data, phase units, buyers, brokers an
   await expect(root).toContainText('EOI paid / eligible');
 
   await preview(page,'manager','m-replay');
-  await expect(root).toContainText('AUDIT & BUYER JOURNEY REPLAY');
+  await expect(root).toContainText(/AUDIT & BUYER JOURNEY REPLAY|LIVE BUYER JOURNEY AUDIT/i);
   await expect(root).toContainText(/Role|ALLOCATOR|MANAGER|System/i);
   expect(errors).toEqual([]);
 });

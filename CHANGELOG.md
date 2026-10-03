@@ -1,5 +1,18 @@
 # Changelog
 
+## 6.5.0 — Live allocation command center & buyer journey audit
+
+- Replaced the Manager Live Allocation demo-style view with an authoritative live command center reading the full active shared queue directly from PRENEURA state.
+- Removed the ten-row queue cap from the manager surface; every active token can be inspected with buyer ID, EOI, channel, priority, state, joined time, wait age, service assignment, exact unit, last role/user and last event.
+- Added live allocation KPIs for online/offline buyers, human-seat availability, configured online capacity, average/longest wait and active unit locks/reservations.
+- Added manager exceptions for long waits and capacity pressure, plus a live queue/allocation/unit-lock event feed.
+- Clarified the shared-queue service model: Online buyers use the AI allocation channel; Sales Center buyers use Human Allocator seats; priority truth remains shared.
+- Added 1.5-second live state refresh without requiring a full-page reload, with a manual refresh and auto-refresh toggle.
+- Rebuilt Buyer Journey Audit around a buyer selector/search and detailed multi-line event cards showing step, event type, role, actual user/actor, buyer, reference, original actor, timestamp and full details.
+- Added a strict distinction between RECORDED AUDIT historical events and CURRENT STATE authoritative snapshots reconstructed from buyer, queue, transaction, document, contract and property records.
+- Added audit-event enrichment so newly recorded events retain role/user/buyer/step metadata when available.
+- Added manager live static validation and Chromium QA for live queue state changes and multi-line buyer journeys.
+
 ## 6.4.0 — Production operations & management intelligence
 
 - Upgraded local Egyptian speech output to the Egyptian Qwen3-TTS 1.7B fine-tune with `egyptian_speaker`; retained the local Qwen3 allocation brain and Arabic ASR.
