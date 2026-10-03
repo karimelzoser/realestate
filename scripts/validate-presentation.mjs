@@ -5,8 +5,10 @@ const index=read('index.html');
 const js=read('src/features/presentation/index.js');
 const css=read('src/features/presentation/index.css');
 const voice=read('src/features/presentation/voice-polish.js');
+const english=read('src/features/local-voice-agent/english-only.js');
 const fail=[];
 function must(text,needle,label){if(!text.includes(needle))fail.push(label||('Missing '+needle));}
+function mustNot(text,needle,label){if(text.includes(needle))fail.push(label||('Unexpected '+needle));}
 
 must(index,"appendStyle('src/features/presentation/index.css')",'Presentation CSS not loaded');
 must(index,"appendScript('src/features/presentation/index.js')",'Presentation JS not loaded');
@@ -20,7 +22,12 @@ must(js,"Overdue Collections",'Collections presentation scenario missing');
 must(js,"Unit Lock Conflict",'Lock conflict scenario missing');
 must(css,'.p66-console','Presentation console styles missing');
 must(css,'.p66-decision','Decision room styles missing');
-must(voice,'BROWSER VOICE • جاهز للعرض','Professional browser voice fallback label missing');
+
+must(english,'BROWSER VOICE • READY','Active English browser voice fallback label missing');
+must(voice,'English live allocation advisor','Metro presentation English advisor copy missing');
+must(voice,'English live','Metro presentation English advisor tag missing');
+mustNot(voice,'جاهز للعرض','Presentation polish still contains the retired Arabic fallback label');
+mustNot(voice,'Local Egyptian AI','Presentation polish still describes the retired active Egyptian runtime');
 
 if(fail.length){console.error('PRENEURA presentation validation failed');fail.forEach(x=>console.error('- '+x));process.exit(1)}
 console.log('PRENEURA presentation release validated');
@@ -28,4 +35,4 @@ console.log('- deterministic reset');
 console.log('- five prepared operating scenarios');
 console.log('- manager decision room');
 console.log('- presentation-friendly audit terminology');
-console.log('- professional voice fallback label');
+console.log('- visible advisor labels match the active English-only 6.7 release');

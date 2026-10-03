@@ -2,7 +2,7 @@ name: Validate PRENEURA
 
 on:
   push:
-    branches: [main, develop, "feature/**", "refactor/**", "release/**"]
+    branches: [main, develop, "feature/**", "refactor/**", "fix/**", "release/**"]
   pull_request:
     branches: [main, develop]
 
@@ -38,6 +38,7 @@ jobs:
           node --check src/features/presentation/voice-polish.js
           node --check src/features/lock-grace/index.js
           node --check src/features/lock-grace/operator-inbox.js
+          node --check scripts/validate-6.7-consistency.mjs
           python3 -m py_compile local_voice_agent/server.py local_voice_agent/server64.py local_voice_agent/server67.py
       - name: Validate routes and assets
         run: node scripts/validate.mjs
@@ -61,6 +62,8 @@ jobs:
         run: node scripts/validate-presentation.mjs
       - name: Validate English advisor and unit-lock grace
         run: node scripts/validate-lock-grace.mjs
+      - name: Validate final 6.7 consistency
+        run: node scripts/validate-6.7-consistency.mjs
       - name: Install Chromium browser QA
         run: |
           npm install --no-save --package-lock=false @playwright/test@1.56.1
