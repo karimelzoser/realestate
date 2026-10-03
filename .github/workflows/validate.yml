@@ -24,6 +24,8 @@ jobs:
           node --check src/core/router.js
           node --check src/features/buyer-experience/index.js
           node --check src/features/how-it-works/index.js
+          node --check src/features/flow-preview/index.js
+          node --check src/features/flow-preview/contract.js
       - name: Validate routes and assets
         run: node scripts/validate.mjs
       - name: Validate canonical product model
@@ -34,3 +36,18 @@ jobs:
         run: node scripts/validate-state.mjs
       - name: Validate release UX and functional contract
         run: node scripts/validate-release.mjs
+      - name: Validate flow previews
+        run: node scripts/validate-flow-preview.mjs
+      - name: Install Chromium browser QA
+        run: |
+          npm install --no-save --package-lock=false @playwright/test@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Browser-test flow previews and purchase completion
+        env:
+          PRENEURA_BASE_URL: http://127.0.0.1:4173/
+        run: |
+          python3 -m http.server 4173 >/tmp/preneura-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID' EXIT
+          sleep 1
+          npx playwright test tests/flow-preview.spec.cjs --reporter=line

@@ -1,5 +1,18 @@
 # Changelog
 
+## 6.2.1 — Functional flow previews
+
+- Made every direct **OPEN** destination from How PRENEURA Works render with the demo context it needs instead of dead-ending on missing prerequisites.
+- Added deterministic preview fixtures for Building, Floor, Exact Unit, Queue Reception, Unit Lock / Handoff, Transaction Inbox and Contract & Sign.
+- Contract preview now creates an active exact-unit lock, confirms demo payment, verifies the required transaction documents and satisfies configured approval so **Generate Exact Contract** becomes available.
+- Added a preview-only **Complete Demo Requirements** action and made the sticky Complete requirements action perform the same preparation.
+- Preserved real **ROLE** workflow restrictions; preview fixtures are restored before entering a real role.
+- Added a deterministic **Use Demo Signature** action for OPEN preview while keeping the real drawn-signature canvas interactive.
+- Browser QA now exercises Contract generation, OTP, signature, biometric verification, final signature and continuation into My Property.
+- Browser QA also checks My Property cards, installments, signed contract viewer, documents and support actions.
+- Removed the requested explanatory chrome from How It Works while keeping the actual Metro flow and Manager controls.
+- Added focused top/left spacing around the Contract preview title, Buyer stage and live-example copy.
+
 ## 6.2.0 — Modular online release
 
 - Added canonical product model for roles, routes, allocation rules and action boundaries.
@@ -13,6 +26,7 @@
 - Increased Metro typography and spacing for easier reading while keeping horizontal scrolling.
 - Added release-level functional/visual contract validation.
 - Added GitHub Pages deployment for a public online demo.
+
 ## Rev 6.1.6 — Repository baseline
 
 Imported the latest integrated PRENEURA Real Estate OS demo into `app/index.html`.

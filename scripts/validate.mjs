@@ -18,7 +18,10 @@ const requiredAssets=[
   'src/features/buyer-experience/index.css',
   'src/features/buyer-experience/index.js',
   'src/features/how-it-works/index.css',
-  'src/features/how-it-works/index.js'
+  'src/features/how-it-works/index.js',
+  'src/features/flow-preview/index.css',
+  'src/features/flow-preview/index.js',
+  'src/features/flow-preview/contract.js'
 ];
 
 const requiredRoutes=[

@@ -1,11 +1,11 @@
 {
   "name": "preneura-real-estate-os",
-  "version": "6.2.0",
+  "version": "6.2.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "validate": "node scripts/validate.mjs && node scripts/validate-model.mjs && node scripts/validate-role-policy.mjs && node scripts/validate-state.mjs && node scripts/validate-release.mjs",
+    "validate": "node scripts/validate.mjs && node scripts/validate-model.mjs && node scripts/validate-role-policy.mjs && node scripts/validate-state.mjs && node scripts/validate-release.mjs && node scripts/validate-flow-preview.mjs",
     "check": "npm run validate"
   },
   "devDependencies": {

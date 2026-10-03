@@ -1,0 +1,40 @@
+/* PRENEURA 6.2.1 — functional flow-preview polish */
+
+/* Remove explanatory chrome from How It Works immediately, before the JS cleanup runs. */
+.p616-portal .p616-head p,
+.p616-portal .p616-head-actions,
+.p616-portal .p616-truth,
+.p616-portal .p616-guide,
+.p616-portal .p616-legend{display:none!important}
+
+/* The system overview should start with the title and Manager control, not explanatory chrome. */
+.p620-flow-clean .p616-head{margin-bottom:10px;padding:2px 4px 0}
+.p620-flow-clean .p616-head h1{margin-bottom:0}
+.p620-flow-clean .p616-manager{margin-top:0;margin-bottom:10px}
+.p620-flow-clean .p616-viewport{padding-top:10px}
+
+/* Contract opened from the flow needs breathing room around the top copy only. */
+body.p620-contract-active #app .topbar>div:first-child{padding-top:10px;padding-left:18px}
+body.p620-contract-active #pageRoot>.p612-preview-banner{margin-top:12px;margin-left:18px;margin-right:18px}
+body.p620-contract-active #pageRoot>.p58-buyer-shell{padding-top:8px;padding-left:18px;padding-right:18px;box-sizing:border-box}
+body.p620-contract-active #pageRoot>.p614-example{margin-left:18px;margin-right:18px}
+
+/* Direct-preview helper is intentionally distinct from real transaction controls. */
+.p620-preview-helper{margin:12px 18px 0;border:1px solid #bfd1f7;background:linear-gradient(135deg,#f6f9ff,#eef5ff);border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.p620-preview-helper>div{min-width:0}
+.p620-preview-helper small{display:block;font-size:6.5px;font-weight:950;letter-spacing:.1em;color:#235fde;margin-bottom:3px}
+.p620-preview-helper b{display:block;font-size:10px;color:#203b61}
+.p620-preview-helper p{font-size:7.5px;line-height:1.5;color:#607590;margin:3px 0 0}
+.p620-preview-helper button{border:1px solid #235fde;background:#235fde;color:#fff;border-radius:10px;padding:9px 12px;font-size:8px;font-weight:950;white-space:nowrap;cursor:pointer}
+.p620-preview-helper.ready{border-color:#bcdcc8;background:#f3fbf6}
+.p620-preview-helper.ready small,.p620-preview-helper.ready b{color:#276c43}
+.p620-preview-helper.ready button{background:#2f8a58;border-color:#2f8a58}
+
+@media(max-width:760px){
+ body.p620-contract-active #app .topbar>div:first-child{padding-left:10px}
+ body.p620-contract-active #pageRoot>.p612-preview-banner,
+ body.p620-contract-active #pageRoot>.p614-example{margin-left:10px;margin-right:10px}
+ body.p620-contract-active #pageRoot>.p58-buyer-shell{padding-left:10px;padding-right:10px}
+ .p620-preview-helper{margin-left:10px;margin-right:10px;align-items:flex-start;flex-direction:column}
+ .p620-preview-helper button{width:100%}
+}
