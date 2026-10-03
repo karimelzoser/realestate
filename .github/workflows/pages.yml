@@ -22,12 +22,17 @@ jobs:
       - uses: actions/configure-pages@v5
       - name: Validate release
         run: |
+          node --check src/features/local-voice-agent/engine.js
+          node --check src/features/local-voice-agent/audio.js
+          node --check src/features/local-voice-agent/index.js
+          python3 -m py_compile local_voice_agent/server.py
           node scripts/validate.mjs
           node scripts/validate-model.mjs
           node scripts/validate-role-policy.mjs
           node scripts/validate-state.mjs
           node scripts/validate-release.mjs
           node scripts/validate-flow-preview.mjs
+          node scripts/validate-local-voice-agent.mjs
       - name: Build static site artifact
         run: |
           mkdir -p _site
