@@ -28,6 +28,7 @@ jobs:
           node --check src/features/local-voice-agent/index.js
           node --check src/features/local-voice-agent/lifecycle.js
           node --check src/features/production-ops/index.js
+          node --check src/features/manager-live/index.js
           python3 -m py_compile local_voice_agent/server.py local_voice_agent/server64.py
           node scripts/validate.mjs
           node scripts/validate-model.mjs
@@ -37,6 +38,7 @@ jobs:
           node scripts/validate-flow-preview.mjs
           node scripts/validate-local-voice-agent.mjs
           node scripts/validate-production-ops.mjs
+          node scripts/validate-manager-live.mjs
       - name: Build static site artifact
         run: |
           mkdir -p _site
