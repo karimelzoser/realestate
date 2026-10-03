@@ -29,6 +29,7 @@ jobs:
           node --check src/features/local-voice-agent/engine.js
           node --check src/features/local-voice-agent/audio.js
           node --check src/features/local-voice-agent/index.js
+          node --check src/features/local-voice-agent/lifecycle.js
           python3 -m py_compile local_voice_agent/server.py
       - name: Validate routes and assets
         run: node scripts/validate.mjs
