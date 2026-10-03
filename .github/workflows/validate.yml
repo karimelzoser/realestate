@@ -32,6 +32,7 @@ jobs:
           node --check src/features/local-voice-agent/index.js
           node --check src/features/local-voice-agent/lifecycle.js
           node --check src/features/production-ops/index.js
+          node --check src/features/manager-live/index.js
           python3 -m py_compile local_voice_agent/server.py local_voice_agent/server64.py
       - name: Validate routes and assets
         run: node scripts/validate.mjs
@@ -49,11 +50,13 @@ jobs:
         run: node scripts/validate-local-voice-agent.mjs
       - name: Validate production operations
         run: node scripts/validate-production-ops.mjs
+      - name: Validate manager live allocation and audit
+        run: node scripts/validate-manager-live.mjs
       - name: Install Chromium browser QA
         run: |
           npm install --no-save --package-lock=false @playwright/test@1.56.1
           npx playwright install --with-deps chromium
-      - name: Browser-test flows, purchase completion, voice allocation and production operations
+      - name: Browser-test flows, purchase completion, voice allocation, production operations and manager live intelligence
         env:
           PRENEURA_BASE_URL: http://127.0.0.1:4173/
         run: |
@@ -61,4 +64,4 @@ jobs:
           SERVER_PID=$!
           trap 'kill $SERVER_PID' EXIT
           sleep 1
-          npx playwright test tests/flow-preview.spec.cjs tests/local-voice-agent.spec.cjs tests/production-ops.spec.cjs --reporter=line
+          npx playwright test tests/flow-preview.spec.cjs tests/local-voice-agent.spec.cjs tests/production-ops.spec.cjs tests/manager-live.spec.cjs --reporter=line
