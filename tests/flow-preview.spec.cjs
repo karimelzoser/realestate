@@ -145,7 +145,7 @@ test('My Property cards, installments, contract, documents and support all open'
   await expect(page.getByText(/Property documents|Documents/i).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Updates & Support', exact: true }).click();
-  await expect(page.getByText('Support')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Support', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Create Support Ticket' }).click();
 
   expect(errors).toEqual([]);
