@@ -109,12 +109,15 @@ test('Contract direct preview completes requirements, generates, signs and conti
   const canvas = page.locator('#r52SignatureCanvas');
   const box = await canvas.boundingBox();
   expect(box).toBeTruthy();
-  await page.mouse.move(box.x + 35, box.y + box.height * 0.62);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width * 0.30, box.y + box.height * 0.36, { steps: 5 });
-  await page.mouse.move(box.x + box.width * 0.55, box.y + box.height * 0.68, { steps: 5 });
-  await page.mouse.move(box.x + box.width * 0.76, box.y + box.height * 0.35, { steps: 5 });
-  await page.mouse.up();
+  const p1={clientX:box.x+35,clientY:box.y+box.height*0.62,pointerId:1,pointerType:'mouse',isPrimary:true,buttons:1};
+  const p2={clientX:box.x+box.width*0.30,clientY:box.y+box.height*0.36,pointerId:1,pointerType:'mouse',isPrimary:true,buttons:1};
+  const p3={clientX:box.x+box.width*0.58,clientY:box.y+box.height*0.68,pointerId:1,pointerType:'mouse',isPrimary:true,buttons:1};
+  const p4={clientX:box.x+box.width*0.78,clientY:box.y+box.height*0.35,pointerId:1,pointerType:'mouse',isPrimary:true,buttons:1};
+  await canvas.dispatchEvent('pointerdown',p1);
+  await canvas.dispatchEvent('pointermove',p2);
+  await canvas.dispatchEvent('pointermove',p3);
+  await canvas.dispatchEvent('pointermove',p4);
+  await canvas.dispatchEvent('pointerup',{...p4,buttons:0});
   expect(await page.evaluate(() => app.fx.final6.signing.hasStroke)).toBeTruthy();
 
   await page.getByRole('button', { name: /Demo Provider Biometric Callback|Demo Fingerprint \/ Biometric Verification/ }).click();
