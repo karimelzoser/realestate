@@ -7,7 +7,7 @@ on:
       - ".github/workflows/platform-foundation.yml"
   push:
     branches:
-      - "feature/production-foundation-auth"
+      - "feature/production-*"
     paths:
       - "platform/**"
       - ".github/workflows/platform-foundation.yml"

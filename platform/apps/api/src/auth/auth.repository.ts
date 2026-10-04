@@ -1,8 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Kysely } from 'kysely';
 import type { Database, JsonValue } from '@preneura/database';
-
-export const DATABASE = Symbol('DATABASE');
+import { DATABASE } from '../database/database.module.js';
 
 export type AliasKind = 'PHONE' | 'NATIONAL_ID';
 export type DeliveryChannel = 'SMS' | 'WHATSAPP';
