@@ -25,8 +25,19 @@ export interface SessionRecord {
   expiresAt: Date;
 }
 
+export interface ExternalIdentityResult {
+  userId: string;
+  status: 'ACTIVE' | 'DISABLED' | 'PENDING';
+}
+
 export abstract class AuthRepository {
   abstract findActiveUserByAlias(kind: AliasKind, identifierHmac: Uint8Array): Promise<string | null>;
+  abstract findOrProvisionExternalIdentity(input: {
+    provider: string;
+    providerSubject: string;
+    displayName: string;
+    verifiedEmail?: string | null;
+  }): Promise<ExternalIdentityResult>;
   abstract createChallenge(challenge: NewChallenge): Promise<void>;
   abstract markDeliveryAttempted(challengeId: string): Promise<void>;
   abstract consumeChallenge(challengeId: string, otpDigest: Uint8Array, now: Date): Promise<string | null>;
@@ -58,6 +69,63 @@ export class PostgresAuthRepository extends AuthRepository {
       .where('user.status', '=', 'ACTIVE')
       .executeTakeFirst();
     return row?.user_id ?? null;
+  }
+
+  async findOrProvisionExternalIdentity(input: {
+    provider: string;
+    providerSubject: string;
+    displayName: string;
+    verifiedEmail?: string | null;
+  }): Promise<ExternalIdentityResult> {
+    const existing = await this.db
+      .selectFrom('auth_external_identities as identity')
+      .innerJoin('users as user', 'user.id', 'identity.user_id')
+      .select(['identity.user_id', 'user.status'])
+      .where('identity.provider', '=', input.provider)
+      .where('identity.provider_subject', '=', input.providerSubject)
+      .executeTakeFirst();
+
+    if (existing) {
+      return { userId: existing.user_id, status: existing.status };
+    }
+
+    return this.db.transaction().execute(async (trx) => {
+      const createdUser = await trx
+        .insertInto('users')
+        .values({
+          display_name: input.displayName || 'PRENEURA User',
+          status: 'PENDING',
+        })
+        .returning(['id', 'status'])
+        .executeTakeFirstOrThrow();
+
+      const linked = await trx
+        .insertInto('auth_external_identities')
+        .values({
+          user_id: createdUser.id,
+          provider: input.provider,
+          provider_subject: input.providerSubject,
+          email_at_link_time: input.verifiedEmail ?? null,
+        })
+        .onConflict((oc) => oc.columns(['provider', 'provider_subject']).doNothing())
+        .returning('user_id')
+        .executeTakeFirst();
+
+      if (linked) {
+        return { userId: createdUser.id, status: createdUser.status };
+      }
+
+      await trx.deleteFrom('users').where('id', '=', createdUser.id).execute();
+      const winner = await trx
+        .selectFrom('auth_external_identities as identity')
+        .innerJoin('users as user', 'user.id', 'identity.user_id')
+        .select(['identity.user_id', 'user.status'])
+        .where('identity.provider', '=', input.provider)
+        .where('identity.provider_subject', '=', input.providerSubject)
+        .executeTakeFirstOrThrow();
+
+      return { userId: winner.user_id, status: winner.status };
+    });
   }
 
   async createChallenge(challenge: NewChallenge): Promise<void> {
