@@ -9,6 +9,7 @@ import type {
   UpdateChequeStatusInput,
 } from '@preneura/contracts/finance';
 import { AccessService } from '../access/access.service.js';
+import { CommissionService } from '../commissions/commission.service.js';
 import { FinanceRepository, type FinanceTransactionContext } from './finance.repository.js';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class FinanceService {
   constructor(
     private readonly repository: FinanceRepository,
     private readonly access: AccessService,
+    private readonly commissions: CommissionService,
   ) {}
 
   async createPaymentSchedule(input: {
@@ -48,7 +50,9 @@ export class FinanceService {
       throw new BadRequestException('Payment schedule must include at least one down-payment item.');
     }
 
-    return this.repository.createPaymentSchedule({ actorUserId: input.actorUserId, data: input.data, now: new Date() });
+    const result = await this.repository.createPaymentSchedule({ actorUserId: input.actorUserId, data: input.data, now: new Date() });
+    await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
+    return result;
   }
 
   async markPaymentItemPaid(input: {
@@ -72,6 +76,7 @@ export class FinanceService {
       now: new Date(),
     });
     if (!updated) throw new NotFoundException('Payment item not found.');
+    await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
     return { paid: true };
   }
 
@@ -108,7 +113,9 @@ export class FinanceService {
     if (uniqueSequences.size !== input.data.cheques.length) {
       throw new BadRequestException('Cheque sequence numbers must be unique.');
     }
-    return this.repository.createChequeSchedule({ actorUserId: input.actorUserId, data: input.data, now: new Date() });
+    const result = await this.repository.createChequeSchedule({ actorUserId: input.actorUserId, data: input.data, now: new Date() });
+    await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
+    return result;
   }
 
   async updateChequeStatus(input: {
@@ -134,6 +141,7 @@ export class FinanceService {
       now: new Date(),
     });
     if (!updated) throw new NotFoundException('Cheque not found.');
+    await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
     return { updated: true };
   }
 
@@ -146,6 +154,10 @@ export class FinanceService {
     const transaction = await this.requireTransaction(input.tenantId, input.projectId, input.transactionId);
     await this.assertRead(input.actorUserId, transaction, 'payment.read', 'installment.read.self');
     return this.repository.listCheques(input);
+  }
+
+  private async refreshCommission(tenantId: string, projectId: string, transactionId: string): Promise<void> {
+    await this.commissions.refreshTransactionCase({ tenantId, projectId, transactionId });
   }
 
   private async requireTransaction(
