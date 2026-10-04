@@ -8,7 +8,11 @@
     "./auth": "./src/auth.ts",
     "./access": "./src/access.ts",
     "./catalog": "./src/catalog.ts",
-    "./sales": "./src/sales.ts"
+    "./sales": "./src/sales.ts",
+    "./documents": "./src/documents.ts",
+    "./finance": "./src/finance.ts",
+    "./commissions": "./src/commissions.ts",
+    "./notifications": "./src/notifications.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
