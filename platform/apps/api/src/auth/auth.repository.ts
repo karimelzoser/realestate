@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Kysely } from 'kysely';
-import type { Database } from '@preneura/database';
+import type { Database, JsonValue } from '@preneura/database';
 
 export const DATABASE = Symbol('DATABASE');
 
@@ -38,7 +38,7 @@ export abstract class AuthRepository {
     result: 'SUCCESS' | 'REJECTED' | 'FAILED';
     challengeId?: string | null;
     sessionId?: string | null;
-    metadata?: Record<string, unknown>;
+    metadata?: Record<string, JsonValue>;
   }): Promise<void>;
 }
 
@@ -129,20 +129,21 @@ export class PostgresAuthRepository extends AuthRepository {
     result: 'SUCCESS' | 'REJECTED' | 'FAILED';
     challengeId?: string | null;
     sessionId?: string | null;
-    metadata?: Record<string, unknown>;
+    metadata?: Record<string, JsonValue>;
   }): Promise<void> {
-    await this.db.executeQuery(
-      this.db
-        .insertInto('auth_security_events' as never)
-        .values({
-          user_id: input.userId ?? null,
-          event_type: input.eventType,
-          result: input.result,
-          challenge_id: input.challengeId ?? null,
-          session_id: input.sessionId ?? null,
-          metadata: JSON.stringify(input.metadata ?? {}),
-        } as never)
-        .compile(),
-    );
+    await this.db
+      .insertInto('auth_security_events')
+      .values({
+        user_id: input.userId ?? null,
+        event_type: input.eventType,
+        result: input.result,
+        challenge_id: input.challengeId ?? null,
+        session_id: input.sessionId ?? null,
+        request_id: null,
+        ip_digest: null,
+        user_agent_digest: null,
+        metadata: input.metadata ?? {},
+      })
+      .executeTakeFirstOrThrow();
   }
 }
