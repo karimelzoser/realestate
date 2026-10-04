@@ -22,6 +22,7 @@
 - durable realtime replay log + PostgreSQL `LISTEN/NOTIFY` wakeups
 - user notification inbox + provider-neutral external delivery jobs
 - project milestone SLA scheduling and reminder delivery
+- authenticated role-aware web workspace backed only by authorized API snapshots
 
 ## Runtime boundaries
 
@@ -55,6 +56,26 @@ Broker commission streams are broker-company scoped. `BROKER_AGENT` streams are 
 
 User notification streams are always scoped to the authenticated session user.
 
+## Web workspace authorization
+
+The browser does not construct its own project or broker scope. After session validation it loads:
+
+```text
+GET /v1/me/workspace
+```
+
+That response is derived from active platform, tenant, project and broker-company role assignments plus time-effective broker-project access. The selected project ID can be remembered locally, but it is accepted only if it still exists in the current authoritative workspace response.
+
+Current live web snapshots include:
+
+```text
+GET /v1/tenants/:tenantId/projects/:projectId/catalog
+GET /v1/tenants/:tenantId/projects/:projectId/queue
+GET /v1/tenants/:tenantId/projects/:projectId/transactions
+```
+
+The transaction list is server-filtered for internal project scope, broker-company scope, exact broker-agent attribution, or buyer-self scope. Browser filtering is never relied on for confidentiality.
+
 ## Local bootstrap
 
 ```bash
@@ -80,9 +101,12 @@ Run all development applications:
 pnpm dev
 ```
 
-Or run the production API/worker processes independently after building:
+Or run production applications independently after building:
 
 ```bash
+pnpm --filter @preneura/web build
+pnpm --filter @preneura/web start
+
 pnpm --filter @preneura/api build
 pnpm --filter @preneura/api start
 
@@ -96,7 +120,7 @@ Default local endpoints:
 - API: `http://localhost:4100/v1`
 - Keycloak: `http://localhost:8080`
 
-## Important API surfaces in the current slice
+## Important API surfaces
 
 Realtime project signals:
 
@@ -159,7 +183,9 @@ A first-time Google identity is `PENDING`; identity verification alone never gra
 `.github/workflows/platform-foundation.yml` currently validates:
 
 - strict TypeScript for API, worker, web, contracts and database packages
-- emitted API and worker builds
+- emitted API build
+- emitted worker build
+- production Next.js web build
 - PostgreSQL 18 migrations from an empty database
 - critical uniqueness/index constraints across catalog, sales, documents, finance, commissions and notification runtime
 - commission creation/refresh triggers
@@ -168,7 +194,29 @@ A first-time Google identity is `PENDING`; identity verification alone never gra
 
 ## Railway service layout
 
-Use separate Railway services against the same repository/database:
+Use separate Railway services against the same repository/database.
+
+### Web service
+
+Working/root directory:
+
+```text
+platform
+```
+
+Build command:
+
+```bash
+pnpm install --no-frozen-lockfile && pnpm --filter @preneura/web build
+```
+
+Start command:
+
+```bash
+pnpm --filter @preneura/web start
+```
+
+Expose the service publicly. `NEXT_PUBLIC_API_URL` must be set to the public API origin **during the build**, because Next.js embeds public environment variables into the browser bundle. Railway should also provide `PORT` at runtime.
 
 ### API service
 
@@ -190,7 +238,7 @@ Start command:
 pnpm --filter @preneura/api start
 ```
 
-Expose the API service publicly and set `PORT`, `WEB_ORIGIN`, `DATABASE_URL`, authentication variables and object-storage variables.
+Expose the API service publicly and set `PORT`, `WEB_ORIGIN`, `DATABASE_URL`, authentication variables and object-storage variables. `WEB_ORIGIN` must include the deployed web origin so credentialed browser requests and SSE can use the HttpOnly session cookie.
 
 ### Worker service
 
