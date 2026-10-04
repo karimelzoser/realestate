@@ -1,7 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   roleHasPermission,
   type PermissionCode,
+  type WorkspaceContextSnapshot,
 } from '@preneura/contracts/access';
 import { AccessRepository, type RoleAssignment } from './access.repository.js';
 
@@ -65,6 +66,12 @@ export class AccessService {
 
   async assignmentsForUser(userId: string): Promise<RoleAssignment[]> {
     return this.repository.listActiveAssignments(userId);
+  }
+
+  async workspaceContext(userId: string): Promise<WorkspaceContextSnapshot> {
+    const context = await this.repository.workspaceContext(userId, new Date());
+    if (!context) throw new NotFoundException('Active user not found.');
+    return context;
   }
 
   private async scopeMatches(
