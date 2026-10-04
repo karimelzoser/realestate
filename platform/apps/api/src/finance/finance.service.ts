@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { PermissionCode } from '@preneura/contracts/access';
 import type {
   ChequeSnapshot,
@@ -11,6 +11,8 @@ import type {
 import { AccessService } from '../access/access.service.js';
 import { CommissionService } from '../commissions/commission.service.js';
 import { FinanceRepository, type FinanceTransactionContext } from './finance.repository.js';
+
+const BROKER_ROLES = new Set(['BROKER_MANAGER', 'BROKER_FINANCE', 'BROKER_AGENT']);
 
 @Injectable()
 export class FinanceService {
@@ -182,13 +184,22 @@ export class FinanceService {
     regularPermission: PermissionCode,
     selfPermission: PermissionCode,
   ): Promise<void> {
-    const regular = await this.access.can({
+    const assignments = await this.access.matchingAssignments({
       userId: actorUserId,
       permission: regularPermission,
       context: { tenantId: transaction.tenantId, projectId: transaction.projectId },
     });
-    if (regular.allowed) return;
-    await this.access.assert({
+
+    if (assignments.some((assignment) => !BROKER_ROLES.has(assignment.role))) return;
+
+    const matchingBroker = assignments.some((assignment) => {
+      if (!BROKER_ROLES.has(assignment.role)) return false;
+      if (!transaction.brokerCompanyId || assignment.brokerCompanyId !== transaction.brokerCompanyId) return false;
+      return assignment.role !== 'BROKER_AGENT' || transaction.brokerAgentUserId === actorUserId;
+    });
+    if (matchingBroker) return;
+
+    const self = await this.access.matchingAssignments({
       userId: actorUserId,
       permission: selfPermission,
       context: {
@@ -197,6 +208,9 @@ export class FinanceService {
         resourceOwnerUserId: transaction.buyerUserId,
       },
     });
+    if (self.length > 0) return;
+
+    throw new ForbiddenException('You do not have permission to view finance for this transaction.');
   }
 
   private moneyCents(value: string): bigint {
