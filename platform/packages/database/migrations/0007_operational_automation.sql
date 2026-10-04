@@ -63,15 +63,19 @@ BEGIN
     completion_percent_snapshot = v_completion,
     status = CASE
       WHEN v_prerequisites_complete AND c.status = 'PENDING_PREREQUISITES' THEN 'ELIGIBLE'
+      WHEN NOT v_prerequisites_complete AND c.status = 'ELIGIBLE' THEN 'PENDING_PREREQUISITES'
+      WHEN NOT v_prerequisites_complete AND c.status IN ('INVOICED','DUE') THEN 'DISPUTED'
       ELSE c.status
     END,
     eligible_at = CASE
       WHEN v_prerequisites_complete AND c.eligible_at IS NULL THEN v_now
+      WHEN NOT v_prerequisites_complete AND c.status = 'ELIGIBLE' THEN NULL
       ELSE c.eligible_at
     END,
     due_at = CASE
       WHEN v_prerequisites_complete AND c.due_at IS NULL
         THEN v_now + make_interval(days => p.due_days_after_eligibility)
+      WHEN NOT v_prerequisites_complete AND c.status = 'ELIGIBLE' THEN NULL
       ELSE c.due_at
     END,
     updated_at = v_now
@@ -182,7 +186,7 @@ FOR EACH ROW
 EXECUTE FUNCTION refresh_commission_after_milestone();
 
 -- Upgrade-safe backfill: create missing commission cases for already-open broker transactions
--- when an effective plan already exists.
+-- only when a plan was already effective when that transaction opened.
 INSERT INTO broker_commission_cases (
   tenant_id,
   project_id,
