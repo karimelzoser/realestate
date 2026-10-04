@@ -1,11 +1,10 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { sql, type Kysely } from 'kysely';
-import type { Database, JsonValue } from '@preneura/database';
+import type { Database } from '@preneura/database';
 import type {
   CreatePricingVersionInput,
   CreateUnitTypeInput,
   InventoryLockResult,
-  PricingComponent,
   UnitTypeCommercialSnapshot,
 } from '@preneura/contracts/catalog';
 import { DATABASE } from '../database/database.module.js';
@@ -49,33 +48,40 @@ export class CatalogRepository {
   }
 
   async createUnitType(input: CreateUnitTypeInput): Promise<string> {
-    const row = await this.db
-      .insertInto('catalog_unit_types')
-      .values({
-        tenant_id: input.tenantId,
-        project_id: input.projectId,
-        code: input.code,
-        name: input.name,
-        description: input.description ?? null,
-        bedroom_count: input.bedroomCount ?? null,
-        indoor_area_sqm: input.indoorAreaSqm,
-        roof_area_sqm: input.roofAreaSqm,
-        garden_area_sqm: input.gardenAreaSqm,
-        status: 'ACTIVE',
-        sort_order: input.sortOrder,
-      })
-      .returning('id')
-      .executeTakeFirstOrThrow();
+    return this.db.transaction().execute(async (trx) => {
+      const row = await trx
+        .insertInto('catalog_unit_types')
+        .values({
+          tenant_id: input.tenantId,
+          project_id: input.projectId,
+          code: input.code,
+          name: input.name,
+          description: input.description ?? null,
+          bedroom_count: input.bedroomCount ?? null,
+          indoor_area_sqm: input.indoorAreaSqm,
+          roof_area_sqm: input.roofAreaSqm,
+          garden_area_sqm: input.gardenAreaSqm,
+          status: 'ACTIVE',
+          sort_order: input.sortOrder,
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
 
-    await this.emitEvent({
-      tenantId: input.tenantId,
-      projectId: input.projectId,
-      aggregateType: 'UNIT_TYPE',
-      aggregateId: row.id,
-      eventType: 'catalog.unit_type.created',
-      payload: { code: input.code, name: input.name },
+      await trx
+        .insertInto('domain_outbox_events')
+        .values({
+          tenant_id: input.tenantId,
+          project_id: input.projectId,
+          aggregate_type: 'UNIT_TYPE',
+          aggregate_id: row.id,
+          event_type: 'catalog.unit_type.created',
+          payload: { code: input.code, name: input.name },
+          published_at: null,
+          attempts: 0,
+        })
+        .execute();
+      return row.id;
     });
-    return row.id;
   }
 
   async addInventoryCapacity(input: {
@@ -204,10 +210,12 @@ export class CatalogRepository {
             AND ut.project_id = ${input.projectId}
             AND ut.status = 'ACTIVE') * 3)::int AS "expectedRates",
         (SELECT count(*) FROM pricing_rates r
-          JOIN pricing_versions pv ON pv.id = r.pricing_version_id
-          WHERE pv.id = ${input.pricingVersionId}
-            AND pv.tenant_id = ${input.tenantId}
-            AND pv.project_id = ${input.projectId})::int AS "actualRates"
+          WHERE r.pricing_version_id = pv.id)::int AS "actualRates"
+      FROM pricing_versions pv
+      WHERE pv.id = ${input.pricingVersionId}
+        AND pv.tenant_id = ${input.tenantId}
+        AND pv.project_id = ${input.projectId}
+      LIMIT 1
     `.execute(this.db);
     return result.rows[0] ?? null;
   }
@@ -230,15 +238,13 @@ export class CatalogRepository {
         .executeTakeFirst();
       if (!version || version.status !== 'DRAFT') return null;
 
-      const status =
-        (version.effective_at as Date).getTime() <= input.now.getTime()
-          ? 'PUBLISHED'
-          : 'SCHEDULED';
+      const effectiveAt = version.effective_at as Date;
+      const status = effectiveAt.getTime() <= input.now.getTime() ? 'PUBLISHED' : 'SCHEDULED';
 
       if (status === 'PUBLISHED') {
         await trx
           .updateTable('pricing_versions')
-          .set({ status: 'SUPERSEDED' })
+          .set({ status: 'SUPERSEDED', updated_at: input.now })
           .where('project_id', '=', input.projectId)
           .where('status', '=', 'PUBLISHED')
           .where('id', '<>', input.pricingVersionId)
@@ -265,7 +271,7 @@ export class CatalogRepository {
           aggregate_id: input.pricingVersionId,
           event_type: status === 'PUBLISHED' ? 'pricing.version.published' : 'pricing.version.scheduled',
           payload: {
-            effectiveAt: (version.effective_at as Date).toISOString(),
+            effectiveAt: effectiveAt.toISOString(),
             actorUserId: input.actorUserId,
           },
           published_at: null,
@@ -273,7 +279,7 @@ export class CatalogRepository {
         })
         .execute();
 
-      return { status, effectiveAt: version.effective_at as Date };
+      return { status, effectiveAt };
     });
   }
 
@@ -545,21 +551,6 @@ export class CatalogRepository {
     });
   }
 
-  async getPricingVersionProject(input: {
-    pricingVersionId: string;
-    tenantId: string;
-    projectId: string;
-  }): Promise<boolean> {
-    const row = await this.db
-      .selectFrom('pricing_versions')
-      .select('id')
-      .where('id', '=', input.pricingVersionId)
-      .where('tenant_id', '=', input.tenantId)
-      .where('project_id', '=', input.projectId)
-      .executeTakeFirst();
-    return Boolean(row);
-  }
-
   private async expireLocks(tenantId: string, projectId: string, now: Date): Promise<void> {
     await this.db
       .updateTable('inventory_locks')
@@ -574,32 +565,5 @@ export class CatalogRepository {
       .where('status', '=', 'ACTIVE')
       .where('expires_at', '<=', now)
       .execute();
-  }
-
-  private async emitEvent(input: {
-    tenantId: string;
-    projectId: string;
-    aggregateType: string;
-    aggregateId: string;
-    eventType: string;
-    payload: Record<string, JsonValue>;
-  }): Promise<void> {
-    try {
-      await this.db
-        .insertInto('domain_outbox_events')
-        .values({
-          tenant_id: input.tenantId,
-          project_id: input.projectId,
-          aggregate_type: input.aggregateType,
-          aggregate_id: input.aggregateId,
-          event_type: input.eventType,
-          payload: input.payload,
-          published_at: null,
-          attempts: 0,
-        })
-        .execute();
-    } catch (error) {
-      throw new ConflictException('The catalog change could not be recorded.', { cause: error });
-    }
   }
 }
