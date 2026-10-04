@@ -24,21 +24,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 12.9.1
           run_install: false
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
-
       - name: Install
         run: pnpm install --no-frozen-lockfile
-
       - name: Typecheck
         run: pnpm typecheck
 
@@ -61,7 +57,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Apply migrations from zero
         env:
           PGPASSWORD: postgres
@@ -71,8 +66,7 @@ jobs:
             echo "Applying ${migration}"
             psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 -f "${migration}"
           done
-
-      - name: Verify commercial core constraints
+      - name: Verify production domain constraints
         env:
           PGPASSWORD: postgres
         run: |
@@ -91,6 +85,21 @@ jobs:
             END IF;
             IF to_regclass('public.domain_outbox_unpublished') IS NULL THEN
               RAISE EXCEPTION 'outbox index missing';
+            END IF;
+            IF to_regclass('public.buyer_eois_one_live_per_project') IS NULL THEN
+              RAISE EXCEPTION 'buyer EOI live uniqueness index missing';
+            END IF;
+            IF to_regclass('public.queue_entries_one_live_per_buyer') IS NULL THEN
+              RAISE EXCEPTION 'queue live uniqueness index missing';
+            END IF;
+            IF to_regclass('public.reservations_one_active_per_slot') IS NULL THEN
+              RAISE EXCEPTION 'reservation slot uniqueness index missing';
+            END IF;
+            IF to_regclass('public.transaction_milestones_progress') IS NULL THEN
+              RAISE EXCEPTION 'transaction milestone progress index missing';
+            END IF;
+            IF to_regclass('public.eoi_refund_requests_one_live') IS NULL THEN
+              RAISE EXCEPTION 'EOI refund live uniqueness index missing';
             END IF;
           END $$;
           SQL
