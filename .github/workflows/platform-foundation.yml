@@ -101,5 +101,44 @@ jobs:
             IF to_regclass('public.eoi_refund_requests_one_live') IS NULL THEN
               RAISE EXCEPTION 'EOI refund live uniqueness index missing';
             END IF;
+            IF to_regclass('public.document_templates_active_lookup') IS NULL THEN
+              RAISE EXCEPTION 'document template active lookup index missing';
+            END IF;
+            IF to_regclass('public.document_signatures_role_unique') IS NULL THEN
+              RAISE EXCEPTION 'document signature uniqueness index missing';
+            END IF;
+            IF to_regclass('public.payment_schedule_items_due') IS NULL THEN
+              RAISE EXCEPTION 'payment schedule due index missing';
+            END IF;
+            IF to_regclass('public.transaction_cheques_transaction_status') IS NULL THEN
+              RAISE EXCEPTION 'transaction cheque status index missing';
+            END IF;
+            IF to_regclass('public.broker_commission_plans_active') IS NULL THEN
+              RAISE EXCEPTION 'commission plan active index missing';
+            END IF;
+            IF to_regclass('public.broker_commission_cases_due') IS NULL THEN
+              RAISE EXCEPTION 'commission due index missing';
+            END IF;
+            IF to_regclass('public.notification_jobs_dispatch') IS NULL THEN
+              RAISE EXCEPTION 'notification dispatch index missing';
+            END IF;
+            IF to_regclass('public.project_milestone_slas') IS NULL THEN
+              RAISE EXCEPTION 'project milestone SLA table missing';
+            END IF;
+            IF to_regclass('public.document_template_signer_requirements') IS NULL THEN
+              RAISE EXCEPTION 'document template signer requirements missing';
+            END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_trigger
+              WHERE tgname = 'trg_create_broker_commission_case' AND NOT tgisinternal
+            ) THEN
+              RAISE EXCEPTION 'commission case creation trigger missing';
+            END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_trigger
+              WHERE tgname = 'trg_refresh_commission_after_milestone' AND NOT tgisinternal
+            ) THEN
+              RAISE EXCEPTION 'commission milestone refresh trigger missing';
+            END IF;
           END $$;
           SQL
