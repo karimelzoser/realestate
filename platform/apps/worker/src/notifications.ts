@@ -1,5 +1,10 @@
 import { sql, type Kysely } from 'kysely';
-import type { Database, JsonValue } from '@preneura/database';
+import type {
+  Database,
+  JsonValue,
+  NotificationAudience,
+  NotificationChannel,
+} from '@preneura/database';
 import {
   deliverExternalNotification,
   type ClaimedNotification,
@@ -217,8 +222,8 @@ export async function enqueueNotification(
     projectId: string | null;
     transactionId: string | null;
     recipientUserId: string;
-    audience: ClaimedNotification['channel'] extends never ? never : Database['notification_jobs']['audience'];
-    channel: Database['notification_jobs']['channel'];
+    audience: NotificationAudience;
+    channel: NotificationChannel;
     templateCode: string;
     locale?: string;
     payload: JsonValue;
@@ -248,6 +253,20 @@ export async function enqueueNotification(
       processing_started_at: null,
       processing_by: null,
     })
-    .onConflict((oc) => oc.column('idempotency_key').doNothing())
+    .onConflict((oc) =>
+      oc.column('idempotency_key').doUpdateSet({
+        tenant_id: input.tenantId,
+        project_id: input.projectId,
+        transaction_id: input.transactionId,
+        recipient_user_id: input.recipientUserId,
+        audience: input.audience,
+        channel: input.channel,
+        template_code: input.templateCode,
+        locale: input.locale ?? 'ar-EG',
+        payload: input.payload,
+        scheduled_for: input.scheduledFor,
+        updated_at: new Date(),
+      }).where('notification_jobs.status', '=', 'PENDING'),
+    )
     .execute();
 }
