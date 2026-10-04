@@ -19,7 +19,7 @@ import type {
   TransactionProgressSnapshot,
 } from '@preneura/contracts/sales';
 import { AccessService } from '../access/access.service.js';
-import { SalesRepository } from './sales.repository.js';
+import { SalesRepository, type BuyerProfileRecord } from './sales.repository.js';
 
 const MILESTONE_PERMISSION: Readonly<Record<TransactionMilestoneCode, PermissionCode>> = {
   BUYER_DOCUMENTS_COMPLETE: 'documents.verify',
@@ -29,6 +29,8 @@ const MILESTONE_PERMISSION: Readonly<Record<TransactionMilestoneCode, Permission
   CONTRACT_SIGNED: 'contract.execute',
   CONTRACT_STAMPED: 'contract.execute',
 };
+
+const BROKER_ROLES = new Set(['BROKER_MANAGER', 'BROKER_FINANCE', 'BROKER_AGENT']);
 
 @Injectable()
 export class SalesService {
@@ -255,23 +257,53 @@ export class SalesService {
     if (!progress) throw new NotFoundException('Transaction not found.');
     const buyer = await this.requireBuyer(input.tenantId, progress.buyerProfileId);
 
-    const regular = await this.access.can({
+    await this.assertTransactionRead({
+      actorUserId: input.actorUserId,
+      tenantId: input.tenantId,
+      projectId: input.projectId,
+      buyer,
+    });
+    return progress;
+  }
+
+  private async assertTransactionRead(input: {
+    actorUserId: string;
+    tenantId: string;
+    projectId: string;
+    buyer: BuyerProfileRecord;
+  }): Promise<void> {
+    const regularAssignments = await this.access.matchingAssignments({
       userId: input.actorUserId,
       permission: 'transaction.read',
       context: { tenantId: input.tenantId, projectId: input.projectId },
     });
-    if (!regular.allowed) {
-      await this.access.assert({
-        userId: input.actorUserId,
-        permission: 'transaction.read.self',
-        context: {
-          tenantId: input.tenantId,
-          projectId: input.projectId,
-          resourceOwnerUserId: buyer.userId,
-        },
-      });
+
+    if (regularAssignments.some((assignment) => !BROKER_ROLES.has(assignment.role))) return;
+
+    if (input.buyer.source === 'BROKER' && input.buyer.brokerCompanyId) {
+      const matchingBrokerAssignments = regularAssignments.filter(
+        (assignment) =>
+          BROKER_ROLES.has(assignment.role) &&
+          assignment.brokerCompanyId === input.buyer.brokerCompanyId,
+      );
+      if (matchingBrokerAssignments.some((assignment) => assignment.role !== 'BROKER_AGENT')) return;
+      if (
+        matchingBrokerAssignments.some((assignment) => assignment.role === 'BROKER_AGENT') &&
+        input.buyer.brokerAgentUserId === input.actorUserId
+      ) {
+        return;
+      }
     }
-    return progress;
+
+    await this.access.assert({
+      userId: input.actorUserId,
+      permission: 'transaction.read.self',
+      context: {
+        tenantId: input.tenantId,
+        projectId: input.projectId,
+        resourceOwnerUserId: input.buyer.userId,
+      },
+    });
   }
 
   private async requireProject(tenantId: string, projectId: string): Promise<void> {
@@ -280,7 +312,7 @@ export class SalesService {
     }
   }
 
-  private async requireBuyer(tenantId: string, buyerProfileId: string) {
+  private async requireBuyer(tenantId: string, buyerProfileId: string): Promise<BuyerProfileRecord> {
     const buyer = await this.repository.getBuyerProfile({ tenantId, buyerProfileId });
     if (!buyer) throw new NotFoundException('Buyer profile not found.');
     return buyer;
