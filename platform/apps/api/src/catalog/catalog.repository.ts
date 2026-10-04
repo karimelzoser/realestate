@@ -168,6 +168,8 @@ export class CatalogRepository {
         .insertInto('pricing_rates')
         .values(
           input.data.rates.map((rate) => ({
+            tenant_id: input.data.tenantId,
+            project_id: input.data.projectId,
             pricing_version_id: version.id,
             unit_type_id: rate.unitTypeId,
             component: rate.component,
