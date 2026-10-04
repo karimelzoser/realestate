@@ -7,6 +7,8 @@ import {
   DATABASE,
   PostgresAuthRepository,
 } from './auth.repository.js';
+import { GoogleAuthController } from './google-auth.controller.js';
+import { GoogleOidcService } from './google-oidc.service.js';
 import { DevelopmentOtpDelivery, OtpDeliveryPort } from './otp-delivery.js';
 
 const databaseProvider: Provider = {
@@ -35,13 +37,14 @@ const otpDeliveryProvider: Provider = {
 };
 
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, GoogleAuthController],
   providers: [
     databaseProvider,
     PostgresAuthRepository,
     { provide: AuthRepository, useExisting: PostgresAuthRepository },
     otpDeliveryProvider,
     AuthService,
+    GoogleOidcService,
   ],
   exports: [AuthService],
 })
