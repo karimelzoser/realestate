@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AccessModule } from './access/access.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CatalogModule } from './catalog/catalog.module.js';
+import { CommissionModule } from './commissions/commission.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { DocumentModule } from './documents/document.module.js';
 import { FinanceModule } from './finance/finance.module.js';
@@ -17,6 +18,7 @@ import { StorageModule } from './storage/storage.module.js';
     StorageModule,
     CatalogModule,
     SalesModule,
+    CommissionModule,
     DocumentModule,
     FinanceModule,
   ],
