@@ -39,6 +39,7 @@ export interface ExternalIdentityResult {
 
 export abstract class AuthRepository {
   abstract findActiveUserByAlias(kind: AliasKind, identifierHmac: Uint8Array): Promise<string | null>;
+  abstract countChallengesSince(kind: AliasKind, identifierHmac: Uint8Array, since: Date): Promise<number>;
   abstract findOrProvisionExternalIdentity(input: {
     provider: string;
     providerSubject: string;
@@ -78,6 +79,17 @@ export class PostgresAuthRepository extends AuthRepository {
       .where('user.status', '=', 'ACTIVE')
       .executeTakeFirst();
     return row?.user_id ?? null;
+  }
+
+  async countChallengesSince(kind: AliasKind, identifierHmac: Uint8Array, since: Date): Promise<number> {
+    const row = await this.db
+      .selectFrom('auth_otp_challenges')
+      .select((eb) => eb.fn.countAll<number>().as('count'))
+      .where('requested_kind', '=', kind)
+      .where('requested_identifier_hmac', '=', identifierHmac)
+      .where('created_at', '>=', since)
+      .executeTakeFirstOrThrow();
+    return Number(row.count);
   }
 
   async findOrProvisionExternalIdentity(input: {
