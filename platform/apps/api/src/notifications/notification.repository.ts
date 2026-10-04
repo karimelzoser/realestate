@@ -117,10 +117,9 @@ export class NotificationRepository {
   async markRead(input: { userId: string; notificationId: string; now: Date }): Promise<boolean> {
     const result = await this.db
       .updateTable('user_notifications')
-      .set({ read_at: input.now })
+      .set({ read_at: sql<Date>`COALESCE(read_at, ${input.now})` })
       .where('id', '=', input.notificationId)
       .where('recipient_user_id', '=', input.userId)
-      .where('read_at', 'is', null)
       .executeTakeFirst();
     return Number(result.numUpdatedRows) > 0;
   }
