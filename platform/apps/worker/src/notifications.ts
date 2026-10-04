@@ -265,8 +265,15 @@ export async function enqueueNotification(
         locale: input.locale ?? 'ar-EG',
         payload: input.payload,
         scheduled_for: input.scheduledFor,
+        status: 'PENDING',
+        attempts: 0,
+        provider_message_id: null,
+        last_error: null,
+        sent_at: null,
+        processing_started_at: null,
+        processing_by: null,
         updated_at: new Date(),
-      }).where('notification_jobs.status', '=', 'PENDING'),
+      }).where('notification_jobs.status', '=', 'CANCELLED'),
     )
     .execute();
 }
