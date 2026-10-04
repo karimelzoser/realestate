@@ -1,7 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Kysely } from 'kysely';
 import type { Database } from '@preneura/database';
-import type { RoleCode, ScopeType } from '@preneura/contracts/access';
+import type {
+  RoleCode,
+  ScopeType,
+  WorkspaceContextSnapshot,
+  WorkspaceProjectSnapshot,
+} from '@preneura/contracts/access';
 import { DATABASE } from '../database/database.module.js';
 
 export interface RoleAssignment {
@@ -13,8 +18,21 @@ export interface RoleAssignment {
   brokerCompanyId: string | null;
 }
 
+type ProjectRow = {
+  id: string;
+  tenant_id: string;
+  code: string;
+  name: string;
+  status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'CLOSED' | 'ARCHIVED';
+  currency: string;
+  timezone: string;
+  tenant_code: string;
+  tenant_name: string;
+};
+
 export abstract class AccessRepository {
   abstract listActiveAssignments(userId: string): Promise<RoleAssignment[]>;
+  abstract workspaceContext(userId: string, at: Date): Promise<WorkspaceContextSnapshot | null>;
   abstract brokerCompanyCanAccessProject(input: {
     tenantId: string;
     brokerCompanyId: string;
@@ -55,6 +73,119 @@ export class PostgresAccessRepository extends AccessRepository {
     }));
   }
 
+  async workspaceContext(userId: string, at: Date): Promise<WorkspaceContextSnapshot | null> {
+    const user = await this.db
+      .selectFrom('users')
+      .select(['id', 'display_name'])
+      .where('id', '=', userId)
+      .where('status', '=', 'ACTIVE')
+      .executeTakeFirst();
+    if (!user) return null;
+
+    const assignments = await this.listActiveAssignments(userId);
+    const projectRows = new Map<string, ProjectRow>();
+    const hasPlatformScope = assignments.some((assignment) => assignment.scopeType === 'PLATFORM');
+    const tenantIds = unique(assignments
+      .filter((assignment) => assignment.scopeType === 'TENANT' && assignment.tenantId)
+      .map((assignment) => assignment.tenantId!));
+    const assignedProjectIds = unique(assignments
+      .filter((assignment) => assignment.scopeType === 'PROJECT' && assignment.projectId)
+      .map((assignment) => assignment.projectId!));
+    const brokerCompanyIds = unique(assignments
+      .filter((assignment) => assignment.scopeType === 'BROKER_COMPANY' && assignment.brokerCompanyId)
+      .map((assignment) => assignment.brokerCompanyId!));
+
+    const brokerAccessRows = brokerCompanyIds.length === 0
+      ? []
+      : await this.db
+        .selectFrom('broker_project_access')
+        .select(['tenant_id', 'project_id', 'broker_company_id'])
+        .where('broker_company_id', 'in', brokerCompanyIds)
+        .where('status', '=', 'ACTIVE')
+        .where('effective_from', '<=', at)
+        .where((eb) => eb.or([
+          eb('effective_to', 'is', null),
+          eb('effective_to', '>', at),
+        ]))
+        .execute();
+    const brokerProjectIds = unique(brokerAccessRows.map((row) => row.project_id));
+    const brokerProjectKeys = new Set(
+      brokerAccessRows.map((row) => `${row.project_id}:${row.broker_company_id}`),
+    );
+
+    const selectProjects = () => this.db
+      .selectFrom('projects as p')
+      .innerJoin('tenants as t', 't.id', 'p.tenant_id')
+      .select([
+        'p.id', 'p.tenant_id', 'p.code', 'p.name', 'p.status', 'p.currency', 'p.timezone',
+        't.code as tenant_code', 't.name as tenant_name',
+      ])
+      .where('p.status', '!=', 'ARCHIVED')
+      .where('t.status', '=', 'ACTIVE');
+
+    if (hasPlatformScope) {
+      for (const row of await selectProjects().execute()) projectRows.set(row.id, row);
+    } else {
+      if (tenantIds.length > 0) {
+        for (const row of await selectProjects().where('p.tenant_id', 'in', tenantIds).execute()) {
+          projectRows.set(row.id, row);
+        }
+      }
+      const explicitIds = unique([...assignedProjectIds, ...brokerProjectIds]);
+      if (explicitIds.length > 0) {
+        for (const row of await selectProjects().where('p.id', 'in', explicitIds).execute()) {
+          projectRows.set(row.id, row);
+        }
+      }
+    }
+
+    const projects: WorkspaceProjectSnapshot[] = [...projectRows.values()]
+      .map((project) => {
+        const projectAssignments = assignments.filter((assignment) => {
+          if (assignment.scopeType === 'PLATFORM') return true;
+          if (assignment.scopeType === 'TENANT') return assignment.tenantId === project.tenant_id;
+          if (assignment.scopeType === 'PROJECT') return assignment.projectId === project.id;
+          return Boolean(
+            assignment.brokerCompanyId &&
+            brokerProjectKeys.has(`${project.id}:${assignment.brokerCompanyId}`),
+          );
+        });
+        const roles = unique(projectAssignments.map((assignment) => assignment.role));
+        const projectBrokerCompanyIds = unique(projectAssignments
+          .filter((assignment) => assignment.scopeType === 'BROKER_COMPANY' && assignment.brokerCompanyId)
+          .map((assignment) => assignment.brokerCompanyId!));
+        return {
+          tenantId: project.tenant_id,
+          tenantCode: project.tenant_code,
+          tenantName: project.tenant_name,
+          projectId: project.id,
+          projectCode: project.code,
+          projectName: project.name,
+          projectStatus: project.status as WorkspaceProjectSnapshot['projectStatus'],
+          currency: project.currency,
+          timezone: project.timezone,
+          roles,
+          brokerCompanyIds: projectBrokerCompanyIds,
+        };
+      })
+      .filter((project) => project.roles.length > 0)
+      .sort((a, b) => a.tenantName.localeCompare(b.tenantName) || a.projectName.localeCompare(b.projectName));
+
+    return {
+      userId: user.id,
+      displayName: user.display_name,
+      assignments: assignments.map((assignment) => ({
+        assignmentId: assignment.id,
+        role: assignment.role,
+        scopeType: assignment.scopeType,
+        tenantId: assignment.tenantId,
+        projectId: assignment.projectId,
+        brokerCompanyId: assignment.brokerCompanyId,
+      })),
+      projects,
+    };
+  }
+
   async brokerCompanyCanAccessProject(input: {
     tenantId: string;
     brokerCompanyId: string;
@@ -79,4 +210,8 @@ export class PostgresAccessRepository extends AccessRepository {
 
     return Boolean(row);
   }
+}
+
+function unique<T>(values: T[]): T[] {
+  return [...new Set(values)];
 }

@@ -1,7 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   roleHasPermission,
   type PermissionCode,
+  type WorkspaceContextSnapshot,
 } from '@preneura/contracts/access';
 import { AccessRepository, type RoleAssignment } from './access.repository.js';
 
@@ -16,39 +17,54 @@ export interface AccessDecision {
   allowed: boolean;
   assignmentId?: string;
   role?: RoleAssignment['role'];
+  scopeType?: RoleAssignment['scopeType'];
+  tenantId?: string | null;
+  projectId?: string | null;
+  brokerCompanyId?: string | null;
 }
 
 @Injectable()
 export class AccessService {
   constructor(private readonly repository: AccessRepository) {}
 
+  async matchingAssignments(input: {
+    userId: string;
+    permission: PermissionCode;
+    context?: AccessContext;
+  }): Promise<RoleAssignment[]> {
+    const context = input.context ?? {};
+    if (
+      input.permission.endsWith('.self') &&
+      context.resourceOwnerUserId !== input.userId
+    ) {
+      return [];
+    }
+
+    const assignments = await this.repository.listActiveAssignments(input.userId);
+    const matching: RoleAssignment[] = [];
+    for (const assignment of assignments) {
+      if (!roleHasPermission(assignment.role, input.permission)) continue;
+      if (await this.scopeMatches(assignment, context)) matching.push(assignment);
+    }
+    return matching;
+  }
+
   async can(input: {
     userId: string;
     permission: PermissionCode;
     context?: AccessContext;
   }): Promise<AccessDecision> {
-    const context = input.context ?? {};
-
-    if (
-      input.permission.endsWith('.self') &&
-      context.resourceOwnerUserId !== input.userId
-    ) {
-      return { allowed: false };
-    }
-
-    const assignments = await this.repository.listActiveAssignments(input.userId);
-    for (const assignment of assignments) {
-      if (!roleHasPermission(assignment.role, input.permission)) continue;
-      if (await this.scopeMatches(assignment, context)) {
-        return {
-          allowed: true,
-          assignmentId: assignment.id,
-          role: assignment.role,
-        };
-      }
-    }
-
-    return { allowed: false };
+    const assignment = (await this.matchingAssignments(input))[0];
+    if (!assignment) return { allowed: false };
+    return {
+      allowed: true,
+      assignmentId: assignment.id,
+      role: assignment.role,
+      scopeType: assignment.scopeType,
+      tenantId: assignment.tenantId,
+      projectId: assignment.projectId,
+      brokerCompanyId: assignment.brokerCompanyId,
+    };
   }
 
   async assert(input: {
@@ -65,6 +81,12 @@ export class AccessService {
 
   async assignmentsForUser(userId: string): Promise<RoleAssignment[]> {
     return this.repository.listActiveAssignments(userId);
+  }
+
+  async workspaceContext(userId: string): Promise<WorkspaceContextSnapshot> {
+    const context = await this.repository.workspaceContext(userId, new Date());
+    if (!context) throw new NotFoundException('Active user not found.');
+    return context;
   }
 
   private async scopeMatches(

@@ -10,10 +10,13 @@ import { QueueDispatchService } from './queue-dispatch.service.js';
 import { SalesController } from './sales.controller.js';
 import { SalesRepository } from './sales.repository.js';
 import { SalesService } from './sales.service.js';
+import { TransactionListController } from './transaction-list.controller.js';
+import { TransactionListRepository } from './transaction-list.repository.js';
+import { TransactionListService } from './transaction-list.service.js';
 
 @Module({
   imports: [AuthModule, AccessModule],
-  controllers: [SalesController, EoiRefundController, QueueDispatchController],
+  controllers: [SalesController, EoiRefundController, QueueDispatchController, TransactionListController],
   providers: [
     SalesRepository,
     SalesService,
@@ -21,7 +24,9 @@ import { SalesService } from './sales.service.js';
     EoiRefundService,
     QueueDispatchRepository,
     QueueDispatchService,
+    TransactionListRepository,
+    TransactionListService,
   ],
-  exports: [SalesService, EoiRefundService],
+  exports: [SalesService, EoiRefundService, TransactionListService],
 })
 export class SalesModule {}
