@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -45,8 +47,26 @@ export class AuthService {
     const normalized = this.normalizeIdentifier(input.method, input.identifier);
     const kind: AliasKind = input.method === 'phone' ? 'PHONE' : 'NATIONAL_ID';
     const identifierHmac = this.identifierHmac(normalized);
-    const userId = await this.repository.findActiveUserByAlias(kind, identifierHmac);
 
+    const windowSeconds = this.otpRequestWindowSeconds();
+    const recentChallengeCount = await this.repository.countChallengesSince(
+      kind,
+      identifierHmac,
+      new Date(Date.now() - windowSeconds * 1000),
+    );
+    if (recentChallengeCount >= this.otpMaxRequestsPerWindow()) {
+      await this.repository.recordEvent({
+        eventType: 'LOGIN_CHALLENGE_RATE_LIMITED',
+        result: 'REJECTED',
+        metadata: { method: input.method, windowSeconds },
+      });
+      throw new HttpException(
+        'Too many one-time-code requests. Try again later.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const userId = await this.repository.findActiveUserByAlias(kind, identifierHmac);
     const challengeId = randomUUID();
     const code = this.generateOtp();
     const expiresInSeconds = this.otpTtlSeconds();
@@ -173,6 +193,14 @@ export class AuthService {
 
   private otpMaxAttempts(): number {
     return this.positiveIntegerEnv('AUTH_OTP_MAX_ATTEMPTS', 5);
+  }
+
+  private otpRequestWindowSeconds(): number {
+    return this.positiveIntegerEnv('AUTH_OTP_REQUEST_WINDOW_SECONDS', 600);
+  }
+
+  private otpMaxRequestsPerWindow(): number {
+    return this.positiveIntegerEnv('AUTH_OTP_MAX_REQUESTS_PER_WINDOW', 5);
   }
 
   private generateOtp(): string {
