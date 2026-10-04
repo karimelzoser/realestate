@@ -25,6 +25,13 @@ export interface SessionRecord {
   expiresAt: Date;
 }
 
+export interface ResolvedSession {
+  sessionId: string;
+  userId: string;
+  userStatus: 'ACTIVE' | 'DISABLED' | 'PENDING';
+  expiresAt: Date;
+}
+
 export interface ExternalIdentityResult {
   userId: string;
   status: 'ACTIVE' | 'DISABLED' | 'PENDING';
@@ -43,6 +50,8 @@ export abstract class AuthRepository {
   abstract consumeChallenge(challengeId: string, otpDigest: Uint8Array, now: Date): Promise<string | null>;
   abstract decrementChallengeAttempt(challengeId: string, now: Date): Promise<void>;
   abstract createSession(session: SessionRecord): Promise<void>;
+  abstract resolveSession(tokenDigest: Uint8Array, now: Date): Promise<ResolvedSession | null>;
+  abstract revokeSession(sessionId: string, now: Date): Promise<void>;
   abstract recordEvent(input: {
     userId?: string | null;
     eventType: string;
@@ -189,6 +198,39 @@ export class PostgresAuthRepository extends AuthRepository {
         revoked_at: null,
       })
       .executeTakeFirstOrThrow();
+  }
+
+  async resolveSession(tokenDigest: Uint8Array, now: Date): Promise<ResolvedSession | null> {
+    const row = await this.db
+      .selectFrom('auth_sessions as session')
+      .innerJoin('users as user', 'user.id', 'session.user_id')
+      .select([
+        'session.id as session_id',
+        'session.user_id',
+        'session.expires_at',
+        'user.status as user_status',
+      ])
+      .where('session.token_digest', '=', tokenDigest)
+      .where('session.revoked_at', 'is', null)
+      .where('session.expires_at', '>', now)
+      .executeTakeFirst();
+
+    if (!row || row.user_status === 'DISABLED') return null;
+    return {
+      sessionId: row.session_id,
+      userId: row.user_id,
+      userStatus: row.user_status,
+      expiresAt: row.expires_at as Date,
+    };
+  }
+
+  async revokeSession(sessionId: string, now: Date): Promise<void> {
+    await this.db
+      .updateTable('auth_sessions')
+      .set({ revoked_at: now })
+      .where('id', '=', sessionId)
+      .where('revoked_at', 'is', null)
+      .execute();
   }
 
   async recordEvent(input: {
