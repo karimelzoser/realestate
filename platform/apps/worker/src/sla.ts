@@ -1,0 +1,264 @@
+import type { Kysely } from 'kysely';
+import type {
+  AccessRoleCode,
+  Database,
+  NotificationAudience,
+  NotificationChannel,
+} from '@preneura/database';
+import { enqueueNotification } from './notifications.js';
+
+export async function scheduleMilestoneSlas(
+  db: Kysely<Database>,
+  now = new Date(),
+): Promise<number> {
+  const rows = await db
+    .selectFrom('transaction_milestones as m')
+    .innerJoin('transactions as t', 't.id', 'm.transaction_id')
+    .innerJoin('buyer_profiles as b', (join) =>
+      join.onRef('b.id', '=', 't.buyer_profile_id').onRef('b.tenant_id', '=', 't.tenant_id'),
+    )
+    .innerJoin('project_milestone_slas as s', (join) =>
+      join
+        .onRef('s.project_id', '=', 't.project_id')
+        .onRef('s.tenant_id', '=', 't.tenant_id')
+        .onRef('s.milestone_code', '=', 'm.code'),
+    )
+    .select([
+      't.id as transaction_id',
+      't.tenant_id',
+      't.project_id',
+      't.opened_at',
+      'b.user_id as buyer_user_id',
+      'b.broker_company_id',
+      'b.broker_agent_user_id',
+      'm.code as milestone_code',
+      's.target_hours_after_open',
+      's.reminder_hours_before',
+      's.audience',
+      's.channel',
+      's.template_code',
+    ])
+    .where('s.enabled', '=', true)
+    .where('t.status', 'in', ['IN_PROGRESS', 'READY_FOR_COMPLETION'])
+    .where('m.status', 'in', ['PENDING', 'BLOCKED'])
+    .execute();
+
+  let scheduled = 0;
+  const desiredKeys = new Set<string>();
+  for (const row of rows) {
+    const targetAt = new Date(
+      (row.opened_at as Date).getTime() + row.target_hours_after_open * 60 * 60 * 1000,
+    );
+    const scheduledFor = new Date(
+      targetAt.getTime() - row.reminder_hours_before * 60 * 60 * 1000,
+    );
+    const recipients = await resolveRecipients(db, {
+      tenantId: row.tenant_id,
+      projectId: row.project_id,
+      audience: row.audience,
+      buyerUserId: row.buyer_user_id,
+      brokerCompanyId: row.broker_company_id,
+      brokerAgentUserId: row.broker_agent_user_id,
+      now,
+    });
+
+    for (const recipientUserId of recipients) {
+      const idempotencyKey = milestoneSlaKey({
+        transactionId: row.transaction_id,
+        milestoneCode: row.milestone_code,
+        recipientUserId,
+        audience: row.audience,
+        channel: row.channel,
+        targetHoursAfterOpen: row.target_hours_after_open,
+        reminderHoursBefore: row.reminder_hours_before,
+        templateCode: row.template_code,
+      });
+      desiredKeys.add(idempotencyKey);
+      await enqueueNotification(db, {
+        tenantId: row.tenant_id,
+        projectId: row.project_id,
+        transactionId: row.transaction_id,
+        recipientUserId,
+        audience: row.audience,
+        channel: row.channel,
+        templateCode: row.template_code,
+        payload: {
+          kind: 'MILESTONE_SLA',
+          transactionId: row.transaction_id,
+          milestoneCode: row.milestone_code,
+          targetAt: targetAt.toISOString(),
+          overdue: targetAt.getTime() <= now.getTime(),
+        },
+        scheduledFor,
+        idempotencyKey,
+      });
+      scheduled += 1;
+    }
+  }
+
+  await cancelStaleMilestoneJobs(db, desiredKeys, now);
+  return scheduled;
+}
+
+async function resolveRecipients(
+  db: Kysely<Database>,
+  input: {
+    tenantId: string;
+    projectId: string;
+    audience: NotificationAudience;
+    buyerUserId: string;
+    brokerCompanyId: string | null;
+    brokerAgentUserId: string | null;
+    now: Date;
+  },
+): Promise<string[]> {
+  if (input.audience === 'BUYER') return [input.buyerUserId];
+
+  if (
+    input.audience === 'BROKER_AGENT' ||
+    input.audience === 'BROKER_MANAGER' ||
+    input.audience === 'BROKER_FINANCE'
+  ) {
+    if (!input.brokerCompanyId) return [];
+    const brokerHasAccess = await brokerCompanyCanAccessProject(db, {
+      tenantId: input.tenantId,
+      projectId: input.projectId,
+      brokerCompanyId: input.brokerCompanyId,
+      now: input.now,
+    });
+    if (!brokerHasAccess) return [];
+  }
+
+  if (input.audience === 'BROKER_AGENT') {
+    if (!input.brokerAgentUserId || !input.brokerCompanyId) return [];
+    const assignment = await db
+      .selectFrom('access_role_assignments')
+      .select('user_id')
+      .where('user_id', '=', input.brokerAgentUserId)
+      .where('role_code', '=', 'BROKER_AGENT')
+      .where('scope_type', '=', 'BROKER_COMPANY')
+      .where('tenant_id', '=', input.tenantId)
+      .where('broker_company_id', '=', input.brokerCompanyId)
+      .where('status', '=', 'ACTIVE')
+      .where('revoked_at', 'is', null)
+      .executeTakeFirst();
+    return assignment ? [assignment.user_id] : [];
+  }
+
+  if (input.audience === 'BROKER_MANAGER' || input.audience === 'BROKER_FINANCE') {
+    const rows = await db
+      .selectFrom('access_role_assignments')
+      .select('user_id')
+      .where('role_code', '=', input.audience)
+      .where('scope_type', '=', 'BROKER_COMPANY')
+      .where('tenant_id', '=', input.tenantId)
+      .where('broker_company_id', '=', input.brokerCompanyId!)
+      .where('status', '=', 'ACTIVE')
+      .where('revoked_at', 'is', null)
+      .execute();
+    return unique(rows.map((row) => row.user_id));
+  }
+
+  const roleCode = input.audience as AccessRoleCode;
+  const rows = await db
+    .selectFrom('access_role_assignments')
+    .select(['user_id', 'scope_type', 'project_id', 'tenant_id'])
+    .where('role_code', '=', roleCode)
+    .where('status', '=', 'ACTIVE')
+    .where('revoked_at', 'is', null)
+    .where((eb) =>
+      eb.or([
+        eb.and([
+          eb('scope_type', '=', 'PROJECT'),
+          eb('tenant_id', '=', input.tenantId),
+          eb('project_id', '=', input.projectId),
+        ]),
+        eb.and([
+          eb('scope_type', '=', 'TENANT'),
+          eb('tenant_id', '=', input.tenantId),
+        ]),
+      ]),
+    )
+    .execute();
+  return unique(rows.map((row) => row.user_id));
+}
+
+async function brokerCompanyCanAccessProject(
+  db: Kysely<Database>,
+  input: {
+    tenantId: string;
+    projectId: string;
+    brokerCompanyId: string;
+    now: Date;
+  },
+): Promise<boolean> {
+  const row = await db
+    .selectFrom('broker_project_access')
+    .select('broker_company_id')
+    .where('tenant_id', '=', input.tenantId)
+    .where('project_id', '=', input.projectId)
+    .where('broker_company_id', '=', input.brokerCompanyId)
+    .where('status', '=', 'ACTIVE')
+    .where('effective_from', '<=', input.now)
+    .where((eb) => eb.or([
+      eb('effective_to', 'is', null),
+      eb('effective_to', '>', input.now),
+    ]))
+    .executeTakeFirst();
+  return Boolean(row);
+}
+
+async function cancelStaleMilestoneJobs(
+  db: Kysely<Database>,
+  desiredKeys: ReadonlySet<string>,
+  now: Date,
+): Promise<void> {
+  const pending = await db
+    .selectFrom('notification_jobs')
+    .select(['id', 'idempotency_key'])
+    .where('status', '=', 'PENDING')
+    .where('idempotency_key', 'like', 'sla:%')
+    .execute();
+
+  const staleIds = pending
+    .filter((job) => !desiredKeys.has(job.idempotency_key))
+    .map((job) => job.id);
+
+  if (staleIds.length > 0) {
+    await db
+      .updateTable('notification_jobs')
+      .set({ status: 'CANCELLED', updated_at: now })
+      .where('id', 'in', staleIds)
+      .where('status', '=', 'PENDING')
+      .execute();
+  }
+}
+
+function milestoneSlaKey(input: {
+  transactionId: string;
+  milestoneCode: string;
+  recipientUserId: string;
+  audience: NotificationAudience;
+  channel: NotificationChannel;
+  targetHoursAfterOpen: number;
+  reminderHoursBefore: number;
+  templateCode: string;
+}): string {
+  const templateToken = Buffer.from(input.templateCode, 'utf8').toString('base64url');
+  return [
+    'sla',
+    'v2',
+    input.transactionId,
+    input.milestoneCode,
+    input.recipientUserId,
+    input.audience,
+    input.channel,
+    String(input.targetHoursAfterOpen),
+    String(input.reminderHoursBefore),
+    templateToken,
+  ].join(':');
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
+}

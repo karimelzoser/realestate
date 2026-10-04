@@ -12,7 +12,8 @@
     "./documents": "./src/documents.ts",
     "./finance": "./src/finance.ts",
     "./commissions": "./src/commissions.ts",
-    "./notifications": "./src/notifications.ts"
+    "./notifications": "./src/notifications.ts",
+    "./realtime": "./src/realtime.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

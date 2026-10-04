@@ -1,86 +1,219 @@
 # PRENEURA Production Platform
 
-This directory is the new server-authoritative production implementation. The existing 6.7 demo at repository root remains untouched while production domains are migrated and parity-tested.
+`platform/` is the server-authoritative production implementation of PRENEURA. The legacy/demo application at repository root remains separate while production capabilities are moved behind typed APIs, PostgreSQL invariants, worker processes, and explicit authorization.
 
-## Implemented in the first foundation slice
+## Current production stack
 
-- pnpm/Turborepo TypeScript workspace
-- Next.js production web shell
-- NestJS/Fastify API
-- PostgreSQL typed database package
-- passwordless phone login + OTP contract
-- National ID account lookup + OTP to the verified phone
-- Google OIDC authorization-code + PKCE flow through Keycloak
-- HttpOnly server sessions with only token digests stored in PostgreSQL
-- enumeration-resistant login challenge behavior
-- authentication security event records
-- local PostgreSQL / Redis / Keycloak development stack
+- pnpm + Turborepo TypeScript workspace
+- Next.js web application
+- NestJS + Fastify API
+- PostgreSQL 18 domain database through Kysely
+- dedicated background worker process
+- passwordless phone / National ID + OTP authentication
+- Google OIDC through Keycloak
+- HttpOnly server sessions with token digests stored in PostgreSQL
+- tenant/project/broker RBAC and ownership-scoped buyer permissions
+- project catalog, pricing versions, inventory slots and atomic unit locks
+- buyer profiles, EOI/refunds, queues, reservations and transactions
+- S3-compatible document storage, verification, templates, signatures and contract stamping
+- payment schedules and physical cheque lifecycle
+- broker commission plans, cases, eligibility and due-state automation
+- durable transactional outbox
+- durable realtime replay log + PostgreSQL `LISTEN/NOTIFY` wakeups
+- user notification inbox + provider-neutral external delivery jobs
+- project milestone SLA scheduling and reminder delivery
 
-## Login security model
+## Runtime boundaries
 
-### Phone
+The API is stateless request/SSE infrastructure. It does **not** own recurring timers.
 
-1. User enters a phone number.
-2. API normalizes to E.164 and computes an HMAC lookup key.
-3. API creates an OTP challenge whether or not an account exists.
-4. If an active account exists, the configured provider sends the OTP.
-5. Successful OTP verification atomically consumes the challenge and creates a server session.
+The dedicated worker owns:
 
-### National ID
+- outbox publication into the durable realtime replay stream
+- notification claiming, retries and stale-claim recovery
+- in-app notification materialization
+- external notification gateway delivery
+- transaction milestone SLA scheduling/reconciliation
+- commission due-time refreshes
 
-The National ID is an identifier, never a password. PRENEURA stores a keyed HMAC lookup alias and does not require the clear National ID in the authentication tables. When a matching account exists, the OTP is delivered to the already verified phone attached to that user.
+This separation is required so horizontally scaled API instances do not create duplicate timer execution.
 
-The first implementation validates the Egyptian 14-digit National ID format. International identity/passport login can be added as a separate alias type without weakening this flow.
+## Realtime model
 
-### Google
+Realtime transport is intentionally signal-only. Browser streams never receive raw transactional outbox payloads.
 
-The web UI sends the user to `/v1/auth/google/start`. The API creates a PKCE verifier + state and redirects through the PRENEURA Keycloak realm with `kc_idp_hint=google`. The callback validates state, exchanges the code with PKCE, verifies the Keycloak ID token against the realm JWKS, links the `(provider, subject)` identity and creates the same PRENEURA server session used by OTP login.
+Project streams emit only:
 
-A first-time Google identity is `PENDING`; identity verification alone never grants a tenant, project or operational role.
+- monotonic sequence cursor
+- topic
+- source event type
+- occurrence timestamp
+
+Clients refetch the authorized REST snapshot after receiving a signal. Reconnects use the durable PostgreSQL sequence to replay missed signals. Large replay gaps emit `resync_required` so the client performs a full authorized refresh instead of receiving an unbounded backlog.
+
+Broker commission streams are broker-company scoped. `BROKER_AGENT` streams are further restricted to commission cases attributed to that agent and do not receive commission-plan publication signals.
+
+User notification streams are always scoped to the authenticated session user.
 
 ## Local bootstrap
 
 ```bash
 cd platform
 cp .env.example .env
-# replace all placeholder secrets before running auth flows
+# Replace all placeholder secrets and configure local S3-compatible storage.
 
 docker compose -f docker-compose.dev.yml up -d
 pnpm install
 ```
 
-Apply `packages/database/migrations/0001_auth_foundation.sql` to the `preneura` PostgreSQL database before starting the API.
+Apply every migration in order:
 
-Then run:
+```bash
+for migration in packages/database/migrations/*.sql; do
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+done
+```
+
+Run all development applications:
 
 ```bash
 pnpm dev
 ```
 
-Default endpoints:
+Or run the production API/worker processes independently after building:
+
+```bash
+pnpm --filter @preneura/api build
+pnpm --filter @preneura/api start
+
+pnpm --filter @preneura/worker build
+pnpm --filter @preneura/worker start
+```
+
+Default local endpoints:
 
 - web: `http://localhost:3000`
 - API: `http://localhost:4100/v1`
 - Keycloak: `http://localhost:8080`
 
-## Keycloak setup required for Google
+## Important API surfaces in the current slice
 
-Create realm `preneura`, configure confidential OIDC client `preneura-web`, use the callback URL from `OIDC_REDIRECT_URI`, and add Google as an Identity Provider. Google client secrets and all production Keycloak secrets belong in a secrets manager, never in Git.
+Realtime project signals:
 
-## Production safety rules already enforced
+```text
+GET /v1/tenants/:tenantId/projects/:projectId/events
+```
 
-- `OTP_PROVIDER=console` throws during production bootstrap.
-- production OIDC requires signed state/verifier cookies.
-- real identifier and OTP secrets are never committed.
-- OTP codes must never be logged by production delivery adapters.
-- National ID is never accepted as proof of identity by itself.
-- Google account creation does not grant any business role automatically.
+Broker commission signals:
 
-## Next implementation slices
+```text
+GET /v1/tenants/:tenantId/projects/:projectId/brokers/:brokerCompanyId/events
+```
 
-1. Redis-backed auth rate limiting, resend limits and abuse controls.
-2. Production OTP adapters: SMS provider + Meta WhatsApp authentication template adapter.
-3. Session guard, logout/revocation, `/auth/me`, device/session management and MFA step-up policies for privileged roles.
-4. Tenant/project membership + RBAC/ABAC enforcement.
-5. Project/inventory/pricing domain and atomic exact-unit locking.
-6. Durable Temporal workflows and realtime event/outbox foundation.
+Both SSE endpoints accept either the `Last-Event-ID` header or an `after` query cursor.
+
+Authenticated notification inbox and stream:
+
+```text
+GET  /v1/me/notifications
+GET  /v1/me/notifications/events
+POST /v1/me/notifications/:notificationId/read
+```
+
+Project milestone SLA policy:
+
+```text
+GET  /v1/tenants/:tenantId/projects/:projectId/notification-slas
+POST /v1/tenants/:tenantId/projects/:projectId/notification-slas
+```
+
+## Notification delivery
+
+`IN_APP` jobs are delivered entirely inside PostgreSQL and are unique per notification job.
+
+`WHATSAPP`, `SMS`, and `EMAIL` jobs are sent to the configured `NOTIFICATION_GATEWAY_URL` with an `Idempotency-Key` header. The gateway is expected to preserve that idempotency contract with its downstream provider.
+
+Worker delivery behavior:
+
+- PostgreSQL row claiming uses `FOR UPDATE SKIP LOCKED`
+- processing claims older than five minutes are recoverable
+- failures use bounded exponential backoff
+- delivery attempts are auditable
+- terminal failures stop after five attempts
+- SLA jobs are policy-versioned and stale pending jobs are cancelled when milestones, recipients, broker access or SLA policy changes
+
+## Document storage
+
+Documents, templates and signature objects are never stored as file bytes in PostgreSQL. The API generates server-scoped S3-compatible object keys and presigned uploads, then verifies byte size, MIME type and SHA-256 before accepting the business record.
+
+Required storage configuration is documented in `.env.example`.
+
+## Keycloak setup for Google
+
+Create realm `preneura`, configure confidential OIDC client `preneura-web`, use the callback URL from `OIDC_REDIRECT_URI`, and add Google as an Identity Provider. Google client secrets and production Keycloak secrets belong in a secrets manager, never in Git.
+
+A first-time Google identity is `PENDING`; identity verification alone never grants tenant, project or operational roles.
+
+## Production validation
+
+`.github/workflows/platform-foundation.yml` currently validates:
+
+- strict TypeScript for API, worker, web, contracts and database packages
+- emitted API and worker builds
+- PostgreSQL 18 migrations from an empty database
+- critical uniqueness/index constraints across catalog, sales, documents, finance, commissions and notification runtime
+- commission creation/refresh triggers
+- realtime and user-notification `LISTEN/NOTIFY` triggers
+- durable replay and notification tables/indexes
+
+## Railway service layout
+
+Use separate Railway services against the same repository/database:
+
+### API service
+
+Working/root directory:
+
+```text
+platform
+```
+
+Build command:
+
+```bash
+pnpm install --no-frozen-lockfile && pnpm --filter @preneura/api build
+```
+
+Start command:
+
+```bash
+pnpm --filter @preneura/api start
+```
+
+Expose the API service publicly and set `PORT`, `WEB_ORIGIN`, `DATABASE_URL`, authentication variables and object-storage variables.
+
+### Worker service
+
+Working/root directory:
+
+```text
+platform
+```
+
+Build command:
+
+```bash
+pnpm install --no-frozen-lockfile && pnpm --filter @preneura/worker build
+```
+
+Start command:
+
+```bash
+pnpm --filter @preneura/worker start
+```
+
+The worker does not need a public domain or HTTP port. Set `DATABASE_URL`, worker polling variables and notification-gateway variables.
+
+## Release-hardening item still open
+
+The workspace does not yet contain a committed `pnpm-lock.yaml`, so CI and Railway must currently use `--no-frozen-lockfile`. Before the production release branch is cut, generate and commit the workspace lockfile and switch CI/deploy installs to `--frozen-lockfile` so dependency resolution is fully reproducible.

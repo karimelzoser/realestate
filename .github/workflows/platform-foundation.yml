@@ -37,6 +37,10 @@ jobs:
         run: pnpm install --no-frozen-lockfile
       - name: Typecheck
         run: pnpm typecheck
+      - name: Build API and worker
+        run: |
+          pnpm --filter @preneura/api build
+          pnpm --filter @preneura/worker build
 
   database-migrations:
     runs-on: ubuntu-latest
@@ -122,11 +126,43 @@ jobs:
             IF to_regclass('public.notification_jobs_dispatch') IS NULL THEN
               RAISE EXCEPTION 'notification dispatch index missing';
             END IF;
+            IF to_regclass('public.notification_jobs_processing') IS NULL THEN
+              RAISE EXCEPTION 'notification processing recovery index missing';
+            END IF;
+            IF to_regclass('public.notification_delivery_attempts_job') IS NULL THEN
+              RAISE EXCEPTION 'notification attempt audit index missing';
+            END IF;
             IF to_regclass('public.project_milestone_slas') IS NULL THEN
               RAISE EXCEPTION 'project milestone SLA table missing';
             END IF;
             IF to_regclass('public.document_template_signer_requirements') IS NULL THEN
               RAISE EXCEPTION 'document template signer requirements missing';
+            END IF;
+            IF to_regclass('public.realtime_events') IS NULL THEN
+              RAISE EXCEPTION 'realtime event replay table missing';
+            END IF;
+            IF to_regclass('public.realtime_events_project_sequence') IS NULL THEN
+              RAISE EXCEPTION 'project realtime replay index missing';
+            END IF;
+            IF to_regclass('public.realtime_events_tenant_sequence') IS NULL THEN
+              RAISE EXCEPTION 'tenant realtime replay index missing';
+            END IF;
+            IF to_regclass('public.user_notifications') IS NULL THEN
+              RAISE EXCEPTION 'user notifications table missing';
+            END IF;
+            IF to_regclass('public.user_notifications_recipient_sequence') IS NULL THEN
+              RAISE EXCEPTION 'user notification replay index missing';
+            END IF;
+            IF to_regclass('public.user_notifications_unread') IS NULL THEN
+              RAISE EXCEPTION 'user unread notification index missing';
+            END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public'
+                AND table_name = 'realtime_events'
+                AND column_name = 'source_aggregate_id'
+            ) THEN
+              RAISE EXCEPTION 'realtime source aggregate id missing';
             END IF;
             IF NOT EXISTS (
               SELECT 1 FROM pg_trigger
@@ -139,6 +175,21 @@ jobs:
               WHERE tgname = 'trg_refresh_commission_after_milestone' AND NOT tgisinternal
             ) THEN
               RAISE EXCEPTION 'commission milestone refresh trigger missing';
+            END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_trigger
+              WHERE tgname = 'trg_notify_preneura_realtime_event' AND NOT tgisinternal
+            ) THEN
+              RAISE EXCEPTION 'realtime LISTEN/NOTIFY trigger missing';
+            END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_trigger
+              WHERE tgname = 'trg_notify_preneura_user_notification' AND NOT tgisinternal
+            ) THEN
+              RAISE EXCEPTION 'user notification LISTEN/NOTIFY trigger missing';
+            END IF;
+            IF to_regprocedure('public.refresh_broker_commission_case(uuid)') IS NULL THEN
+              RAISE EXCEPTION 'commission refresh function missing';
             END IF;
           END $$;
           SQL
