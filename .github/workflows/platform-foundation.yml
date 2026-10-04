@@ -37,10 +37,13 @@ jobs:
         run: pnpm install --no-frozen-lockfile
       - name: Typecheck
         run: pnpm typecheck
-      - name: Build API and worker
+      - name: Build production applications
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4100
         run: |
           pnpm --filter @preneura/api build
           pnpm --filter @preneura/worker build
+          pnpm --filter @preneura/web build
 
   database-migrations:
     runs-on: ubuntu-latest
