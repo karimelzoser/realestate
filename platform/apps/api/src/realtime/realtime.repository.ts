@@ -82,6 +82,7 @@ export class RealtimeRepository {
     tenantId: string;
     projectId: string;
     brokerCompanyId: string;
+    brokerAgentUserId?: string | null;
   }): Promise<string | null> {
     const row = await this.brokerCommissionBase(input)
       .select(sql<string | null>`max(e.sequence)::text`.as('latest'))
@@ -93,6 +94,7 @@ export class RealtimeRepository {
     tenantId: string;
     projectId: string;
     brokerCompanyId: string;
+    brokerAgentUserId?: string | null;
     afterSequence: string;
     throughSequence?: string | null;
     limit?: number;
@@ -119,6 +121,7 @@ export class RealtimeRepository {
     tenantId: string;
     projectId: string;
     brokerCompanyId: string;
+    brokerAgentUserId?: string | null;
     sequence: string;
   }): Promise<RealtimeSignal | null> {
     const row = await this.brokerCommissionBase(input)
@@ -137,34 +140,49 @@ export class RealtimeRepository {
     tenantId: string;
     projectId: string;
     brokerCompanyId: string;
+    brokerAgentUserId?: string | null;
   }) {
-    return this.db
+    const base = this.db
       .selectFrom('realtime_events as e')
       .where('e.tenant_id', '=', input.tenantId)
       .where('e.project_id', '=', input.projectId)
-      .where('e.topic', '=', 'COMMISSION')
-      .where((eb) => eb.or([
-        eb.and([
-          eb('e.source_aggregate_type', '=', 'BROKER_COMMISSION_CASE'),
-          eb('e.source_aggregate_id', 'in',
-            eb.selectFrom('broker_commission_cases')
-              .select('id')
-              .where('tenant_id', '=', input.tenantId)
-              .where('project_id', '=', input.projectId)
-              .where('broker_company_id', '=', input.brokerCompanyId),
-          ),
-        ]),
-        eb.and([
-          eb('e.source_aggregate_type', '=', 'BROKER_COMMISSION_PLAN'),
-          eb('e.source_aggregate_id', 'in',
-            eb.selectFrom('broker_commission_plans')
-              .select('id')
-              .where('tenant_id', '=', input.tenantId)
-              .where('project_id', '=', input.projectId)
-              .where('broker_company_id', '=', input.brokerCompanyId),
-          ),
-        ]),
-      ]));
+      .where('e.topic', '=', 'COMMISSION');
+
+    if (input.brokerAgentUserId) {
+      return base
+        .where('e.source_aggregate_type', '=', 'BROKER_COMMISSION_CASE')
+        .where((eb) => eb('e.source_aggregate_id', 'in',
+          eb.selectFrom('broker_commission_cases')
+            .select('id')
+            .where('tenant_id', '=', input.tenantId)
+            .where('project_id', '=', input.projectId)
+            .where('broker_company_id', '=', input.brokerCompanyId)
+            .where('broker_agent_user_id', '=', input.brokerAgentUserId!),
+        ));
+    }
+
+    return base.where((eb) => eb.or([
+      eb.and([
+        eb('e.source_aggregate_type', '=', 'BROKER_COMMISSION_CASE'),
+        eb('e.source_aggregate_id', 'in',
+          eb.selectFrom('broker_commission_cases')
+            .select('id')
+            .where('tenant_id', '=', input.tenantId)
+            .where('project_id', '=', input.projectId)
+            .where('broker_company_id', '=', input.brokerCompanyId),
+        ),
+      ]),
+      eb.and([
+        eb('e.source_aggregate_type', '=', 'BROKER_COMMISSION_PLAN'),
+        eb('e.source_aggregate_id', 'in',
+          eb.selectFrom('broker_commission_plans')
+            .select('id')
+            .where('tenant_id', '=', input.tenantId)
+            .where('project_id', '=', input.projectId)
+            .where('broker_company_id', '=', input.brokerCompanyId),
+        ),
+      ]),
+    ]));
   }
 
   private signal(row: {
