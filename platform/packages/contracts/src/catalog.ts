@@ -46,6 +46,13 @@ export const createPricingVersionSchema = z.object({
 });
 export type CreatePricingVersionInput = z.infer<typeof createPricingVersionSchema>;
 
+export const publishPricingVersionSchema = z.object({
+  tenantId: z.uuid(),
+  projectId: z.uuid(),
+  pricingVersionId: z.uuid(),
+});
+export type PublishPricingVersionInput = z.infer<typeof publishPricingVersionSchema>;
+
 export const createInventoryLockSchema = z.object({
   tenantId: z.uuid(),
   projectId: z.uuid(),
