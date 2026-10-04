@@ -1,4 +1,5 @@
 import TransactionDetailClient from './transaction-detail-client';
+import TransactionShortcuts from './transaction-shortcuts';
 
 type PageProps = {
   params: Promise<{ transactionId: string }>;
@@ -12,12 +13,21 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
   const [{ transactionId }, query] = await Promise.all([params, searchParams]);
   const tenantId = Array.isArray(query.tenantId) ? query.tenantId[0] : query.tenantId;
   const projectId = Array.isArray(query.projectId) ? query.projectId[0] : query.projectId;
+  const resolvedTenantId = tenantId ?? '';
+  const resolvedProjectId = projectId ?? '';
 
   return (
-    <TransactionDetailClient
-      transactionId={transactionId}
-      tenantId={tenantId ?? ''}
-      projectId={projectId ?? ''}
-    />
+    <>
+      <TransactionDetailClient
+        transactionId={transactionId}
+        tenantId={resolvedTenantId}
+        projectId={resolvedProjectId}
+      />
+      <TransactionShortcuts
+        transactionId={transactionId}
+        tenantId={resolvedTenantId}
+        projectId={resolvedProjectId}
+      />
+    </>
   );
 }
