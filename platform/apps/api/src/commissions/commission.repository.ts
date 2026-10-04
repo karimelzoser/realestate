@@ -13,6 +13,7 @@ interface BrokerTransactionContext {
   tenantId: string;
   projectId: string;
   transactionStatus: 'IN_PROGRESS' | 'READY_FOR_COMPLETION' | 'COMPLETED' | 'CANCELLED';
+  openedAt: Date;
   buyerProfileId: string;
   brokerCompanyId: string;
   brokerAgentUserId: string | null;
@@ -142,7 +143,7 @@ export class CommissionRepository {
         .where('project_id', '=', input.projectId)
         .where('broker_company_id', '=', context.brokerCompanyId)
         .where('status', '=', 'ACTIVE')
-        .where('effective_at', '<=', input.now)
+        .where('effective_at', '<=', context.openedAt)
         .orderBy('effective_at', 'desc')
         .orderBy('version_number', 'desc')
         .executeTakeFirst();
@@ -305,7 +306,7 @@ export class CommissionRepository {
         join.onRef('r.id', '=', 't.reservation_id').onRef('r.tenant_id', '=', 't.tenant_id').onRef('r.project_id', '=', 't.project_id'),
       )
       .select([
-        't.id', 't.tenant_id', 't.project_id', 't.status', 't.buyer_profile_id',
+        't.id', 't.tenant_id', 't.project_id', 't.status', 't.opened_at', 't.buyer_profile_id',
         'b.broker_company_id', 'b.broker_agent_user_id', 'r.quoted_total',
       ])
       .where('t.id', '=', input.transactionId)
@@ -319,6 +320,7 @@ export class CommissionRepository {
       tenantId: row.tenant_id,
       projectId: row.project_id,
       transactionStatus: row.status,
+      openedAt: row.opened_at as Date,
       buyerProfileId: row.buyer_profile_id,
       brokerCompanyId: row.broker_company_id,
       brokerAgentUserId: row.broker_agent_user_id,
