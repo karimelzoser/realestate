@@ -58,8 +58,8 @@ export interface BrokerCommissionCasesTable { id: Generated<string>; tenant_id: 
 
 export interface NotificationJobsTable { id: Generated<string>; tenant_id: string; project_id: string | null; transaction_id: string | null; recipient_user_id: string; audience: NotificationAudience; channel: NotificationChannel; template_code: string; locale: string; payload: JsonValue; scheduled_for: Timestamp; status: 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED' | 'CANCELLED'; idempotency_key: string; attempts: number; provider_message_id: string | null; last_error: string | null; sent_at: Timestamp | null; processing_started_at: Timestamp | null; processing_by: string | null; created_at: Generated<Date>; updated_at: Generated<Date>; }
 export interface NotificationDeliveryAttemptsTable { id: Generated<string>; notification_job_id: string; attempt_number: number; provider: string; result: 'SENT' | 'FAILED'; provider_message_id: string | null; error: string | null; started_at: Timestamp; completed_at: Timestamp; created_at: Generated<Date>; }
-export interface RealtimeEventsTable { sequence: Generated<number>; outbox_event_id: string; tenant_id: string | null; project_id: string | null; topic: RealtimeTopic; source_event_type: string; source_aggregate_type: string; occurred_at: Timestamp; published_at: Generated<Date>; }
-export interface UserNotificationsTable { id: Generated<string>; sequence: Generated<number>; notification_job_id: string; tenant_id: string; project_id: string | null; recipient_user_id: string; template_code: string; locale: string; payload: JsonValue; created_at: Generated<Date>; read_at: Timestamp | null; }
+export interface RealtimeEventsTable { sequence: Generated<string>; outbox_event_id: string; tenant_id: string | null; project_id: string | null; topic: RealtimeTopic; source_event_type: string; source_aggregate_type: string; source_aggregate_id: string; occurred_at: Timestamp; published_at: Generated<Date>; }
+export interface UserNotificationsTable { id: Generated<string>; sequence: Generated<string>; notification_job_id: string; tenant_id: string; project_id: string | null; recipient_user_id: string; template_code: string; locale: string; payload: JsonValue; created_at: Generated<Date>; read_at: Timestamp | null; }
 
 export interface Database {
   users: UsersTable;
@@ -82,8 +82,8 @@ export interface Database {
   domain_outbox_events: DomainOutboxEventsTable;
   buyer_profiles: BuyerProfilesTable;
   eoi_refund_policies: EoiRefundPoliciesTable;
-  buyer_eois: BuyerEoisTable;
   eoi_refund_requests: EoiRefundRequestsTable;
+  buyer_eois: BuyerEoisTable;
   queue_entries: QueueEntriesTable;
   reservations: ReservationsTable;
   transactions: TransactionsTable;
