@@ -3,6 +3,7 @@ import type {
   AccessRoleCode,
   Database,
   NotificationAudience,
+  NotificationChannel,
 } from '@preneura/database';
 import { enqueueNotification } from './notifications.js';
 
@@ -43,6 +44,7 @@ export async function scheduleMilestoneSlas(
     .execute();
 
   let scheduled = 0;
+  const desiredKeys = new Set<string>();
   for (const row of rows) {
     const targetAt = new Date(
       (row.opened_at as Date).getTime() + row.target_hours_after_open * 60 * 60 * 1000,
@@ -60,6 +62,17 @@ export async function scheduleMilestoneSlas(
     });
 
     for (const recipientUserId of recipients) {
+      const idempotencyKey = milestoneSlaKey({
+        transactionId: row.transaction_id,
+        milestoneCode: row.milestone_code,
+        recipientUserId,
+        audience: row.audience,
+        channel: row.channel,
+        targetHoursAfterOpen: row.target_hours_after_open,
+        reminderHoursBefore: row.reminder_hours_before,
+        templateCode: row.template_code,
+      });
+      desiredKeys.add(idempotencyKey);
       await enqueueNotification(db, {
         tenantId: row.tenant_id,
         projectId: row.project_id,
@@ -76,13 +89,13 @@ export async function scheduleMilestoneSlas(
           overdue: targetAt.getTime() <= now.getTime(),
         },
         scheduledFor,
-        idempotencyKey: `sla:${row.transaction_id}:${row.milestone_code}:${recipientUserId}`,
+        idempotencyKey,
       });
       scheduled += 1;
     }
   }
 
-  await cancelCompletedMilestoneJobs(db, now);
+  await cancelStaleMilestoneJobs(db, desiredKeys, now);
   return scheduled;
 }
 
@@ -141,36 +154,55 @@ async function resolveRecipients(
   return unique(rows.map((row) => row.user_id));
 }
 
-async function cancelCompletedMilestoneJobs(db: Kysely<Database>, now: Date): Promise<void> {
+async function cancelStaleMilestoneJobs(
+  db: Kysely<Database>,
+  desiredKeys: ReadonlySet<string>,
+  now: Date,
+): Promise<void> {
   const pending = await db
-    .selectFrom('notification_jobs as n')
-    .innerJoin('transaction_milestones as m', 'm.transaction_id', 'n.transaction_id')
-    .select(['n.id', 'n.payload', 'm.code', 'm.status'])
-    .where('n.status', '=', 'PENDING')
-    .where('n.template_code', 'is not', null)
-    .where('m.status', 'in', ['COMPLETED', 'WAIVED'])
+    .selectFrom('notification_jobs')
+    .select(['id', 'idempotency_key'])
+    .where('status', '=', 'PENDING')
+    .where('idempotency_key', 'like', 'sla:%')
     .execute();
 
-  const ids = pending
-    .filter((row) => {
-      const payload = row.payload;
-      return Boolean(
-        payload &&
-        typeof payload === 'object' &&
-        !Array.isArray(payload) &&
-        payload.kind === 'MILESTONE_SLA' &&
-        payload.milestoneCode === row.code,
-      );
-    })
-    .map((row) => row.id);
+  const staleIds = pending
+    .filter((job) => !desiredKeys.has(job.idempotency_key))
+    .map((job) => job.id);
 
-  if (ids.length > 0) {
+  if (staleIds.length > 0) {
     await db
       .updateTable('notification_jobs')
       .set({ status: 'CANCELLED', updated_at: now })
-      .where('id', 'in', ids)
+      .where('id', 'in', staleIds)
+      .where('status', '=', 'PENDING')
       .execute();
   }
+}
+
+function milestoneSlaKey(input: {
+  transactionId: string;
+  milestoneCode: string;
+  recipientUserId: string;
+  audience: NotificationAudience;
+  channel: NotificationChannel;
+  targetHoursAfterOpen: number;
+  reminderHoursBefore: number;
+  templateCode: string;
+}): string {
+  const templateToken = Buffer.from(input.templateCode, 'utf8').toString('base64url');
+  return [
+    'sla',
+    'v2',
+    input.transactionId,
+    input.milestoneCode,
+    input.recipientUserId,
+    input.audience,
+    input.channel,
+    String(input.targetHoursAfterOpen),
+    String(input.reminderHoursBefore),
+    templateToken,
+  ].join(':');
 }
 
 function unique(values: string[]): string[] {
