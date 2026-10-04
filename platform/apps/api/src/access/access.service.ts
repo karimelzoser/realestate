@@ -17,6 +17,10 @@ export interface AccessDecision {
   allowed: boolean;
   assignmentId?: string;
   role?: RoleAssignment['role'];
+  scopeType?: RoleAssignment['scopeType'];
+  tenantId?: string | null;
+  projectId?: string | null;
+  brokerCompanyId?: string | null;
 }
 
 @Injectable()
@@ -45,6 +49,10 @@ export class AccessService {
           allowed: true,
           assignmentId: assignment.id,
           role: assignment.role,
+          scopeType: assignment.scopeType,
+          tenantId: assignment.tenantId,
+          projectId: assignment.projectId,
+          brokerCompanyId: assignment.brokerCompanyId,
         };
       }
     }
