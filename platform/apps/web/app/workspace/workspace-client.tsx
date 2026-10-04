@@ -9,7 +9,10 @@ import {
 import type { UnitTypeCommercialSnapshot } from '@preneura/contracts/catalog';
 import type { UserNotificationSnapshot } from '@preneura/contracts/notifications';
 import type { RealtimeSignal } from '@preneura/contracts/realtime';
-import type { QueueEntrySnapshot } from '@preneura/contracts/sales';
+import type {
+  QueueEntrySnapshot,
+  TransactionListItemSnapshot,
+} from '@preneura/contracts/sales';
 import {
   useCallback,
   useEffect,
@@ -20,7 +23,7 @@ import {
 import { ApiError, apiFetch, eventStreamUrl } from '../../lib/api';
 import styles from './workspace.module.css';
 
-type View = 'overview' | 'inventory' | 'queue';
+type View = 'overview' | 'inventory' | 'queue' | 'transactions';
 type LiveState = 'connecting' | 'live' | 'reconnecting' | 'offline';
 
 type AuthMe = {
@@ -36,6 +39,7 @@ export default function WorkspaceClient() {
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [catalog, setCatalog] = useState<UnitTypeCommercialSnapshot[]>([]);
   const [queue, setQueue] = useState<QueueEntrySnapshot[]>([]);
+  const [transactions, setTransactions] = useState<TransactionListItemSnapshot[]>([]);
   const [notifications, setNotifications] = useState<UserNotificationSnapshot[]>([]);
   const [view, setView] = useState<View>('overview');
   const [liveState, setLiveState] = useState<LiveState>('connecting');
@@ -59,6 +63,7 @@ export default function WorkspaceClient() {
   const canReadInventory = can(selectedProject, 'inventory.read');
   const canReadPricing = can(selectedProject, 'pricing.read');
   const canReadQueue = can(selectedProject, 'queue.read');
+  const canReadTransactions = can(selectedProject, 'transaction.read') || can(selectedProject, 'transaction.read.self');
 
   useEffect(() => {
     let cancelled = false;
@@ -110,18 +115,27 @@ export default function WorkspaceClient() {
     );
   }, [can]);
 
+  const loadTransactions = useCallback(async (project: WorkspaceProjectSnapshot): Promise<TransactionListItemSnapshot[]> => {
+    if (!can(project, 'transaction.read') && !can(project, 'transaction.read.self')) return [];
+    return apiFetch<TransactionListItemSnapshot[]>(
+      `/v1/tenants/${project.tenantId}/projects/${project.projectId}/transactions`,
+    );
+  }, [can]);
+
   const refreshProject = useCallback(async (project: WorkspaceProjectSnapshot): Promise<void> => {
     const token = ++projectLoadToken.current;
     setLoadingProject(true);
     setProjectError('');
     try {
-      const [nextCatalog, nextQueue] = await Promise.all([
+      const [nextCatalog, nextQueue, nextTransactions] = await Promise.all([
         loadCatalog(project),
         loadQueue(project),
+        loadTransactions(project),
       ]);
       if (projectLoadToken.current !== token) return;
       setCatalog(nextCatalog);
       setQueue(nextQueue);
+      setTransactions(nextTransactions);
     } catch (error) {
       if (projectLoadToken.current !== token) return;
       if (error instanceof ApiError && error.status === 401) {
@@ -132,13 +146,14 @@ export default function WorkspaceClient() {
     } finally {
       if (projectLoadToken.current === token) setLoadingProject(false);
     }
-  }, [loadCatalog, loadQueue]);
+  }, [loadCatalog, loadQueue, loadTransactions]);
 
   useEffect(() => {
     if (!selectedProject) return;
     window.localStorage.setItem(projectStorageKey, selectedProject.projectId);
     setCatalog([]);
     setQueue([]);
+    setTransactions([]);
     void refreshProject(selectedProject);
   }, [selectedProject, refreshProject]);
 
@@ -159,6 +174,12 @@ export default function WorkspaceClient() {
         if (signal.topic === 'QUEUE' && can(selectedProject, 'queue.read')) {
           void loadQueue(selectedProject).then(setQueue).catch(() => undefined);
         }
+        if (
+          signal.topic === 'TRANSACTION' &&
+          (can(selectedProject, 'transaction.read') || can(selectedProject, 'transaction.read.self'))
+        ) {
+          void loadTransactions(selectedProject).then(setTransactions).catch(() => undefined);
+        }
       } catch {
         // Durable replay will supply the next valid signal.
       }
@@ -178,7 +199,7 @@ export default function WorkspaceClient() {
       source.removeEventListener('resync_required', onResync);
       source.close();
     };
-  }, [selectedProject, can, loadCatalog, loadQueue, refreshProject]);
+  }, [selectedProject, can, loadCatalog, loadQueue, loadTransactions, refreshProject]);
 
   useEffect(() => {
     let cancelled = false;
@@ -276,6 +297,9 @@ export default function WorkspaceClient() {
     { available: 0, locked: 0, reserved: 0, sold: 0 },
   );
   const queueActive = queue.filter((entry) => ['WAITING', 'CALLED', 'LOCKED'].includes(entry.status));
+  const activeTransactions = transactions.filter((transaction) =>
+    ['IN_PROGRESS', 'READY_FOR_COMPLETION'].includes(transaction.status),
+  );
   const nextPriceMoves = catalog.filter((unit) => unit.nextPriceEffectiveAt && unit.nextPriceChangePercent);
   const unreadCount = notifications.filter((notification) => !notification.readAt).length;
 
@@ -297,6 +321,15 @@ export default function WorkspaceClient() {
           ) : null}
           {canReadQueue ? (
             <NavButton active={view === 'queue'} icon="users" label="Queue" count={queueActive.length} onClick={() => setView('queue')} />
+          ) : null}
+          {canReadTransactions ? (
+            <NavButton
+              active={view === 'transactions'}
+              icon="file"
+              label="Transactions"
+              count={activeTransactions.length}
+              onClick={() => setView('transactions')}
+            />
           ) : null}
         </nav>
 
@@ -365,14 +398,17 @@ export default function WorkspaceClient() {
               project={selectedProject}
               catalog={catalog}
               queue={queue}
+              transactions={transactions}
               totals={totals}
               queueActive={queueActive}
               nextPriceMoves={nextPriceMoves}
               canReadPricing={canReadPricing}
               canReadQueue={canReadQueue}
+              canReadTransactions={canReadTransactions}
               loading={loadingProject}
               onInventory={() => setView('inventory')}
               onQueue={() => setView('queue')}
+              onTransactions={() => setView('transactions')}
             />
           ) : null}
           {view === 'inventory' && canReadInventory ? (
@@ -386,6 +422,9 @@ export default function WorkspaceClient() {
           {view === 'queue' && canReadQueue ? (
             <QueueView queue={queue} loading={loadingProject} />
           ) : null}
+          {view === 'transactions' && canReadTransactions ? (
+            <TransactionsView transactions={transactions} loading={loadingProject} />
+          ) : null}
         </div>
       </section>
     </main>
@@ -396,15 +435,21 @@ function Overview(props: {
   project: WorkspaceProjectSnapshot;
   catalog: UnitTypeCommercialSnapshot[];
   queue: QueueEntrySnapshot[];
+  transactions: TransactionListItemSnapshot[];
   totals: { available: number; locked: number; reserved: number; sold: number };
   queueActive: QueueEntrySnapshot[];
   nextPriceMoves: UnitTypeCommercialSnapshot[];
   canReadPricing: boolean;
   canReadQueue: boolean;
+  canReadTransactions: boolean;
   loading: boolean;
   onInventory(): void;
   onQueue(): void;
+  onTransactions(): void;
 }) {
+  const activeTransactions = props.transactions.filter((transaction) =>
+    ['IN_PROGRESS', 'READY_FOR_COMPLETION'].includes(transaction.status),
+  );
   return (
     <>
       <section className={styles.pageHeading}>
@@ -412,7 +457,7 @@ function Overview(props: {
           <span className={styles.eyebrow}>Live project operations</span>
           <h1>{props.project.projectName}</h1>
           <p>
-            Server-authoritative inventory, pricing and queue state. Updates refresh automatically from the durable event stream.
+            Server-authoritative inventory, pricing, queue and transaction state. Updates refresh automatically from the durable event stream.
           </p>
         </div>
         <div className={styles.contextTags}>
@@ -428,6 +473,7 @@ function Overview(props: {
         <Metric label="Reserved" value={props.totals.reserved} hint="converted reservations" />
         <Metric label="Sold" value={props.totals.sold} hint="completed inventory" />
         {props.canReadQueue ? <Metric label="Queue" value={props.queueActive.length} hint="active buyers" /> : null}
+        {props.canReadTransactions ? <Metric label="Transactions" value={activeTransactions.length} hint="active post-reservation cases" /> : null}
       </section>
 
       <section className={styles.twoColumn}>
@@ -466,15 +512,21 @@ function Overview(props: {
           <div className={styles.panelHeader}>
             <div>
               <span className={styles.eyebrow}>Attention</span>
-              <h2>{props.canReadQueue ? 'Queue & pricing' : 'Upcoming pricing'}</h2>
+              <h2>Operational pulse</h2>
             </div>
-            {props.canReadQueue ? <button type="button" onClick={props.onQueue}>Open queue</button> : null}
+            {props.canReadTransactions ? <button type="button" onClick={props.onTransactions}>Transactions</button> : null}
           </div>
           <div className={styles.attentionStack}>
             {props.canReadQueue ? (
               <AttentionItem
                 title={`${props.queueActive.filter((entry) => entry.status === 'WAITING').length} buyers waiting`}
                 detail={`${props.queueActive.filter((entry) => entry.status === 'CALLED').length} called · ${props.queueActive.filter((entry) => entry.status === 'LOCKED').length} with active locks`}
+              />
+            ) : null}
+            {props.canReadTransactions ? (
+              <AttentionItem
+                title={`${activeTransactions.length} active transactions`}
+                detail={`${activeTransactions.filter((transaction) => transaction.status === 'READY_FOR_COMPLETION').length} ready for completion`}
               />
             ) : null}
             <AttentionItem
@@ -609,6 +661,68 @@ function QueueView(props: { queue: QueueEntrySnapshot[]; loading: boolean }) {
   );
 }
 
+function TransactionsView(props: { transactions: TransactionListItemSnapshot[]; loading: boolean }) {
+  return (
+    <>
+      <section className={styles.pageHeading}>
+        <div>
+          <span className={styles.eyebrow}>Post-reservation operations</span>
+          <h1>Transactions</h1>
+          <p>The server applies internal, broker-company, broker-agent or buyer-self scope before this list is returned.</p>
+        </div>
+      </section>
+      <section className={styles.panel}>
+        {props.loading && props.transactions.length === 0 ? <SkeletonRows /> : (
+          <div className={styles.queueTableWrap}>
+            <table className={styles.queueTable}>
+              <thead>
+                <tr>
+                  <th>Transaction</th>
+                  <th>Unit type</th>
+                  <th>Buyer</th>
+                  <th>Status</th>
+                  <th>Progress</th>
+                  <th>Contract value</th>
+                  <th>Opened</th>
+                </tr>
+              </thead>
+              <tbody>
+                {props.transactions.map((transaction) => (
+                  <tr key={transaction.transactionId}>
+                    <td><code>{shortId(transaction.transactionId)}</code></td>
+                    <td>
+                      <strong className={styles.tablePrimary}>{transaction.unitTypeName}</strong>
+                      <span className={styles.tableSecondary}>{transaction.unitTypeCode}</span>
+                    </td>
+                    <td>
+                      <code>{shortId(transaction.buyerProfileId)}</code>
+                      <span className={styles.tableSecondary}>{formatToken(transaction.buyerSource)}</span>
+                    </td>
+                    <td>
+                      <span className={`${styles.statusBadge} ${transactionStatusClass(transaction.status, styles)}`}>
+                        {formatToken(transaction.status)}
+                      </span>
+                    </td>
+                    <td>
+                      <div className={styles.progressCell}>
+                        <div><span style={{ width: `${clampPercent(transaction.completionPercent)}%` }} /></div>
+                        <strong>{clampPercent(transaction.completionPercent).toFixed(0)}%</strong>
+                      </div>
+                    </td>
+                    <td>{transaction.quotedTotal ? money(transaction.quotedTotal, transaction.currency) : '—'}</td>
+                    <td>{formatDateTime(transaction.openedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {props.transactions.length === 0 && !props.loading ? <Empty text="No transactions are visible in your current project scope." /> : null}
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
+
 function NotificationPanel(props: {
   items: UserNotificationSnapshot[];
   onClose(): void;
@@ -712,13 +826,14 @@ function SkeletonCards() {
   );
 }
 
-type IconName = 'grid' | 'building' | 'users' | 'bell';
+type IconName = 'grid' | 'building' | 'users' | 'file' | 'bell';
 
 function Icon({ name }: { name: IconName }) {
   const paths: Record<IconName, React.ReactNode> = {
     grid: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
     building: <><path d="M4 21V5a2 2 0 0 1 2-2h8v18"/><path d="M14 9h4a2 2 0 0 1 2 2v10"/><path d="M2 21h20"/><path d="M8 7h2M8 11h2M8 15h2M17 13h1M17 17h1"/></>,
     users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
+    file: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></>,
     bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></>,
   };
   return (
@@ -767,6 +882,10 @@ function signedPercent(value: string): string {
   return `${prefix}${number.toLocaleString('en-US', { maximumFractionDigits: 2 })}%`;
 }
 
+function clampPercent(value: string): number {
+  return Math.max(0, Math.min(100, Number(value)));
+}
+
 function formatDateTime(value: string): string {
   return new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
@@ -793,6 +912,18 @@ function liveLabel(state: LiveState): string {
     case 'connecting': return 'Connecting';
     case 'reconnecting': return 'Reconnecting';
     case 'offline': return 'Replay available';
+  }
+}
+
+function transactionStatusClass(
+  status: TransactionListItemSnapshot['status'],
+  styleMap: typeof styles,
+): string {
+  switch (status) {
+    case 'IN_PROGRESS': return styleMap.statusIN_PROGRESS;
+    case 'READY_FOR_COMPLETION': return styleMap.statusREADY_FOR_COMPLETION;
+    case 'COMPLETED': return styleMap.statusCOMPLETED;
+    case 'CANCELLED': return styleMap.statusCANCELLED;
   }
 }
 
