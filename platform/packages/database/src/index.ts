@@ -2,6 +2,7 @@ import { Kysely, PostgresDialect, type ColumnType, type Generated } from 'kysely
 import { Pool } from 'pg';
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
+export type Numeric = ColumnType<string, string | number, string | number>;
 export type JsonValue =
   | string
   | number
@@ -153,6 +154,90 @@ export interface AccessRoleAssignmentsTable {
   revoked_at: Timestamp | null;
 }
 
+export interface CatalogUnitTypesTable {
+  id: Generated<string>;
+  tenant_id: string;
+  project_id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  bedroom_count: number | null;
+  indoor_area_sqm: Numeric;
+  roof_area_sqm: Numeric;
+  garden_area_sqm: Numeric;
+  status: 'ACTIVE' | 'HIDDEN' | 'ARCHIVED';
+  sort_order: number;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface PricingVersionsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  project_id: string;
+  version_number: number;
+  label: string;
+  status: 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'SUPERSEDED' | 'CANCELLED';
+  effective_at: Timestamp;
+  published_at: Timestamp | null;
+  published_by: string | null;
+  created_by: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface PricingRatesTable {
+  id: Generated<string>;
+  tenant_id: string;
+  project_id: string;
+  pricing_version_id: string;
+  unit_type_id: string;
+  component: 'INDOOR' | 'ROOF' | 'GARDEN';
+  rate_per_sqm: Numeric;
+  created_at: Generated<Date>;
+}
+
+export interface InventorySlotsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  project_id: string;
+  unit_type_id: string;
+  state: 'AVAILABLE' | 'RESERVED' | 'SOLD' | 'WITHDRAWN';
+  internal_reference: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface InventoryLocksTable {
+  id: Generated<string>;
+  tenant_id: string;
+  project_id: string;
+  unit_type_id: string;
+  inventory_slot_id: string;
+  buyer_user_id: string | null;
+  locked_by_user_id: string;
+  status: 'ACTIVE' | 'RELEASED' | 'EXPIRED' | 'CONVERTED';
+  expires_at: Timestamp;
+  released_at: Timestamp | null;
+  converted_at: Timestamp | null;
+  release_reason: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface DomainOutboxEventsTable {
+  id: Generated<string>;
+  tenant_id: string | null;
+  project_id: string | null;
+  aggregate_type: string;
+  aggregate_id: string;
+  event_type: string;
+  payload: JsonValue;
+  occurred_at: Generated<Date>;
+  published_at: Timestamp | null;
+  attempts: number;
+}
+
 export interface Database {
   users: UsersTable;
   auth_login_aliases: AuthLoginAliasesTable;
@@ -166,6 +251,12 @@ export interface Database {
   broker_companies: BrokerCompaniesTable;
   broker_project_access: BrokerProjectAccessTable;
   access_role_assignments: AccessRoleAssignmentsTable;
+  catalog_unit_types: CatalogUnitTypesTable;
+  pricing_versions: PricingVersionsTable;
+  pricing_rates: PricingRatesTable;
+  inventory_slots: InventorySlotsTable;
+  inventory_locks: InventoryLocksTable;
+  domain_outbox_events: DomainOutboxEventsTable;
 }
 
 export function createDatabase(connectionString: string): Kysely<Database> {
