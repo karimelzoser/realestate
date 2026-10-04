@@ -27,6 +27,15 @@ export interface AuthLoginAliasesTable {
   created_at: Generated<Timestamp>;
 }
 
+export interface AuthExternalIdentitiesTable {
+  id: Generated<string>;
+  user_id: string;
+  provider: string;
+  provider_subject: string;
+  email_at_link_time: string | null;
+  linked_at: Generated<Timestamp>;
+}
+
 export interface AuthOtpChallengesTable {
   id: Generated<string>;
   user_id: string | null;
@@ -68,6 +77,7 @@ export interface AuthSecurityEventsTable {
 export interface Database {
   users: UsersTable;
   auth_login_aliases: AuthLoginAliasesTable;
+  auth_external_identities: AuthExternalIdentitiesTable;
   auth_otp_challenges: AuthOtpChallengesTable;
   auth_sessions: AuthSessionsTable;
   auth_security_events: AuthSecurityEventsTable;
