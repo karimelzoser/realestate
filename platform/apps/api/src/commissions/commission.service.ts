@@ -67,19 +67,19 @@ export class CommissionService {
       this.access.can({ userId: input.actorUserId, permission: 'commission.rate.read', context }),
     ]);
 
-    return cases.map((commissionCase) => ({
-      ...commissionCase,
-      ...(amountDecision.allowed
-        ? {
-            basisAmount: commissionCase.basisAmount,
-            commissionAmount: commissionCase.commissionAmount,
-          }
-        : {
-            basisAmount: undefined,
-            commissionAmount: undefined,
-          }),
-      ratePercent: rateDecision.allowed ? commissionCase.ratePercent : undefined,
-    }));
+    return cases.map((commissionCase) => {
+      const {
+        basisAmount,
+        commissionAmount,
+        ratePercent,
+        ...statusOnly
+      } = commissionCase;
+      return {
+        ...statusOnly,
+        ...(amountDecision.allowed ? { basisAmount, commissionAmount } : {}),
+        ...(rateDecision.allowed ? { ratePercent } : {}),
+      };
+    });
   }
 
   async updateCaseStatus(input: {
