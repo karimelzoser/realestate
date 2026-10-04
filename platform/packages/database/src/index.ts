@@ -14,8 +14,8 @@ export interface UsersTable {
   id: Generated<string>;
   display_name: string;
   status: 'ACTIVE' | 'DISABLED' | 'PENDING';
-  created_at: Generated<Timestamp>;
-  updated_at: Generated<Timestamp>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
 }
 
 export interface AuthLoginAliasesTable {
@@ -24,7 +24,7 @@ export interface AuthLoginAliasesTable {
   kind: 'PHONE' | 'NATIONAL_ID';
   identifier_hmac: Uint8Array;
   verified_at: Timestamp;
-  created_at: Generated<Timestamp>;
+  created_at: Generated<Date>;
 }
 
 export interface AuthExternalIdentitiesTable {
@@ -33,7 +33,7 @@ export interface AuthExternalIdentitiesTable {
   provider: string;
   provider_subject: string;
   email_at_link_time: string | null;
-  linked_at: Generated<Timestamp>;
+  linked_at: Generated<Date>;
 }
 
 export interface AuthOtpChallengesTable {
@@ -47,7 +47,7 @@ export interface AuthOtpChallengesTable {
   attempts_remaining: number;
   expires_at: Timestamp;
   consumed_at: Timestamp | null;
-  created_at: Generated<Timestamp>;
+  created_at: Generated<Date>;
 }
 
 export interface AuthSessionsTable {
@@ -56,8 +56,8 @@ export interface AuthSessionsTable {
   token_digest: Uint8Array;
   expires_at: Timestamp;
   revoked_at: Timestamp | null;
-  created_at: Generated<Timestamp>;
-  last_seen_at: Generated<Timestamp>;
+  created_at: Generated<Date>;
+  last_seen_at: Generated<Date>;
 }
 
 export interface AuthSecurityEventsTable {
@@ -71,7 +71,7 @@ export interface AuthSecurityEventsTable {
   ip_digest: Uint8Array | null;
   user_agent_digest: Uint8Array | null;
   metadata: JsonValue;
-  created_at: Generated<Timestamp>;
+  created_at: Generated<Date>;
 }
 
 export interface Database {
