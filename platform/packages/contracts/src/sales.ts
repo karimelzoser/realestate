@@ -147,6 +147,22 @@ export interface ReservationResult {
   reservedAt: string;
 }
 
+export interface TransactionListItemSnapshot {
+  transactionId: string;
+  reservationId: string;
+  buyerProfileId: string;
+  buyerUserId: string;
+  buyerSource: BuyerSource;
+  unitTypeId: string;
+  unitTypeCode: string;
+  unitTypeName: string;
+  status: 'IN_PROGRESS' | 'READY_FOR_COMPLETION' | 'COMPLETED' | 'CANCELLED';
+  quotedTotal: string | null;
+  currency: string;
+  openedAt: string;
+  completionPercent: string;
+}
+
 export interface TransactionProgressSnapshot {
   transactionId: string;
   reservationId: string;
