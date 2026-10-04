@@ -1,0 +1,65 @@
+import { Kysely, PostgresDialect, type ColumnType, type Generated } from 'kysely';
+import { Pool } from 'pg';
+
+export type Timestamp = ColumnType<Date, Date | string, Date | string>;
+
+export interface UsersTable {
+  id: Generated<string>;
+  display_name: string;
+  status: 'ACTIVE' | 'DISABLED' | 'PENDING';
+  created_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface AuthLoginAliasesTable {
+  id: Generated<string>;
+  user_id: string;
+  kind: 'PHONE' | 'NATIONAL_ID';
+  identifier_hmac: Uint8Array;
+  verified_at: Timestamp;
+  created_at: Generated<Timestamp>;
+}
+
+export interface AuthOtpChallengesTable {
+  id: Generated<string>;
+  user_id: string | null;
+  requested_kind: 'PHONE' | 'NATIONAL_ID';
+  requested_identifier_hmac: Uint8Array;
+  otp_digest: Uint8Array;
+  delivery_channel: 'SMS' | 'WHATSAPP';
+  delivery_attempted: Generated<boolean>;
+  attempts_remaining: number;
+  expires_at: Timestamp;
+  consumed_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+}
+
+export interface AuthSessionsTable {
+  id: Generated<string>;
+  user_id: string;
+  token_digest: Uint8Array;
+  expires_at: Timestamp;
+  revoked_at: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  last_seen_at: Generated<Timestamp>;
+}
+
+export interface Database {
+  users: UsersTable;
+  auth_login_aliases: AuthLoginAliasesTable;
+  auth_otp_challenges: AuthOtpChallengesTable;
+  auth_sessions: AuthSessionsTable;
+}
+
+export function createDatabase(connectionString: string): Kysely<Database> {
+  const pool = new Pool({
+    connectionString,
+    max: 20,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 5_000,
+  });
+
+  return new Kysely<Database>({
+    dialect: new PostgresDialect({ pool }),
+  });
+}
