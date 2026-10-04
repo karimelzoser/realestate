@@ -10,6 +10,7 @@ export async function dispatchOutbox(db: Kysely<Database>, batchSize = 100): Pro
         'tenant_id',
         'project_id',
         'aggregate_type',
+        'aggregate_id',
         'event_type',
         'occurred_at',
       ])
@@ -31,6 +32,7 @@ export async function dispatchOutbox(db: Kysely<Database>, batchSize = 100): Pro
           topic: topicFor(row.event_type),
           source_event_type: row.event_type,
           source_aggregate_type: row.aggregate_type,
+          source_aggregate_id: row.aggregate_id,
           occurred_at: row.occurred_at as Date,
         })
         .onConflict((oc) => oc.column('outbox_event_id').doNothing())
