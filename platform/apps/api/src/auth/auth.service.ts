@@ -110,10 +110,19 @@ export class AuthService {
       throw new UnauthorizedException('The code is invalid or expired.');
     }
 
+    return this.issueSessionForUser(userId, {
+      eventType: 'LOGIN_OTP_VERIFIED',
+      challengeId: input.challengeId,
+    });
+  }
+
+  async issueSessionForUser(
+    userId: string,
+    audit: { eventType: string; challengeId?: string | null },
+  ): Promise<VerifiedLogin> {
     const sessionId = randomUUID();
     const sessionToken = randomBytes(32).toString('base64url');
-    const sessionTtlSeconds = this.sessionTtlSeconds();
-    const expiresAt = new Date(Date.now() + sessionTtlSeconds * 1000);
+    const expiresAt = new Date(Date.now() + this.sessionTtlSeconds() * 1000);
 
     await this.repository.createSession({
       id: sessionId,
@@ -124,9 +133,9 @@ export class AuthService {
 
     await this.repository.recordEvent({
       userId,
-      eventType: 'LOGIN_OTP_VERIFIED',
+      eventType: audit.eventType,
       result: 'SUCCESS',
-      challengeId: input.challengeId,
+      challengeId: audit.challengeId ?? null,
       sessionId,
     });
 
