@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS realtime_events (
   topic text NOT NULL CHECK (topic IN ('CATALOG','INVENTORY','PRICING','QUEUE','TRANSACTION','COMMISSION','REFUND','DOMAIN')),
   source_event_type text NOT NULL,
   source_aggregate_type text NOT NULL,
+  source_aggregate_id uuid NOT NULL,
   occurred_at timestamptz NOT NULL,
   published_at timestamptz NOT NULL DEFAULT now(),
   FOREIGN KEY (project_id, tenant_id)
@@ -52,6 +53,9 @@ CREATE INDEX IF NOT EXISTS realtime_events_project_sequence
 
 CREATE INDEX IF NOT EXISTS realtime_events_tenant_sequence
   ON realtime_events(tenant_id, sequence);
+
+CREATE INDEX IF NOT EXISTS realtime_events_aggregate
+  ON realtime_events(source_aggregate_type, source_aggregate_id, sequence);
 
 CREATE TABLE IF NOT EXISTS user_notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
