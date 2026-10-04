@@ -188,6 +188,8 @@ export interface PricingVersionsTable {
 
 export interface PricingRatesTable {
   id: Generated<string>;
+  tenant_id: string;
+  project_id: string;
   pricing_version_id: string;
   unit_type_id: string;
   component: 'INDOOR' | 'ROOF' | 'GARDEN';
