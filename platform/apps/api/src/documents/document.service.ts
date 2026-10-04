@@ -20,6 +20,7 @@ import type {
   SignerRole,
 } from '@preneura/contracts/documents';
 import { AccessService } from '../access/access.service.js';
+import { CommissionService } from '../commissions/commission.service.js';
 import { ObjectStorageService } from '../storage/object-storage.service.js';
 import { DocumentRepository, type TransactionDocumentContext } from './document.repository.js';
 
@@ -29,6 +30,7 @@ export class DocumentService {
     private readonly repository: DocumentRepository,
     private readonly access: AccessService,
     private readonly storage: ObjectStorageService,
+    private readonly commissions: CommissionService,
   ) {}
 
   async createTemplateUploadIntent(input: {
@@ -188,6 +190,7 @@ export class DocumentService {
       rejectionReason: input.data.rejectionReason ?? null,
       now: new Date(),
     });
+    await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
     return { reviewed: true };
   }
 
@@ -250,6 +253,7 @@ export class DocumentService {
       metadata: {},
       now: new Date(),
     });
+    await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
     return { signed: true };
   }
 
@@ -287,6 +291,7 @@ export class DocumentService {
       metadata: { filename: input.data.file.filename, mimeType: input.data.file.mimeType },
       now: new Date(),
     });
+    await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
     return { signed: true };
   }
 
@@ -308,7 +313,12 @@ export class DocumentService {
       documentId: input.data.documentId,
       now: new Date(),
     });
+    await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
     return { stamped: true };
+  }
+
+  private async refreshCommission(tenantId: string, projectId: string, transactionId: string): Promise<void> {
+    await this.commissions.refreshTransactionCase({ tenantId, projectId, transactionId });
   }
 
   private async requireTransaction(
