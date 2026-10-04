@@ -574,7 +574,7 @@ export default function TransactionDetailClient({ transactionId, tenantId, proje
   );
 }
 
-async function optionalFetch<T>(path: string, fallback: T): Promise<T | null> {
+async function optionalFetch<T>(path: string, fallback: T | null): Promise<T | null> {
   try {
     return await apiFetch<T>(path);
   } catch (error) {
