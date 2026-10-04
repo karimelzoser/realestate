@@ -1,0 +1,271 @@
+import { Inject, Injectable } from '@nestjs/common';
+import type { Kysely } from 'kysely';
+import type { Database, JsonValue } from '@preneura/database';
+
+export const DATABASE = Symbol('DATABASE');
+
+export type AliasKind = 'PHONE' | 'NATIONAL_ID';
+export type DeliveryChannel = 'SMS' | 'WHATSAPP';
+
+export interface NewChallenge {
+  id: string;
+  userId: string | null;
+  requestedKind: AliasKind;
+  requestedIdentifierHmac: Uint8Array;
+  otpDigest: Uint8Array;
+  deliveryChannel: DeliveryChannel;
+  attemptsRemaining: number;
+  expiresAt: Date;
+}
+
+export interface SessionRecord {
+  id: string;
+  userId: string;
+  tokenDigest: Uint8Array;
+  expiresAt: Date;
+}
+
+export interface ResolvedSession {
+  sessionId: string;
+  userId: string;
+  userStatus: 'ACTIVE' | 'DISABLED' | 'PENDING';
+  expiresAt: Date;
+}
+
+export interface ExternalIdentityResult {
+  userId: string;
+  status: 'ACTIVE' | 'DISABLED' | 'PENDING';
+}
+
+export abstract class AuthRepository {
+  abstract findActiveUserByAlias(kind: AliasKind, identifierHmac: Uint8Array): Promise<string | null>;
+  abstract countChallengesSince(kind: AliasKind, identifierHmac: Uint8Array, since: Date): Promise<number>;
+  abstract findOrProvisionExternalIdentity(input: {
+    provider: string;
+    providerSubject: string;
+    displayName: string;
+    verifiedEmail?: string | null;
+  }): Promise<ExternalIdentityResult>;
+  abstract createChallenge(challenge: NewChallenge): Promise<void>;
+  abstract markDeliveryAttempted(challengeId: string): Promise<void>;
+  abstract consumeChallenge(challengeId: string, otpDigest: Uint8Array, now: Date): Promise<string | null>;
+  abstract decrementChallengeAttempt(challengeId: string, now: Date): Promise<void>;
+  abstract createSession(session: SessionRecord): Promise<void>;
+  abstract resolveSession(tokenDigest: Uint8Array, now: Date): Promise<ResolvedSession | null>;
+  abstract revokeSession(sessionId: string, now: Date): Promise<void>;
+  abstract recordEvent(input: {
+    userId?: string | null;
+    eventType: string;
+    result: 'SUCCESS' | 'REJECTED' | 'FAILED';
+    challengeId?: string | null;
+    sessionId?: string | null;
+    metadata?: Record<string, JsonValue>;
+  }): Promise<void>;
+}
+
+@Injectable()
+export class PostgresAuthRepository extends AuthRepository {
+  constructor(@Inject(DATABASE) private readonly db: Kysely<Database>) {
+    super();
+  }
+
+  async findActiveUserByAlias(kind: AliasKind, identifierHmac: Uint8Array): Promise<string | null> {
+    const row = await this.db
+      .selectFrom('auth_login_aliases as alias')
+      .innerJoin('users as user', 'user.id', 'alias.user_id')
+      .select('alias.user_id')
+      .where('alias.kind', '=', kind)
+      .where('alias.identifier_hmac', '=', identifierHmac)
+      .where('user.status', '=', 'ACTIVE')
+      .executeTakeFirst();
+    return row?.user_id ?? null;
+  }
+
+  async countChallengesSince(kind: AliasKind, identifierHmac: Uint8Array, since: Date): Promise<number> {
+    const row = await this.db
+      .selectFrom('auth_otp_challenges')
+      .select((eb) => eb.fn.countAll<number>().as('count'))
+      .where('requested_kind', '=', kind)
+      .where('requested_identifier_hmac', '=', identifierHmac)
+      .where('created_at', '>=', since)
+      .executeTakeFirstOrThrow();
+    return Number(row.count);
+  }
+
+  async findOrProvisionExternalIdentity(input: {
+    provider: string;
+    providerSubject: string;
+    displayName: string;
+    verifiedEmail?: string | null;
+  }): Promise<ExternalIdentityResult> {
+    const existing = await this.db
+      .selectFrom('auth_external_identities as identity')
+      .innerJoin('users as user', 'user.id', 'identity.user_id')
+      .select(['identity.user_id', 'user.status'])
+      .where('identity.provider', '=', input.provider)
+      .where('identity.provider_subject', '=', input.providerSubject)
+      .executeTakeFirst();
+
+    if (existing) {
+      return { userId: existing.user_id, status: existing.status };
+    }
+
+    return this.db.transaction().execute(async (trx) => {
+      const createdUser = await trx
+        .insertInto('users')
+        .values({
+          display_name: input.displayName || 'PRENEURA User',
+          status: 'PENDING',
+        })
+        .returning(['id', 'status'])
+        .executeTakeFirstOrThrow();
+
+      const linked = await trx
+        .insertInto('auth_external_identities')
+        .values({
+          user_id: createdUser.id,
+          provider: input.provider,
+          provider_subject: input.providerSubject,
+          email_at_link_time: input.verifiedEmail ?? null,
+        })
+        .onConflict((oc) => oc.columns(['provider', 'provider_subject']).doNothing())
+        .returning('user_id')
+        .executeTakeFirst();
+
+      if (linked) {
+        return { userId: createdUser.id, status: createdUser.status };
+      }
+
+      await trx.deleteFrom('users').where('id', '=', createdUser.id).execute();
+      const winner = await trx
+        .selectFrom('auth_external_identities as identity')
+        .innerJoin('users as user', 'user.id', 'identity.user_id')
+        .select(['identity.user_id', 'user.status'])
+        .where('identity.provider', '=', input.provider)
+        .where('identity.provider_subject', '=', input.providerSubject)
+        .executeTakeFirstOrThrow();
+
+      return { userId: winner.user_id, status: winner.status };
+    });
+  }
+
+  async createChallenge(challenge: NewChallenge): Promise<void> {
+    await this.db
+      .insertInto('auth_otp_challenges')
+      .values({
+        id: challenge.id,
+        user_id: challenge.userId,
+        requested_kind: challenge.requestedKind,
+        requested_identifier_hmac: challenge.requestedIdentifierHmac,
+        otp_digest: challenge.otpDigest,
+        delivery_channel: challenge.deliveryChannel,
+        attempts_remaining: challenge.attemptsRemaining,
+        expires_at: challenge.expiresAt,
+        consumed_at: null,
+      })
+      .executeTakeFirstOrThrow();
+  }
+
+  async markDeliveryAttempted(challengeId: string): Promise<void> {
+    await this.db
+      .updateTable('auth_otp_challenges')
+      .set({ delivery_attempted: true })
+      .where('id', '=', challengeId)
+      .execute();
+  }
+
+  async consumeChallenge(challengeId: string, otpDigest: Uint8Array, now: Date): Promise<string | null> {
+    const row = await this.db
+      .updateTable('auth_otp_challenges')
+      .set({ consumed_at: now })
+      .where('id', '=', challengeId)
+      .where('otp_digest', '=', otpDigest)
+      .where('consumed_at', 'is', null)
+      .where('expires_at', '>', now)
+      .where('attempts_remaining', '>', 0)
+      .returning('user_id')
+      .executeTakeFirst();
+    return row?.user_id ?? null;
+  }
+
+  async decrementChallengeAttempt(challengeId: string, now: Date): Promise<void> {
+    await this.db
+      .updateTable('auth_otp_challenges')
+      .set((eb) => ({ attempts_remaining: eb('attempts_remaining', '-', 1) }))
+      .where('id', '=', challengeId)
+      .where('consumed_at', 'is', null)
+      .where('expires_at', '>', now)
+      .where('attempts_remaining', '>', 0)
+      .execute();
+  }
+
+  async createSession(session: SessionRecord): Promise<void> {
+    await this.db
+      .insertInto('auth_sessions')
+      .values({
+        id: session.id,
+        user_id: session.userId,
+        token_digest: session.tokenDigest,
+        expires_at: session.expiresAt,
+        revoked_at: null,
+      })
+      .executeTakeFirstOrThrow();
+  }
+
+  async resolveSession(tokenDigest: Uint8Array, now: Date): Promise<ResolvedSession | null> {
+    const row = await this.db
+      .selectFrom('auth_sessions as session')
+      .innerJoin('users as user', 'user.id', 'session.user_id')
+      .select([
+        'session.id as session_id',
+        'session.user_id',
+        'session.expires_at',
+        'user.status as user_status',
+      ])
+      .where('session.token_digest', '=', tokenDigest)
+      .where('session.revoked_at', 'is', null)
+      .where('session.expires_at', '>', now)
+      .executeTakeFirst();
+
+    if (!row || row.user_status === 'DISABLED') return null;
+    return {
+      sessionId: row.session_id,
+      userId: row.user_id,
+      userStatus: row.user_status,
+      expiresAt: row.expires_at as Date,
+    };
+  }
+
+  async revokeSession(sessionId: string, now: Date): Promise<void> {
+    await this.db
+      .updateTable('auth_sessions')
+      .set({ revoked_at: now })
+      .where('id', '=', sessionId)
+      .where('revoked_at', 'is', null)
+      .execute();
+  }
+
+  async recordEvent(input: {
+    userId?: string | null;
+    eventType: string;
+    result: 'SUCCESS' | 'REJECTED' | 'FAILED';
+    challengeId?: string | null;
+    sessionId?: string | null;
+    metadata?: Record<string, JsonValue>;
+  }): Promise<void> {
+    await this.db
+      .insertInto('auth_security_events')
+      .values({
+        user_id: input.userId ?? null,
+        event_type: input.eventType,
+        result: input.result,
+        challenge_id: input.challengeId ?? null,
+        session_id: input.sessionId ?? null,
+        request_id: null,
+        ip_digest: null,
+        user_agent_digest: null,
+        metadata: input.metadata ?? {},
+      })
+      .executeTakeFirstOrThrow();
+  }
+}
