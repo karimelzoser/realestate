@@ -8,6 +8,9 @@ export type DocumentCategory = 'BUYER_ID' | 'PASSPORT' | 'ADDRESS_PROOF' | 'PAYM
 export type MilestoneCode = 'BUYER_DOCUMENTS_COMPLETE' | 'DOWN_PAYMENT_RECEIVED' | 'CHEQUES_RECEIVED' | 'CONTRACT_GENERATED' | 'CONTRACT_SIGNED' | 'CONTRACT_STAMPED';
 export type AccessRoleCode = 'PRENEURA_SUPER_ADMIN' | 'OPERATIONS_DIRECTOR' | 'MANAGER' | 'SALES' | 'QUEUE_RECEPTIONIST' | 'ALLOCATOR' | 'TRANSACTION_OPERATOR' | 'BROKER_MANAGER' | 'BROKER_FINANCE' | 'BROKER_AGENT' | 'BUYER';
 export type AccessScopeType = 'PLATFORM' | 'TENANT' | 'PROJECT' | 'BROKER_COMPANY';
+export type NotificationAudience = 'BUYER' | 'BROKER_AGENT' | 'BROKER_MANAGER' | 'BROKER_FINANCE' | 'SALES' | 'TRANSACTION_OPERATOR' | 'MANAGER';
+export type NotificationChannel = 'WHATSAPP' | 'SMS' | 'EMAIL' | 'IN_APP';
+export type RealtimeTopic = 'CATALOG' | 'INVENTORY' | 'PRICING' | 'QUEUE' | 'TRANSACTION' | 'COMMISSION' | 'REFUND' | 'DOMAIN';
 
 export interface UsersTable { id: Generated<string>; display_name: string; status: 'ACTIVE' | 'DISABLED' | 'PENDING'; created_at: Generated<Date>; updated_at: Generated<Date>; }
 export interface AuthLoginAliasesTable { id: Generated<string>; user_id: string; kind: 'PHONE' | 'NATIONAL_ID'; identifier_hmac: Uint8Array; verified_at: Timestamp; created_at: Generated<Date>; }
@@ -44,7 +47,7 @@ export interface ProjectDocumentRequirementsTable { id: Generated<string>; tenan
 export interface TransactionDocumentsTable { id: Generated<string>; tenant_id: string; project_id: string; transaction_id: string; template_id: string | null; category: DocumentCategory; revision_number: number; supersedes_document_id: string | null; status: 'REQUESTED' | 'UPLOADING' | 'UPLOADED' | 'VERIFIED' | 'REJECTED' | 'SIGNED' | 'STAMPED' | 'SUPERSEDED'; storage_object_key: string | null; original_filename: string | null; mime_type: string | null; byte_size: ColumnType<number | null, number | null, number | null>; sha256_hex: string | null; due_at: Timestamp | null; uploaded_by: string | null; uploaded_at: Timestamp | null; verified_by: string | null; verified_at: Timestamp | null; rejection_reason: string | null; created_at: Generated<Date>; updated_at: Generated<Date>; }
 export interface DocumentSignaturesTable { id: Generated<string>; document_id: string; signer_role: 'BUYER' | 'COMPANY' | 'WITNESS' | 'BROKER'; signer_user_id: string | null; method: 'DRAWN' | 'TYPED' | 'UPLOAD' | 'EXTERNAL_PROVIDER'; typed_name: string | null; signature_object_key: string | null; signature_sha256_hex: string | null; provider: string | null; provider_envelope_id: string | null; signed_at: Timestamp; metadata: JsonValue; created_at: Generated<Date>; }
 export interface DocumentTemplateSignerRequirementsTable { template_id: string; signer_role: 'BUYER' | 'COMPANY' | 'WITNESS' | 'BROKER'; signing_order: number; required: boolean; created_at: Generated<Date>; }
-export interface ProjectMilestoneSlasTable { tenant_id: string; project_id: string; milestone_code: MilestoneCode; target_hours_after_open: number; reminder_hours_before: number; enabled: boolean; created_at: Generated<Date>; updated_at: Generated<Date>; }
+export interface ProjectMilestoneSlasTable { tenant_id: string; project_id: string; milestone_code: MilestoneCode; target_hours_after_open: number; reminder_hours_before: number; audience: NotificationAudience; channel: NotificationChannel; template_code: string; enabled: boolean; created_at: Generated<Date>; updated_at: Generated<Date>; }
 
 export interface PaymentSchedulesTable { id: Generated<string>; tenant_id: string; project_id: string; transaction_id: string; currency: string; total_contract_amount: Numeric; status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED'; created_by: string | null; activated_at: Timestamp | null; created_at: Generated<Date>; updated_at: Generated<Date>; }
 export interface PaymentScheduleItemsTable { id: Generated<string>; payment_schedule_id: string; sequence_number: number; item_type: 'DOWN_PAYMENT' | 'INSTALLMENT' | 'FEE'; amount: Numeric; due_at: Timestamp; status: 'UPCOMING' | 'DUE' | 'PAID' | 'OVERDUE' | 'WAIVED' | 'CANCELLED'; paid_at: Timestamp | null; payment_reference: string | null; verified_by: string | null; updated_at: Generated<Date>; }
@@ -53,7 +56,10 @@ export interface TransactionChequesTable { id: Generated<string>; tenant_id: str
 export interface BrokerCommissionPlansTable { id: Generated<string>; tenant_id: string; project_id: string; broker_company_id: string; version_number: number; status: 'DRAFT' | 'ACTIVE' | 'RETIRED' | 'CANCELLED'; rate_percent: Numeric; due_days_after_eligibility: number; effective_at: Timestamp; activated_at: Timestamp | null; created_by: string | null; created_at: Generated<Date>; updated_at: Generated<Date>; }
 export interface BrokerCommissionCasesTable { id: Generated<string>; tenant_id: string; project_id: string; transaction_id: string; broker_company_id: string; broker_agent_user_id: string | null; commission_plan_id: string; basis_amount: Numeric; rate_percent: Numeric; commission_amount: Numeric; status: 'PENDING_PREREQUISITES' | 'ELIGIBLE' | 'INVOICED' | 'DUE' | 'PAID' | 'DISPUTED' | 'CANCELLED'; completion_percent_snapshot: Numeric; eligible_at: Timestamp | null; due_at: Timestamp | null; invoiced_at: Timestamp | null; paid_at: Timestamp | null; created_at: Generated<Date>; updated_at: Generated<Date>; }
 
-export interface NotificationJobsTable { id: Generated<string>; tenant_id: string; project_id: string | null; transaction_id: string | null; recipient_user_id: string; audience: 'BUYER' | 'BROKER_AGENT' | 'BROKER_MANAGER' | 'BROKER_FINANCE' | 'SALES' | 'TRANSACTION_OPERATOR' | 'MANAGER'; channel: 'WHATSAPP' | 'SMS' | 'EMAIL' | 'IN_APP'; template_code: string; locale: string; payload: JsonValue; scheduled_for: Timestamp; status: 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED' | 'CANCELLED'; idempotency_key: string; attempts: number; provider_message_id: string | null; last_error: string | null; sent_at: Timestamp | null; created_at: Generated<Date>; updated_at: Generated<Date>; }
+export interface NotificationJobsTable { id: Generated<string>; tenant_id: string; project_id: string | null; transaction_id: string | null; recipient_user_id: string; audience: NotificationAudience; channel: NotificationChannel; template_code: string; locale: string; payload: JsonValue; scheduled_for: Timestamp; status: 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED' | 'CANCELLED'; idempotency_key: string; attempts: number; provider_message_id: string | null; last_error: string | null; sent_at: Timestamp | null; processing_started_at: Timestamp | null; processing_by: string | null; created_at: Generated<Date>; updated_at: Generated<Date>; }
+export interface NotificationDeliveryAttemptsTable { id: Generated<string>; notification_job_id: string; attempt_number: number; provider: string; result: 'SENT' | 'FAILED'; provider_message_id: string | null; error: string | null; started_at: Timestamp; completed_at: Timestamp; created_at: Generated<Date>; }
+export interface RealtimeEventsTable { sequence: Generated<number>; outbox_event_id: string; tenant_id: string | null; project_id: string | null; topic: RealtimeTopic; source_event_type: string; source_aggregate_type: string; occurred_at: Timestamp; published_at: Generated<Date>; }
+export interface UserNotificationsTable { id: Generated<string>; sequence: Generated<number>; notification_job_id: string; tenant_id: string; project_id: string | null; recipient_user_id: string; template_code: string; locale: string; payload: JsonValue; created_at: Generated<Date>; read_at: Timestamp | null; }
 
 export interface Database {
   users: UsersTable;
@@ -95,6 +101,9 @@ export interface Database {
   broker_commission_plans: BrokerCommissionPlansTable;
   broker_commission_cases: BrokerCommissionCasesTable;
   notification_jobs: NotificationJobsTable;
+  notification_delivery_attempts: NotificationDeliveryAttemptsTable;
+  realtime_events: RealtimeEventsTable;
+  user_notifications: UserNotificationsTable;
 }
 
 export function createDatabase(connectionString: string): Kysely<Database> {
