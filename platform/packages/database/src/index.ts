@@ -2,6 +2,13 @@ import { Kysely, PostgresDialect, type ColumnType, type Generated } from 'kysely
 import { Pool } from 'pg';
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 
 export interface UsersTable {
   id: Generated<string>;
@@ -44,11 +51,26 @@ export interface AuthSessionsTable {
   last_seen_at: Generated<Timestamp>;
 }
 
+export interface AuthSecurityEventsTable {
+  id: Generated<string>;
+  user_id: string | null;
+  event_type: string;
+  result: 'SUCCESS' | 'REJECTED' | 'FAILED';
+  challenge_id: string | null;
+  session_id: string | null;
+  request_id: string | null;
+  ip_digest: Uint8Array | null;
+  user_agent_digest: Uint8Array | null;
+  metadata: JsonValue;
+  created_at: Generated<Timestamp>;
+}
+
 export interface Database {
   users: UsersTable;
   auth_login_aliases: AuthLoginAliasesTable;
   auth_otp_challenges: AuthOtpChallengesTable;
   auth_sessions: AuthSessionsTable;
+  auth_security_events: AuthSecurityEventsTable;
 }
 
 export function createDatabase(connectionString: string): Kysely<Database> {
