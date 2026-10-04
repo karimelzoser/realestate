@@ -1,5 +1,6 @@
 import { hostname } from 'node:os';
 import { createDatabase } from '@preneura/database';
+import { refreshCommissionDueStates } from './commissions.js';
 import { dispatchOutbox } from './outbox.js';
 import { dispatchNotifications } from './notifications.js';
 import { scheduleMilestoneSlas } from './sla.js';
@@ -43,6 +44,9 @@ async function main(): Promise<void> {
       dispatchNotifications(db, workerId, 25),
     ),
     runLoop('sla', Number(process.env.SLA_SCAN_MS ?? 30_000), () => scheduleMilestoneSlas(db)),
+    runLoop('commission_due', Number(process.env.COMMISSION_DUE_SCAN_MS ?? 30_000), () =>
+      refreshCommissionDueStates(db),
+    ),
   ];
 
   await Promise.all(loops);
