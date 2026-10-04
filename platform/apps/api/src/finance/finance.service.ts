@@ -188,7 +188,7 @@ export class FinanceService {
   }
 
   private moneyCents(value: string): bigint {
-    const [whole, fraction = ''] = value.split('.');
+    const [whole = '0', fraction = ''] = value.split('.');
     const cents = `${fraction}00`.slice(0, 2);
     return BigInt(whole) * 100n + BigInt(cents);
   }
