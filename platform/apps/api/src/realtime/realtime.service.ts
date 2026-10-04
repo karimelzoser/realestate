@@ -65,7 +65,7 @@ export class RealtimeService {
     brokerCompanyId: string;
     afterSequence: string;
   }): Promise<Observable<MessageEvent>> {
-    await this.access.assert({
+    const statusDecision = await this.access.assert({
       userId: input.userId,
       permission: 'commission.status.read',
       context: {
@@ -74,6 +74,13 @@ export class RealtimeService {
         brokerCompanyId: input.brokerCompanyId,
       },
     });
+    const brokerAgentUserId = statusDecision.role === 'BROKER_AGENT' ? input.userId : null;
+    const scope = {
+      tenantId: input.tenantId,
+      projectId: input.projectId,
+      brokerCompanyId: input.brokerCompanyId,
+      brokerAgentUserId,
+    };
 
     return this.buildStream({
       afterSequence: this.cursor(input.afterSequence),
@@ -84,15 +91,15 @@ export class RealtimeService {
           signal.topic === 'COMMISSION'
         ) push(signal.sequence);
       }),
-      latest: () => this.repository.latestBrokerCommissionSequence(input),
+      latest: () => this.repository.latestBrokerCommissionSequence(scope),
       replay: (afterSequence, throughSequence, limit) => this.repository.listBrokerCommissionEvents({
-        ...input,
+        ...scope,
         afterSequence,
         throughSequence,
         limit,
       }),
       fetchOne: (sequence) => this.repository.getBrokerCommissionEvent({
-        ...input,
+        ...scope,
         sequence,
       }),
     });
