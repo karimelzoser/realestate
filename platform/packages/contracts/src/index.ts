@@ -6,3 +6,4 @@ export * from './documents.js';
 export * from './finance.js';
 export * from './commissions.js';
 export * from './notifications.js';
+export * from './realtime.js';
