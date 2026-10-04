@@ -49,6 +49,29 @@ export const markEoiPaidSchema = z.object({
 });
 export type MarkEoiPaidInput = z.infer<typeof markEoiPaidSchema>;
 
+export const eoiRefundStageSchema = z.enum([
+  'BEFORE_RESERVATION',
+  'AFTER_RESERVATION_BEFORE_CONTRACT',
+  'AFTER_CONTRACT',
+]);
+export type EoiRefundStage = z.infer<typeof eoiRefundStageSchema>;
+
+export const requestEoiRefundSchema = z.object({
+  tenantId: z.uuid(),
+  projectId: z.uuid(),
+  eoiId: z.uuid(),
+});
+export type RequestEoiRefundInput = z.infer<typeof requestEoiRefundSchema>;
+
+export const reviewEoiRefundSchema = z.object({
+  tenantId: z.uuid(),
+  projectId: z.uuid(),
+  refundRequestId: z.uuid(),
+  decision: z.enum(['APPROVE', 'REJECT']),
+  note: z.string().trim().max(2000).optional(),
+});
+export type ReviewEoiRefundInput = z.infer<typeof reviewEoiRefundSchema>;
+
 export const queueChannelSchema = z.enum(['ONSITE', 'ONLINE', 'BROKER']);
 export const queuePriorityGroupSchema = z.enum(['STANDARD', 'VIP', 'RECOVERY']);
 
@@ -101,6 +124,18 @@ export interface QueueEntrySnapshot {
   status: 'WAITING' | 'CALLED' | 'LOCKED' | 'COMPLETED' | 'LEFT' | 'CANCELLED';
   checkedInAt: string;
   calledAt: string | null;
+}
+
+export interface EoiRefundQuote {
+  eoiId: string;
+  buyerProfileId: string;
+  stage: EoiRefundStage;
+  originalAmount: string;
+  refundPercent: string;
+  processingFee: string;
+  refundableAmount: string;
+  currency: string;
+  policyId: string;
 }
 
 export interface ReservationResult {
