@@ -19,6 +19,36 @@ export const permissionCodeSchema = z.enum([
 ]);
 export type PermissionCode = z.infer<typeof permissionCodeSchema>;
 
+export interface WorkspaceRoleAssignmentSnapshot {
+  assignmentId: string;
+  role: RoleCode;
+  scopeType: ScopeType;
+  tenantId: string | null;
+  projectId: string | null;
+  brokerCompanyId: string | null;
+}
+
+export interface WorkspaceProjectSnapshot {
+  tenantId: string;
+  tenantCode: string;
+  tenantName: string;
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  projectStatus: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'CLOSED';
+  currency: string;
+  timezone: string;
+  roles: RoleCode[];
+  brokerCompanyIds: string[];
+}
+
+export interface WorkspaceContextSnapshot {
+  userId: string;
+  displayName: string;
+  assignments: WorkspaceRoleAssignmentSnapshot[];
+  projects: WorkspaceProjectSnapshot[];
+}
+
 const ALL_PERMISSIONS = permissionCodeSchema.options;
 
 export const roleCapabilityMap: Readonly<Record<RoleCode, readonly PermissionCode[]>> = {
