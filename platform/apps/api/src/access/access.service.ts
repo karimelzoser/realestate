@@ -27,37 +27,44 @@ export interface AccessDecision {
 export class AccessService {
   constructor(private readonly repository: AccessRepository) {}
 
+  async matchingAssignments(input: {
+    userId: string;
+    permission: PermissionCode;
+    context?: AccessContext;
+  }): Promise<RoleAssignment[]> {
+    const context = input.context ?? {};
+    if (
+      input.permission.endsWith('.self') &&
+      context.resourceOwnerUserId !== input.userId
+    ) {
+      return [];
+    }
+
+    const assignments = await this.repository.listActiveAssignments(input.userId);
+    const matching: RoleAssignment[] = [];
+    for (const assignment of assignments) {
+      if (!roleHasPermission(assignment.role, input.permission)) continue;
+      if (await this.scopeMatches(assignment, context)) matching.push(assignment);
+    }
+    return matching;
+  }
+
   async can(input: {
     userId: string;
     permission: PermissionCode;
     context?: AccessContext;
   }): Promise<AccessDecision> {
-    const context = input.context ?? {};
-
-    if (
-      input.permission.endsWith('.self') &&
-      context.resourceOwnerUserId !== input.userId
-    ) {
-      return { allowed: false };
-    }
-
-    const assignments = await this.repository.listActiveAssignments(input.userId);
-    for (const assignment of assignments) {
-      if (!roleHasPermission(assignment.role, input.permission)) continue;
-      if (await this.scopeMatches(assignment, context)) {
-        return {
-          allowed: true,
-          assignmentId: assignment.id,
-          role: assignment.role,
-          scopeType: assignment.scopeType,
-          tenantId: assignment.tenantId,
-          projectId: assignment.projectId,
-          brokerCompanyId: assignment.brokerCompanyId,
-        };
-      }
-    }
-
-    return { allowed: false };
+    const assignment = (await this.matchingAssignments(input))[0];
+    if (!assignment) return { allowed: false };
+    return {
+      allowed: true,
+      assignmentId: assignment.id,
+      role: assignment.role,
+      scopeType: assignment.scopeType,
+      tenantId: assignment.tenantId,
+      projectId: assignment.projectId,
+      brokerCompanyId: assignment.brokerCompanyId,
+    };
   }
 
   async assert(input: {
