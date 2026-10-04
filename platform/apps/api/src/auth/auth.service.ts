@@ -19,7 +19,11 @@ import {
   type StartLoginResponse,
   type VerifyOtpInput,
 } from '@preneura/contracts/auth';
-import { AuthRepository, type AliasKind } from './auth.repository.js';
+import {
+  AuthRepository,
+  type AliasKind,
+  type ResolvedSession,
+} from './auth.repository.js';
 import { OtpDeliveryPort } from './otp-delivery.js';
 
 export interface VerifiedLogin {
@@ -127,7 +131,7 @@ export class AuthService {
     await this.repository.createSession({
       id: sessionId,
       userId,
-      tokenDigest: createHash('sha256').update(sessionToken).digest(),
+      tokenDigest: this.sessionDigest(sessionToken),
       expiresAt,
     });
 
@@ -140,6 +144,23 @@ export class AuthService {
     });
 
     return { userId, sessionId, sessionToken, expiresAt };
+  }
+
+  async resolveSessionToken(sessionToken: string | undefined): Promise<ResolvedSession | null> {
+    if (!sessionToken) return null;
+    return this.repository.resolveSession(this.sessionDigest(sessionToken), new Date());
+  }
+
+  async revokeSessionToken(sessionToken: string | undefined): Promise<void> {
+    const session = await this.resolveSessionToken(sessionToken);
+    if (!session) return;
+    await this.repository.revokeSession(session.sessionId, new Date());
+    await this.repository.recordEvent({
+      userId: session.userId,
+      eventType: 'SESSION_REVOKED',
+      result: 'SUCCESS',
+      sessionId: session.sessionId,
+    });
   }
 
   sessionTtlSeconds(): number {
@@ -184,6 +205,10 @@ export class AuthService {
     return createHmac('sha256', this.requiredSecret('AUTH_OTP_PEPPER'))
       .update(`${challengeId}:${code}`, 'utf8')
       .digest();
+  }
+
+  private sessionDigest(sessionToken: string): Buffer {
+    return createHash('sha256').update(sessionToken, 'utf8').digest();
   }
 
   private requiredSecret(name: string): string {
