@@ -11,10 +11,9 @@ async function bootstrap(): Promise<void> {
   });
 
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter);
+  const cookieSigningSecret = process.env.COOKIE_SIGNING_SECRET;
 
-  await app.register(cookie, {
-    secret: process.env.COOKIE_SIGNING_SECRET,
-  });
+  await app.register(cookie, cookieSigningSecret ? { secret: cookieSigningSecret } : {});
 
   app.enableCors({
     origin: (process.env.WEB_ORIGIN ?? 'http://localhost:3000').split(','),
