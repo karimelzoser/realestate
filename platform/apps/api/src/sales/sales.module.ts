@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module.js';
 import { EoiRefundController } from './eoi-refund.controller.js';
 import { EoiRefundRepository } from './eoi-refund.repository.js';
 import { EoiRefundService } from './eoi-refund.service.js';
+import { MilestoneEvidenceService } from './milestone-evidence.service.js';
 import { QueueDispatchController } from './queue-dispatch.controller.js';
 import { QueueDispatchRepository } from './queue-dispatch.repository.js';
 import { QueueDispatchService } from './queue-dispatch.service.js';
@@ -19,6 +20,7 @@ import { TransactionListService } from './transaction-list.service.js';
   controllers: [SalesController, EoiRefundController, QueueDispatchController, TransactionListController],
   providers: [
     SalesRepository,
+    MilestoneEvidenceService,
     SalesService,
     EoiRefundRepository,
     EoiRefundService,
