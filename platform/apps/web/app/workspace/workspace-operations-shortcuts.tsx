@@ -12,6 +12,7 @@ export default function WorkspaceOperationsShortcuts() {
   const [showRefunds, setShowRefunds] = useState(false);
   const [showDocumentPolicy, setShowDocumentPolicy] = useState(false);
   const [showDocumentTemplates, setShowDocumentTemplates] = useState(false);
+  const [showCommissions, setShowCommissions] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -26,6 +27,9 @@ export default function WorkspaceOperationsShortcuts() {
         ));
         setShowDocumentPolicy(canManageTemplates);
         setShowDocumentTemplates(canManageTemplates);
+        setShowCommissions(workspace.projects.some((project) => project.roles.some((role) =>
+          roleHasPermission(role, 'commission.status.read'),
+        )));
       })
       .catch(() => undefined);
     return () => {
@@ -33,11 +37,12 @@ export default function WorkspaceOperationsShortcuts() {
     };
   }, []);
 
-  if (!showRefunds && !showDocumentPolicy && !showDocumentTemplates) return null;
+  if (!showRefunds && !showDocumentPolicy && !showDocumentTemplates && !showCommissions) return null;
 
   return (
     <nav className={styles.shortcuts} aria-label="Additional operations">
       {showRefunds ? <a href="/workspace/refunds">Refunds</a> : null}
+      {showCommissions ? <a href="/workspace/commissions">Commissions</a> : null}
       {showDocumentPolicy ? <a href="/workspace/document-requirements">Document policy</a> : null}
       {showDocumentTemplates ? <a href="/workspace/document-templates">Templates</a> : null}
     </nav>
