@@ -284,7 +284,10 @@ export class AccountService {
       await this.access.assert({
         userId: input.actorUserId,
         permission: 'tenant.users.manage',
-        context: { tenantId: input.tenantId, projectId: input.projectId ?? undefined },
+        context: {
+          tenantId: input.tenantId,
+          ...(input.projectId ? { projectId: input.projectId } : {}),
+        },
       });
       return;
     }
@@ -295,7 +298,7 @@ export class AccountService {
         permission: 'broker.users.manage',
         context: {
           tenantId: input.tenantId,
-          brokerCompanyId: input.brokerCompanyId ?? undefined,
+          ...(input.brokerCompanyId ? { brokerCompanyId: input.brokerCompanyId } : {}),
         },
       });
       return;
@@ -304,7 +307,10 @@ export class AccountService {
     await this.access.assert({
       userId: input.actorUserId,
       permission: 'tenant.users.manage',
-      context: { tenantId: input.tenantId, projectId: input.projectId ?? undefined },
+      context: {
+        tenantId: input.tenantId,
+        ...(input.projectId ? { projectId: input.projectId } : {}),
+      },
     });
   }
 
