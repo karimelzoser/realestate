@@ -47,6 +47,34 @@ export interface MilestoneSlaSnapshot {
   enabled: boolean;
 }
 
+export const installmentReminderItemTypeSchema = z.enum(['DOWN_PAYMENT', 'INSTALLMENT', 'FEE']);
+export type InstallmentReminderItemType = z.infer<typeof installmentReminderItemTypeSchema>;
+
+export const upsertInstallmentReminderPolicySchema = z.object({
+  tenantId: z.uuid(),
+  projectId: z.uuid(),
+  itemType: installmentReminderItemTypeSchema.default('INSTALLMENT'),
+  audience: notificationAudienceSchema.default('BUYER'),
+  channel: notificationChannelSchema.default('WHATSAPP'),
+  reminderHoursBefore: z.number().int().min(0).max(87600).default(24),
+  templateCode: z.string().trim().min(1).max(160).default('payment.installment.due'),
+  locale: z.string().trim().min(2).max(32).default('ar-EG'),
+  enabled: z.boolean().default(true),
+});
+export type UpsertInstallmentReminderPolicyInput = z.infer<typeof upsertInstallmentReminderPolicySchema>;
+
+export interface InstallmentReminderPolicySnapshot {
+  policyId: string;
+  itemType: InstallmentReminderItemType;
+  audience: NotificationAudience;
+  channel: NotificationChannel;
+  reminderHoursBefore: number;
+  templateCode: string;
+  locale: string;
+  enabled: boolean;
+  updatedAt: string;
+}
+
 export interface NotificationJobSnapshot {
   notificationJobId: string;
   recipientUserId: string;
