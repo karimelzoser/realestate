@@ -35,7 +35,7 @@ export class AccountRepository {
     tenantId: string;
     brokerCompanyIds: string[] | null;
   }): Promise<AccountSnapshot[]> {
-    let query = this.db
+    const baseUsers = () => this.db
       .selectFrom('tenant_memberships as membership')
       .innerJoin('users as user', 'user.id', 'membership.user_id')
       .select([
@@ -46,18 +46,20 @@ export class AccountRepository {
       ])
       .where('membership.tenant_id', '=', input.tenantId);
 
-    if (input.brokerCompanyIds) {
-      if (input.brokerCompanyIds.length === 0) return [];
-      query = query
-        .innerJoin('access_role_assignments as visible_assignment', 'visible_assignment.user_id', 'user.id')
-        .where('visible_assignment.tenant_id', '=', input.tenantId)
-        .where('visible_assignment.scope_type', '=', 'BROKER_COMPANY')
-        .where('visible_assignment.broker_company_id', 'in', input.brokerCompanyIds)
-        .where('visible_assignment.revoked_at', 'is', null)
-        .distinct();
-    }
+    const users = input.brokerCompanyIds === null
+      ? await baseUsers().orderBy('user.display_name', 'asc').execute()
+      : input.brokerCompanyIds.length === 0
+        ? []
+        : await baseUsers()
+          .innerJoin('access_role_assignments as visible_assignment', 'visible_assignment.user_id', 'user.id')
+          .where('visible_assignment.tenant_id', '=', input.tenantId)
+          .where('visible_assignment.scope_type', '=', 'BROKER_COMPANY')
+          .where('visible_assignment.broker_company_id', 'in', input.brokerCompanyIds)
+          .where('visible_assignment.revoked_at', 'is', null)
+          .distinct()
+          .orderBy('user.display_name', 'asc')
+          .execute();
 
-    const users = await query.orderBy('user.display_name', 'asc').execute();
     const userIds = users.map((user) => user.user_id);
     if (userIds.length === 0) return [];
 
