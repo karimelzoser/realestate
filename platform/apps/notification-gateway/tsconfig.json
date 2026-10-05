@@ -4,7 +4,8 @@
     "rootDir": "src",
     "outDir": "dist",
     "declaration": false,
-    "composite": false
+    "composite": false,
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"]
 }
