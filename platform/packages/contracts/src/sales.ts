@@ -56,6 +56,15 @@ export const eoiRefundStageSchema = z.enum([
 ]);
 export type EoiRefundStage = z.infer<typeof eoiRefundStageSchema>;
 
+export const eoiRefundRequestStatusSchema = z.enum([
+  'REQUESTED',
+  'APPROVED',
+  'REJECTED',
+  'PAID',
+  'CANCELLED',
+]);
+export type EoiRefundRequestStatus = z.infer<typeof eoiRefundRequestStatusSchema>;
+
 export const requestEoiRefundSchema = z.object({
   tenantId: z.uuid(),
   projectId: z.uuid(),
@@ -138,6 +147,25 @@ export interface EoiRefundQuote {
   policyId: string;
 }
 
+export interface EoiRefundRequestSnapshot {
+  refundRequestId: string;
+  eoiId: string;
+  buyerProfileId: string;
+  buyerUserId: string;
+  buyerDisplayName: string;
+  stage: EoiRefundStage;
+  originalAmount: string;
+  refundPercent: string;
+  processingFee: string;
+  requestedAmount: string;
+  currency: string;
+  status: EoiRefundRequestStatus;
+  requestedAt: string;
+  reviewedAt: string | null;
+  paidAt: string | null;
+  decisionNote: string | null;
+}
+
 export interface ReservationResult {
   reservationId: string;
   transactionId: string;
@@ -177,4 +205,13 @@ export interface TransactionProgressSnapshot {
     status: 'PENDING' | 'COMPLETED' | 'WAIVED' | 'BLOCKED';
     completedAt: string | null;
   }>;
+}
+
+export interface TransactionTimelineEventSnapshot {
+  eventId: string;
+  eventType: string;
+  actorUserId: string | null;
+  actorDisplayName: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
 }
