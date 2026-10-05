@@ -1,6 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   EoiRefundQuote,
+  EoiRefundRequestSnapshot,
   RequestEoiRefundInput,
   ReviewEoiRefundInput,
 } from '@preneura/contracts/sales';
@@ -13,6 +14,32 @@ export class EoiRefundService {
     private readonly repository: EoiRefundRepository,
     private readonly access: AccessService,
   ) {}
+
+  async list(input: {
+    actorUserId: string;
+    tenantId: string;
+    projectId: string;
+  }): Promise<EoiRefundRequestSnapshot[]> {
+    const staffRead = await this.access.can({
+      userId: input.actorUserId,
+      permission: 'refund.read',
+      context: { tenantId: input.tenantId, projectId: input.projectId },
+    });
+    if (staffRead.allowed) {
+      return this.repository.list({ tenantId: input.tenantId, projectId: input.projectId });
+    }
+
+    await this.access.assert({
+      userId: input.actorUserId,
+      permission: 'refund.request',
+      context: { tenantId: input.tenantId, projectId: input.projectId },
+    });
+    return this.repository.list({
+      tenantId: input.tenantId,
+      projectId: input.projectId,
+      buyerUserId: input.actorUserId,
+    });
+  }
 
   async quote(input: {
     actorUserId: string;

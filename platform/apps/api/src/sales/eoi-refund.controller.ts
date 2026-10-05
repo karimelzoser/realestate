@@ -3,6 +3,7 @@ import {
   requestEoiRefundSchema,
   reviewEoiRefundSchema,
   type EoiRefundQuote,
+  type EoiRefundRequestSnapshot,
 } from '@preneura/contracts/sales';
 import type { ResolvedSession } from '../auth/auth.repository.js';
 import { CurrentSession, SessionAuthGuard } from '../auth/session-auth.guard.js';
@@ -12,6 +13,17 @@ import { EoiRefundService } from './eoi-refund.service.js';
 @Controller('tenants/:tenantId/projects/:projectId')
 export class EoiRefundController {
   constructor(private readonly refunds: EoiRefundService) {}
+
+  @Get('refund-requests')
+  list(
+    @Param('tenantId') tenantId: string,
+    @Param('projectId') projectId: string,
+    @CurrentSession() session: ResolvedSession,
+  ): Promise<EoiRefundRequestSnapshot[]> {
+    this.assertUuid(tenantId, 'tenantId');
+    this.assertUuid(projectId, 'projectId');
+    return this.refunds.list({ actorUserId: session.userId, tenantId, projectId });
+  }
 
   @Get('eois/:eoiId/refund-quote')
   quote(

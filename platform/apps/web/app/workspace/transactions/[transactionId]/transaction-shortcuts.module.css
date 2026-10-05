@@ -1,29 +1,47 @@
-.uploadShortcut {
+.shortcuts {
   position: fixed;
   right: 24px;
   bottom: 24px;
   z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.primaryShortcut,
+.secondaryShortcut {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 42px;
   padding: 0 16px;
   border-radius: 10px;
-  background: #192833;
-  color: #ffffff;
   box-shadow: 0 12px 32px rgba(20, 34, 44, 0.2);
   text-decoration: none;
   font-size: 10px;
   font-weight: 800;
 }
 
-.uploadShortcut:hover {
-  background: #243845;
+.primaryShortcut {
+  background: #192833;
+  color: #ffffff;
 }
 
+.primaryShortcut:hover { background: #243845; }
+
+.secondaryShortcut {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.92);
+  color: #bfdbfe;
+}
+
+.secondaryShortcut:hover { background: rgba(30, 41, 59, 0.96); }
+
 @media (max-width: 640px) {
-  .uploadShortcut {
+  .shortcuts {
     right: 14px;
     bottom: 14px;
+    align-items: stretch;
+    flex-direction: column-reverse;
   }
 }

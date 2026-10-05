@@ -56,6 +56,15 @@ export const eoiRefundStageSchema = z.enum([
 ]);
 export type EoiRefundStage = z.infer<typeof eoiRefundStageSchema>;
 
+export const eoiRefundRequestStatusSchema = z.enum([
+  'REQUESTED',
+  'APPROVED',
+  'REJECTED',
+  'PAID',
+  'CANCELLED',
+]);
+export type EoiRefundRequestStatus = z.infer<typeof eoiRefundRequestStatusSchema>;
+
 export const requestEoiRefundSchema = z.object({
   tenantId: z.uuid(),
   projectId: z.uuid(),
@@ -126,6 +135,26 @@ export interface QueueEntrySnapshot {
   calledAt: string | null;
 }
 
+export interface EoiListItemSnapshot {
+  eoiId: string;
+  buyerProfileId: string;
+  buyerUserId: string;
+  buyerDisplayName: string;
+  buyerSource: BuyerSource;
+  brokerCompanyId: string | null;
+  brokerAgentUserId: string | null;
+  amount: string;
+  currency: string;
+  status: 'PAYMENT_PENDING' | 'PAID' | 'APPLIED' | 'REFUND_REQUESTED' | 'REFUNDED' | 'CANCELLED' | 'EXPIRED';
+  paymentReference: string | null;
+  paidAt: string | null;
+  appliedAt: string | null;
+  refundRequestedAt: string | null;
+  refundedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
 export interface EoiRefundQuote {
   eoiId: string;
   buyerProfileId: string;
@@ -136,6 +165,25 @@ export interface EoiRefundQuote {
   refundableAmount: string;
   currency: string;
   policyId: string;
+}
+
+export interface EoiRefundRequestSnapshot {
+  refundRequestId: string;
+  eoiId: string;
+  buyerProfileId: string;
+  buyerUserId: string;
+  buyerDisplayName: string;
+  stage: EoiRefundStage;
+  originalAmount: string;
+  refundPercent: string;
+  processingFee: string;
+  requestedAmount: string;
+  currency: string;
+  status: EoiRefundRequestStatus;
+  requestedAt: string;
+  reviewedAt: string | null;
+  paidAt: string | null;
+  decisionNote: string | null;
 }
 
 export interface ReservationResult {
@@ -177,4 +225,13 @@ export interface TransactionProgressSnapshot {
     status: 'PENDING' | 'COMPLETED' | 'WAIVED' | 'BLOCKED';
     completedAt: string | null;
   }>;
+}
+
+export interface TransactionTimelineEventSnapshot {
+  eventId: string;
+  eventType: string;
+  actorUserId: string | null;
+  actorDisplayName: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
 }

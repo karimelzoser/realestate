@@ -16,6 +16,7 @@ type Props = {
 
 export default function TransactionShortcuts({ transactionId, tenantId, projectId }: Props) {
   const [canUpload, setCanUpload] = useState(false);
+  const [canOpenRefunds, setCanOpenRefunds] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,6 +30,9 @@ export default function TransactionShortcuts({ transactionId, tenantId, projectI
         setCanUpload(project.roles.some(
           (role) => roleHasPermission(role, 'documents.upload') || roleHasPermission(role, 'documents.upload.self'),
         ));
+        setCanOpenRefunds(project.roles.some(
+          (role) => roleHasPermission(role, 'refund.read') || roleHasPermission(role, 'refund.request'),
+        ));
       })
       .catch(() => undefined);
     return () => {
@@ -36,8 +40,13 @@ export default function TransactionShortcuts({ transactionId, tenantId, projectI
     };
   }, [projectId, tenantId]);
 
-  if (!canUpload) return null;
+  if (!canUpload && !canOpenRefunds) return null;
 
-  const href = `/workspace/transactions/${transactionId}/documents/upload?tenantId=${encodeURIComponent(tenantId)}&projectId=${encodeURIComponent(projectId)}`;
-  return <a className={styles.uploadShortcut} href={href}>Upload document</a>;
+  const uploadHref = `/workspace/transactions/${transactionId}/documents/upload?tenantId=${encodeURIComponent(tenantId)}&projectId=${encodeURIComponent(projectId)}`;
+  return (
+    <div className={styles.shortcuts}>
+      {canOpenRefunds ? <a className={styles.secondaryShortcut} href="/workspace/refunds">EOI refunds</a> : null}
+      {canUpload ? <a className={styles.primaryShortcut} href={uploadHref}>Upload document</a> : null}
+    </div>
+  );
 }

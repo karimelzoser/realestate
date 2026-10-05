@@ -1,7 +1,11 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { sql, type Kysely, type Transaction } from 'kysely';
 import type { Database } from '@preneura/database';
-import type { EoiRefundQuote, EoiRefundStage } from '@preneura/contracts/sales';
+import type {
+  EoiRefundQuote,
+  EoiRefundRequestSnapshot,
+  EoiRefundStage,
+} from '@preneura/contracts/sales';
 import { DATABASE } from '../database/database.module.js';
 
 interface RefundQuoteRow {
@@ -21,6 +25,65 @@ interface RefundQuoteRow {
 @Injectable()
 export class EoiRefundRepository {
   constructor(@Inject(DATABASE) private readonly db: Kysely<Database>) {}
+
+  async list(input: {
+    tenantId: string;
+    projectId: string;
+    buyerUserId?: string | null;
+  }): Promise<EoiRefundRequestSnapshot[]> {
+    let query = this.db
+      .selectFrom('eoi_refund_requests as r')
+      .innerJoin('buyer_profiles as b', (join) =>
+        join.onRef('b.id', '=', 'r.buyer_profile_id').onRef('b.tenant_id', '=', 'r.tenant_id'),
+      )
+      .innerJoin('users as u', 'u.id', 'b.user_id')
+      .select([
+        'r.id',
+        'r.eoi_id',
+        'r.buyer_profile_id',
+        'b.user_id as buyer_user_id',
+        'u.display_name as buyer_display_name',
+        'r.stage',
+        'r.original_eoi_amount',
+        'r.refund_percent',
+        'r.processing_fee',
+        'r.requested_amount',
+        'r.currency',
+        'r.status',
+        'r.requested_at',
+        'r.reviewed_at',
+        'r.paid_at',
+        'r.decision_note',
+      ])
+      .where('r.tenant_id', '=', input.tenantId)
+      .where('r.project_id', '=', input.projectId);
+
+    if (input.buyerUserId) query = query.where('b.user_id', '=', input.buyerUserId);
+
+    const rows = await query
+      .orderBy('r.requested_at', 'desc')
+      .orderBy('r.id', 'desc')
+      .execute();
+
+    return rows.map((row) => ({
+      refundRequestId: row.id,
+      eoiId: row.eoi_id,
+      buyerProfileId: row.buyer_profile_id,
+      buyerUserId: row.buyer_user_id,
+      buyerDisplayName: row.buyer_display_name,
+      stage: row.stage,
+      originalAmount: String(row.original_eoi_amount),
+      refundPercent: String(row.refund_percent),
+      processingFee: String(row.processing_fee),
+      requestedAmount: String(row.requested_amount),
+      currency: row.currency,
+      status: row.status,
+      requestedAt: (row.requested_at as Date).toISOString(),
+      reviewedAt: row.reviewed_at ? (row.reviewed_at as Date).toISOString() : null,
+      paidAt: row.paid_at ? (row.paid_at as Date).toISOString() : null,
+      decisionNote: row.decision_note,
+    }));
+  }
 
   async quote(input: {
     tenantId: string;
