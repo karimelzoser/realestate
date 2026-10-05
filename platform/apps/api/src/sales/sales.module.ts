@@ -14,10 +14,19 @@ import { SalesService } from './sales.service.js';
 import { TransactionListController } from './transaction-list.controller.js';
 import { TransactionListRepository } from './transaction-list.repository.js';
 import { TransactionListService } from './transaction-list.service.js';
+import { TransactionTimelineController } from './transaction-timeline.controller.js';
+import { TransactionTimelineRepository } from './transaction-timeline.repository.js';
+import { TransactionTimelineService } from './transaction-timeline.service.js';
 
 @Module({
   imports: [AuthModule, AccessModule],
-  controllers: [SalesController, EoiRefundController, QueueDispatchController, TransactionListController],
+  controllers: [
+    SalesController,
+    EoiRefundController,
+    QueueDispatchController,
+    TransactionListController,
+    TransactionTimelineController,
+  ],
   providers: [
     SalesRepository,
     MilestoneEvidenceService,
@@ -28,7 +37,9 @@ import { TransactionListService } from './transaction-list.service.js';
     QueueDispatchService,
     TransactionListRepository,
     TransactionListService,
+    TransactionTimelineRepository,
+    TransactionTimelineService,
   ],
-  exports: [SalesService, EoiRefundService, TransactionListService],
+  exports: [SalesService, EoiRefundService, TransactionListService, TransactionTimelineService],
 })
 export class SalesModule {}
