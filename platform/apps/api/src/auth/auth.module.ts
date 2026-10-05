@@ -4,7 +4,7 @@ import { AuthService } from './auth.service.js';
 import { AuthRepository, PostgresAuthRepository } from './auth.repository.js';
 import { GoogleAuthController } from './google-auth.controller.js';
 import { GoogleOidcService } from './google-oidc.service.js';
-import { DevelopmentOtpDelivery, OtpDeliveryPort } from './otp-delivery.js';
+import { DevelopmentOtpDelivery, GatewayOtpDelivery, OtpDeliveryPort } from './otp-delivery.js';
 import { SessionAuthGuard } from './session-auth.guard.js';
 
 const otpDeliveryProvider: Provider = {
@@ -17,6 +17,7 @@ const otpDeliveryProvider: Provider = {
       }
       return new DevelopmentOtpDelivery();
     }
+    if (provider === 'gateway') return new GatewayOtpDelivery();
     throw new Error(`Unsupported OTP provider: ${provider}`);
   },
 };
