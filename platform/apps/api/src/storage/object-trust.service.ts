@@ -114,7 +114,9 @@ export class ObjectTrustService {
     try {
       scanner = await this.callScanner({
         url: scannerUrl,
-        token: process.env.DOCUMENT_SCANNER_TOKEN,
+        ...(process.env.DOCUMENT_SCANNER_TOKEN
+          ? { token: process.env.DOCUMENT_SCANNER_TOKEN }
+          : {}),
         objectUrl: signed.downloadUrl,
         sha256Hex: input.verified.sha256Hex,
         detectedMimeType,
