@@ -135,6 +135,26 @@ export interface QueueEntrySnapshot {
   calledAt: string | null;
 }
 
+export interface EoiListItemSnapshot {
+  eoiId: string;
+  buyerProfileId: string;
+  buyerUserId: string;
+  buyerDisplayName: string;
+  buyerSource: BuyerSource;
+  brokerCompanyId: string | null;
+  brokerAgentUserId: string | null;
+  amount: string;
+  currency: string;
+  status: 'PAYMENT_PENDING' | 'PAID' | 'APPLIED' | 'REFUND_REQUESTED' | 'REFUNDED' | 'CANCELLED' | 'EXPIRED';
+  paymentReference: string | null;
+  paidAt: string | null;
+  appliedAt: string | null;
+  refundRequestedAt: string | null;
+  refundedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
 export interface EoiRefundQuote {
   eoiId: string;
   buyerProfileId: string;
