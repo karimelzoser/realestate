@@ -146,11 +146,11 @@ export class PlatformAdminRepository {
         count(DISTINCT transaction.id) FILTER (
           WHERE transaction.status IN ('IN_PROGRESS','READY_FOR_COMPLETION')
         )::text AS open_transaction_count,
-        count(DISTINCT buyer.id)::text AS buyer_count,
+        count(DISTINCT eoi.buyer_profile_id)::text AS buyer_count,
         count(DISTINCT broker_access.broker_company_id)::text AS broker_company_count
       FROM projects project
       LEFT JOIN transactions transaction ON transaction.project_id = project.id
-      LEFT JOIN buyer_profiles buyer ON buyer.tenant_id = project.tenant_id
+      LEFT JOIN buyer_eois eoi ON eoi.project_id = project.id
       LEFT JOIN broker_project_access broker_access
         ON broker_access.project_id = project.id AND broker_access.status = 'ACTIVE'
       WHERE project.tenant_id = ${tenantId}::uuid
@@ -254,20 +254,28 @@ export class PlatformAdminRepository {
         WHERE operator_user_id = ${input.operatorUserId}::uuid
           AND status = 'ACTIVE' AND expires_at <= now()
       `.execute(trx);
-      const result = await sql<SupportRow>`
+      const inserted = await sql<{
+        session_id: string; operator_user_id: string; tenant_id: string; project_id: string | null;
+        reason: string; status: 'ACTIVE' | 'ENDED' | 'EXPIRED'; started_at: Date;
+        expires_at: Date; ended_at: Date | null;
+      }>`
         INSERT INTO platform_support_access_sessions (
           operator_user_id, tenant_id, project_id, reason, expires_at
         ) VALUES (
           ${input.operatorUserId}::uuid, ${input.tenantId}::uuid, ${input.projectId}::uuid,
           ${input.reason}, now() + (${input.durationMinutes}::text || ' minutes')::interval
         )
-        RETURNING
-          id AS session_id, operator_user_id, tenant_id, project_id, reason, status,
-          started_at, expires_at, ended_at,
-          (SELECT name FROM tenants WHERE id = tenant_id) AS tenant_name,
-          (SELECT name FROM projects WHERE id = project_id) AS project_name
+        RETURNING id AS session_id, operator_user_id, tenant_id, project_id, reason, status,
+                  started_at, expires_at, ended_at
       `.execute(trx);
-      return this.mapSupport(result.rows[0]!);
+      const session = inserted.rows[0]!;
+      const names = await sql<{ tenant_name: string; project_name: string | null }>`
+        SELECT tenant.name AS tenant_name, project.name AS project_name
+        FROM tenants tenant
+        LEFT JOIN projects project ON project.id = ${session.project_id}::uuid
+        WHERE tenant.id = ${session.tenant_id}::uuid
+      `.execute(trx);
+      return this.mapSupport({ ...session, ...names.rows[0]! });
     });
   }
 
