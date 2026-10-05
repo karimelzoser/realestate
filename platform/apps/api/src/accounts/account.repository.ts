@@ -63,19 +63,27 @@ export class AccountRepository {
     const userIds = users.map((user) => user.user_id);
     if (userIds.length === 0) return [];
 
-    const assignments = await this.db
+    const baseAssignments = () => this.db
       .selectFrom('access_role_assignments')
       .select([
         'id', 'user_id', 'role_code', 'scope_type', 'tenant_id', 'project_id',
         'broker_company_id', 'status',
       ])
       .where('user_id', 'in', userIds)
-      .where((eb) => eb.or([
-        eb('tenant_id', '=', input.tenantId),
-        eb('scope_type', '=', 'PLATFORM'),
-      ]))
-      .where('revoked_at', 'is', null)
-      .execute();
+      .where('revoked_at', 'is', null);
+
+    const assignments = input.brokerCompanyIds === null
+      ? await baseAssignments()
+        .where((eb) => eb.or([
+          eb('tenant_id', '=', input.tenantId),
+          eb('scope_type', '=', 'PLATFORM'),
+        ]))
+        .execute()
+      : await baseAssignments()
+        .where('tenant_id', '=', input.tenantId)
+        .where('scope_type', '=', 'BROKER_COMPANY')
+        .where('broker_company_id', 'in', input.brokerCompanyIds)
+        .execute();
 
     const contactResult = await sql<ContactRow>`
       SELECT user_id, kind, display_hint, verified_at, is_primary
