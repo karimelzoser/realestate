@@ -51,12 +51,6 @@ type ImportRow = {
   errors: unknown;
 };
 
-export type ValidatedImportRow = {
-  rowId: string;
-  rowNumber: number;
-  normalized: Record<string, unknown>;
-};
-
 @Injectable()
 export class ProjectCatalogRepository {
   constructor(@Inject(DATABASE) private readonly db: Db) {}
@@ -476,6 +470,9 @@ export class ProjectCatalogRepository {
   }
 
   private async outbox(trx: Trx, tenantId: string, projectId: string, aggregateType: string, aggregateId: string, eventType: string, payload: Record<string, unknown>): Promise<void> {
-    await trx.insertInto('domain_outbox_events').values({ tenant_id: tenantId, project_id: projectId, aggregate_type: aggregateType, aggregate_id: aggregateId, event_type: eventType, payload, attempts: 0 }).execute();
+    await sql`
+      INSERT INTO domain_outbox_events (tenant_id, project_id, aggregate_type, aggregate_id, event_type, payload, attempts)
+      VALUES (${tenantId}::uuid, ${projectId}::uuid, ${aggregateType}, ${aggregateId}::uuid, ${eventType}, ${JSON.stringify(payload)}::jsonb, 0)
+    `.execute(trx);
   }
 }
