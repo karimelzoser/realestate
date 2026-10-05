@@ -36,9 +36,11 @@ export default function TransactionFinanceSetup({ transactionId, tenantId, proje
   const [schedule, setSchedule] = useState<PaymentScheduleSnapshot | null>(null);
   const [cheques, setCheques] = useState<ChequeSnapshot[]>([]);
   const [paymentDrafts, setPaymentDrafts] = useState<PaymentDraft[]>([
-    newPaymentDraft('DOWN_PAYMENT'),
+    { key: 'payment-initial', itemType: 'DOWN_PAYMENT', amount: '', dueAt: '' },
   ]);
-  const [chequeDrafts, setChequeDrafts] = useState<ChequeDraft[]>([newChequeDraft()]);
+  const [chequeDrafts, setChequeDrafts] = useState<ChequeDraft[]>([
+    { key: 'cheque-initial', amount: '', dueAt: '' },
+  ]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -77,7 +79,10 @@ export default function TransactionFinanceSetup({ transactionId, tenantId, proje
       );
       const nextTransaction = transactions.find((item) => item.transactionId === transactionId) ?? null;
       setTransaction(nextTransaction);
-      if (!nextTransaction) return;
+      if (!nextTransaction) {
+        setError('This transaction is not visible in your current access scope.');
+        return;
+      }
 
       const [nextSchedule, nextCheques] = await Promise.all([
         optionalFetch<PaymentScheduleSnapshot>(`${basePath}/payment-schedule`, null),
@@ -371,7 +376,7 @@ function Status({ text }: { text: string }) {
   return <span className={styles.status}>{text.replaceAll('_', ' ')}</span>;
 }
 
-async function optionalFetch<T>(path: string, fallback: T): Promise<T> {
+async function optionalFetch<T>(path: string, fallback: T | null): Promise<T | null> {
   try {
     return await apiFetch<T>(path);
   } catch (error) {
