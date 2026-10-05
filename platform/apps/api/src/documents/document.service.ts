@@ -23,12 +23,14 @@ import { AccessService } from '../access/access.service.js';
 import { CommissionService } from '../commissions/commission.service.js';
 import { ObjectStorageService } from '../storage/object-storage.service.js';
 import { ObjectTrustService } from '../storage/object-trust.service.js';
+import { ContractExecutionRepository } from './contract-execution.repository.js';
 import { DocumentRepository, type TransactionDocumentContext } from './document.repository.js';
 
 @Injectable()
 export class DocumentService {
   constructor(
     private readonly repository: DocumentRepository,
+    private readonly execution: ContractExecutionRepository,
     private readonly access: AccessService,
     private readonly storage: ObjectStorageService,
     private readonly trust: ObjectTrustService,
@@ -342,7 +344,7 @@ export class DocumentService {
       permission: 'contract.execute',
       context: { tenantId: input.data.tenantId, projectId: input.data.projectId },
     });
-    await this.repository.stampContract({
+    await this.execution.stampContract({
       actorUserId: input.actorUserId,
       tenantId: input.data.tenantId,
       projectId: input.data.projectId,
