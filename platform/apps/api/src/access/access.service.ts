@@ -23,6 +23,28 @@ export interface AccessDecision {
   brokerCompanyId?: string | null;
 }
 
+const SUPPORT_READ_PERMISSIONS = new Set<PermissionCode>([
+  'tenant.read',
+  'project.read',
+  'pricing.read',
+  'buyers.read',
+  'eoi.read',
+  'queue.read',
+  'inventory.read',
+  'transaction.read',
+  'payment.read',
+  'documents.read',
+  'contract.read',
+  'broker.buyers.read',
+  'broker.performance.read',
+  'commission.status.read',
+  'commission.amount.read',
+  'commission.rate.read',
+  'refund.read',
+  'notifications.read',
+  'audit.read',
+]);
+
 @Injectable()
 export class AccessService {
   constructor(private readonly repository: AccessRepository) {}
@@ -43,8 +65,25 @@ export class AccessService {
     const assignments = await this.repository.listActiveAssignments(input.userId);
     const matching: RoleAssignment[] = [];
     for (const assignment of assignments) {
-      if (!roleHasPermission(assignment.role, input.permission)) continue;
-      if (await this.scopeMatches(assignment, context)) matching.push(assignment);
+      if (roleHasPermission(assignment.role, input.permission)) {
+        if (await this.scopeMatches(assignment, context)) matching.push(assignment);
+        continue;
+      }
+
+      if (
+        assignment.role === 'PRENEURA_SUPER_ADMIN' &&
+        assignment.scopeType === 'PLATFORM' &&
+        SUPPORT_READ_PERMISSIONS.has(input.permission) &&
+        context.tenantId &&
+        await this.repository.hasActivePlatformSupportAccess({
+          userId: input.userId,
+          tenantId: context.tenantId,
+          ...(context.projectId ? { projectId: context.projectId } : {}),
+          at: new Date(),
+        })
+      ) {
+        matching.push(assignment);
+      }
     }
     return matching;
   }
