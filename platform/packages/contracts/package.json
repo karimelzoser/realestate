@@ -15,6 +15,7 @@
     "./pricing-quote": "./src/pricing-quote.ts",
     "./sales": "./src/sales.ts",
     "./documents": "./src/documents.ts",
+    "./contract-execution": "./src/contract-execution.ts",
     "./finance": "./src/finance.ts",
     "./commissions": "./src/commissions.ts",
     "./notifications": "./src/notifications.ts",
