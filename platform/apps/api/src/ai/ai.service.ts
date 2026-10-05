@@ -12,7 +12,7 @@ import type {
 import type { UnitTypeCommercialSnapshot } from '@preneura/contracts/catalog';
 import { AccessService } from '../access/access.service.js';
 import { CatalogService } from '../catalog/catalog.service.js';
-import { AiProvider } from './ai.provider.js';
+import { AiProvider, type ManagerInsightFocus } from './ai.provider.js';
 import { AiRepository } from './ai.repository.js';
 
 @Injectable()
@@ -154,7 +154,8 @@ export class AiService {
     const started = Date.now();
     const metrics = await this.repository.managerMetrics(input.tenantId, input.projectId);
     const fingerprint = hash({ question: input.question, metrics });
-    const baseline = deterministicManagerInsight(metrics);
+    const focus = managerInsightFocus(input.question);
+    const baseline = deterministicManagerInsight(metrics, focus);
 
     if (settings.providerCode !== 'EXTERNAL_HTTP') {
       await this.repository.logInvocation({
@@ -171,7 +172,7 @@ export class AiService {
     }
 
     try {
-      const external = await this.provider.managerInsight({ model: settings.model, question: input.question, metrics });
+      const external = await this.provider.managerInsight({ model: settings.model, focus, metrics });
       await this.repository.logInvocation({
         tenantId: input.tenantId, projectId: input.projectId, userId: input.actorUserId,
         purpose: 'MANAGER_INSIGHT', providerCode: 'EXTERNAL_HTTP', model: settings.model,
@@ -288,7 +289,21 @@ function toRecommendationItem(candidate: ScoredCandidate): BuyerRecommendationIt
   };
 }
 
-function deterministicManagerInsight(metrics: ManagerProjectMetricsSnapshot): { answer: string; findings: string[] } {
+function managerInsightFocus(question: string): ManagerInsightFocus {
+  const value = question.toLowerCase();
+  if (/payment|installment|overdue|due amount|collection/.test(value)) return 'PAYMENTS';
+  if (/commission|broker fee|broker payment/.test(value)) return 'COMMISSIONS';
+  if (/notification|message|whatsapp|sms|email|delivery/.test(value)) return 'NOTIFICATIONS';
+  if (/document|paper|kyc|identity|upload/.test(value)) return 'DOCUMENTS';
+  if (/inventory|available|availability|unit|stock|sold|reserved/.test(value)) return 'INVENTORY';
+  if (/transaction|deal|reservation|completion|pipeline/.test(value)) return 'TRANSACTIONS';
+  return 'GENERAL';
+}
+
+function deterministicManagerInsight(
+  metrics: ManagerProjectMetricsSnapshot,
+  focus: ManagerInsightFocus,
+): { answer: string; findings: string[] } {
   const findings: string[] = [];
   if (metrics.overduePaymentItems > 0) findings.push(`${metrics.overduePaymentItems} payment items are overdue.`);
   if (metrics.dueCommissionCases > 0) findings.push(`${metrics.dueCommissionCases} broker commission cases are due.`);
@@ -296,8 +311,17 @@ function deterministicManagerInsight(metrics: ManagerProjectMetricsSnapshot): { 
   if (metrics.pendingDocumentRequirements > 0) findings.push(`${metrics.pendingDocumentRequirements} transactions are still missing required buyer documents.`);
   if (metrics.availableInventory === 0) findings.push('No inventory is currently available.');
   if (findings.length === 0) findings.push('No overdue payment, due commission, failed notification, or pending-document exception is currently flagged.');
-  const answer = `Project snapshot: ${metrics.availableInventory} available, ${metrics.reservedInventory} reserved and ${metrics.soldInventory} sold inventory slots; ${metrics.transactionsOpen + metrics.transactionsReady} transactions remain open or ready for completion.`;
-  return { answer, findings };
+
+  const focusAnswers: Record<ManagerInsightFocus, string> = {
+    PAYMENTS: `${metrics.overduePaymentItems} overdue payment items currently total ${metrics.overduePaymentAmount}.`,
+    COMMISSIONS: `${metrics.dueCommissionCases} commission cases are due, totaling ${metrics.dueCommissionAmount}.`,
+    NOTIFICATIONS: `${metrics.failedNotificationJobs} notification jobs are currently failed.`,
+    DOCUMENTS: `${metrics.pendingDocumentRequirements} transactions still have pending or blocked buyer-document requirements.`,
+    INVENTORY: `${metrics.availableInventory} inventory slots are available, ${metrics.reservedInventory} reserved, and ${metrics.soldInventory} sold.`,
+    TRANSACTIONS: `${metrics.transactionsOpen + metrics.transactionsReady} transactions remain open or ready for completion out of ${metrics.transactionsTotal}.`,
+    GENERAL: `Project snapshot: ${metrics.availableInventory} available, ${metrics.reservedInventory} reserved and ${metrics.soldInventory} sold inventory slots; ${metrics.transactionsOpen + metrics.transactionsReady} transactions remain open or ready for completion.`,
+  };
+  return { answer: focusAnswers[focus], findings };
 }
 
 function hash(value: unknown): string {
