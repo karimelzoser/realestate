@@ -49,10 +49,8 @@ export interface WorkspaceContextSnapshot {
   projects: WorkspaceProjectSnapshot[];
 }
 
-const ALL_PERMISSIONS = permissionCodeSchema.options;
-
 export const roleCapabilityMap: Readonly<Record<RoleCode, readonly PermissionCode[]>> = {
-  PRENEURA_SUPER_ADMIN: ALL_PERMISSIONS,
+  PRENEURA_SUPER_ADMIN: ['platform.tenants.read','platform.tenants.manage','platform.support.access'],
   OPERATIONS_DIRECTOR: [
     'tenant.read','tenant.users.manage','tenant.projects.manage','project.read','project.manage','project.import.manage','pricing.read','pricing.publish','buyers.read','buyers.manage','eoi.read','eoi.manage',
     'queue.read','queue.manage','inventory.read','allocation.assist','unit.lock','transaction.read','transaction.manage','payment.read','payment.verify','payment.schedule.manage','documents.read','documents.upload','documents.verify','documents.templates.manage',
