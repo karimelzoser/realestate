@@ -12,6 +12,7 @@
     "./ai": "./src/ai.ts",
     "./catalog": "./src/catalog.ts",
     "./project-catalog": "./src/project-catalog.ts",
+    "./pricing-quote": "./src/pricing-quote.ts",
     "./sales": "./src/sales.ts",
     "./documents": "./src/documents.ts",
     "./finance": "./src/finance.ts",
