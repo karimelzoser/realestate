@@ -5,6 +5,7 @@ export * from './platform-admin.js';
 export * from './ai.js';
 export * from './catalog.js';
 export * from './project-catalog.js';
+export * from './pricing-quote.js';
 export * from './sales.js';
 export * from './documents.js';
 export * from './finance.js';
