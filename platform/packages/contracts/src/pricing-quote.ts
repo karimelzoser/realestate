@@ -1,7 +1,7 @@
-export type PricingComponent = 'INDOOR' | 'ROOF' | 'GARDEN';
+export type QuotePricingComponent = 'INDOOR' | 'ROOF' | 'GARDEN';
 
 export interface ReservationPriceComponentSnapshot {
-  component: PricingComponent;
+  component: QuotePricingComponent;
   areaSqm: string;
   ratePerSqm: string;
   amount: string;
