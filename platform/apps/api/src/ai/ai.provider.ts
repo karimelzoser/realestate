@@ -18,6 +18,15 @@ export interface ExternalInsightResult {
   requestId: string | null;
 }
 
+export type ManagerInsightFocus =
+  | 'PAYMENTS'
+  | 'COMMISSIONS'
+  | 'NOTIFICATIONS'
+  | 'DOCUMENTS'
+  | 'INVENTORY'
+  | 'TRANSACTIONS'
+  | 'GENERAL';
+
 @Injectable()
 export class AiProvider {
   isConfigured(): boolean {
@@ -49,6 +58,12 @@ export class AiProvider {
           nextPriceEffectiveAt: candidate.nextPriceEffectiveAt,
           nextTotalPrice: candidate.nextTotalPrice,
         })),
+        policy: {
+          advisoryOnly: true,
+          candidateIdsAreAuthoritative: true,
+          noOperationalActions: true,
+          noBuyerPII: true,
+        },
       },
     });
     const parsed = externalRecommendationResponseSchema.safeParse(payload);
@@ -61,7 +76,7 @@ export class AiProvider {
 
   async managerInsight(input: {
     model: string | null;
-    question: string;
+    focus: ManagerInsightFocus;
     metrics: ManagerProjectMetricsSnapshot;
   }): Promise<ExternalInsightResult> {
     const payload = await this.post({
@@ -69,12 +84,14 @@ export class AiProvider {
       purpose: 'MANAGER_INSIGHT',
       model: input.model ?? process.env.AI_PROVIDER_MODEL ?? null,
       input: {
-        question: input.question,
+        focus: input.focus,
         metrics: input.metrics,
         policy: {
           advisoryOnly: true,
+          aggregatesOnly: true,
           noOperationalActions: true,
           noPII: true,
+          rawManagerQuestionWithheld: true,
         },
       },
     });
