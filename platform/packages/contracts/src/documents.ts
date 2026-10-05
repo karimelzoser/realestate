@@ -76,6 +76,23 @@ export const createDocumentTemplateSchema = z.object({
 });
 export type CreateDocumentTemplateInput = z.infer<typeof createDocumentTemplateSchema>;
 
+export const upsertProjectDocumentRequirementSchema = z.object({
+  tenantId: z.uuid(),
+  projectId: z.uuid(),
+  category: documentCategorySchema,
+  requiredCount: z.number().int().min(1).max(20),
+  requiredForCompletion: z.boolean().default(true),
+});
+export type UpsertProjectDocumentRequirementInput = z.infer<typeof upsertProjectDocumentRequirementSchema>;
+
+export interface ProjectDocumentRequirementSnapshot {
+  requirementId: string;
+  category: DocumentCategory;
+  requiredCount: number;
+  requiredForCompletion: boolean;
+  updatedAt: string;
+}
+
 export const transactionDocumentUploadIntentSchema = z.object({
   tenantId: z.uuid(),
   projectId: z.uuid(),
