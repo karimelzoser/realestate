@@ -7,6 +7,7 @@ import {
 } from '@preneura/contracts/access';
 import type {
   DocumentCategory,
+  DocumentTemplateSnapshot,
   UploadIntentResponse,
 } from '@preneura/contracts/documents';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
@@ -34,7 +35,9 @@ const maxBytes = 25 * 1024 * 1024;
 
 export default function DocumentUploadClient({ transactionId, tenantId, projectId }: Props) {
   const [project, setProject] = useState<WorkspaceProjectSnapshot | null>(null);
+  const [templates, setTemplates] = useState<DocumentTemplateSnapshot[]>([]);
   const [category, setCategory] = useState<DocumentCategory>('BUYER_ID');
+  const [templateId, setTemplateId] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [dueAt, setDueAt] = useState('');
   const [busy, setBusy] = useState(false);
@@ -47,10 +50,15 @@ export default function DocumentUploadClient({ transactionId, tenantId, projectI
     [projectId, tenantId, transactionId],
   );
 
+  const matchingTemplates = useMemo(
+    () => templates.filter((template) => template.category === category),
+    [category, templates],
+  );
+
   useEffect(() => {
     let cancelled = false;
     void apiFetch<WorkspaceContextSnapshot>('/v1/me/workspace')
-      .then((context) => {
+      .then(async (context) => {
         if (cancelled) return;
         const nextProject = context.projects.find(
           (candidate) => candidate.tenantId === tenantId && candidate.projectId === projectId,
@@ -59,14 +67,30 @@ export default function DocumentUploadClient({ transactionId, tenantId, projectI
           setError('This project is not in your current workspace scope.');
           return;
         }
-        const allowed = nextProject.roles.some(
-          (role) => roleHasPermission(role, 'documents.upload') || roleHasPermission(role, 'documents.upload.self'),
-        );
-        if (!allowed) {
+        const canUpload = nextProject.roles.some((role) => roleHasPermission(role, 'documents.upload'));
+        const canUploadSelf = nextProject.roles.some((role) => roleHasPermission(role, 'documents.upload.self'));
+        if (!canUpload && !canUploadSelf) {
           setError('Your current role does not include document upload permission.');
           return;
         }
         setProject(nextProject);
+
+        if (canUpload) {
+          try {
+            const activeTemplates = await apiFetch<DocumentTemplateSnapshot[]>(
+              `/v1/tenants/${tenantId}/projects/${projectId}/document-templates/active`,
+            );
+            if (!cancelled) setTemplates(activeTemplates);
+          } catch (reason) {
+            if (reason instanceof ApiError && reason.status === 401) {
+              window.location.replace('/login');
+              return;
+            }
+            if (!cancelled) {
+              setError(reason instanceof Error ? reason.message : 'Unable to load active project templates.');
+            }
+          }
+        }
       })
       .catch((reason) => {
         if (reason instanceof ApiError && reason.status === 401) {
@@ -97,6 +121,13 @@ export default function DocumentUploadClient({ transactionId, tenantId, projectI
         throw new Error('Supported formats are PDF, JPEG, PNG and DOCX.');
       }
 
+      const selectedTemplate = templateId
+        ? matchingTemplates.find((template) => template.templateId === templateId) ?? null
+        : null;
+      if (templateId && !selectedTemplate) {
+        throw new Error('The selected template is no longer active for this document category.');
+      }
+
       setStage('Calculating SHA-256 integrity digest…');
       const sha256Base64 = await digestSha256Base64(file);
       const descriptor = {
@@ -113,6 +144,7 @@ export default function DocumentUploadClient({ transactionId, tenantId, projectI
           method: 'POST',
           body: JSON.stringify({
             category,
+            ...(templateId ? { templateId } : {}),
             ...(dueAt ? { dueAt: new Date(dueAt).toISOString() } : {}),
             file: descriptor,
           }),
@@ -143,7 +175,9 @@ export default function DocumentUploadClient({ transactionId, tenantId, projectI
       );
 
       setSuccess(true);
-      setStage('Document verified and attached to the transaction.');
+      setStage(selectedTemplate
+        ? `Document verified and attached using ${selectedTemplate.name} v${selectedTemplate.versionNumber}.`
+        : 'Document verified and attached to the transaction.');
       setFile(null);
       const input = document.getElementById('transaction-document-file') as HTMLInputElement | null;
       if (input) input.value = '';
@@ -187,7 +221,12 @@ export default function DocumentUploadClient({ transactionId, tenantId, projectI
               <select
                 id="document-category"
                 value={category}
-                onChange={(event) => setCategory(event.target.value as DocumentCategory)}
+                onChange={(event) => {
+                  const nextCategory = event.target.value as DocumentCategory;
+                  setCategory(nextCategory);
+                  const currentTemplate = templates.find((template) => template.templateId === templateId);
+                  if (currentTemplate?.category !== nextCategory) setTemplateId('');
+                }}
                 disabled={busy}
               >
                 {categories.map((item) => (
@@ -196,6 +235,30 @@ export default function DocumentUploadClient({ transactionId, tenantId, projectI
               </select>
               <small>{categories.find((item) => item.value === category)?.hint}</small>
             </div>
+
+            {templates.length > 0 ? (
+              <div className={styles.field}>
+                <label htmlFor="document-template">Active template <span>optional</span></label>
+                <select
+                  id="document-template"
+                  value={templateId}
+                  onChange={(event) => setTemplateId(event.target.value)}
+                  disabled={busy}
+                >
+                  <option value="">No template attachment</option>
+                  {matchingTemplates.map((template) => (
+                    <option key={template.templateId} value={template.templateId}>
+                      {template.name} · v{template.versionNumber} · {template.scope === 'PROJECT' ? 'Project' : 'Tenant default'}
+                    </option>
+                  ))}
+                </select>
+                <small>
+                  {matchingTemplates.length > 0
+                    ? 'Project-specific templates override tenant defaults with the same code.'
+                    : 'No active template is configured for this category.'}
+                </small>
+              </div>
+            ) : null}
 
             <div className={styles.field}>
               <label htmlFor="transaction-document-file">File</label>
@@ -245,9 +308,9 @@ export default function DocumentUploadClient({ transactionId, tenantId, projectI
             <h2>What happens to the file</h2>
             <ol>
               <li><strong>Hash locally.</strong><span>The browser computes SHA-256 before any upload begins.</span></li>
+              <li><strong>Resolve active template.</strong><span>Internal upload roles can attach the effective active project or tenant-default template version.</span></li>
               <li><strong>Request scoped storage.</strong><span>The API issues a short-lived transaction-specific object key and presigned PUT URL.</span></li>
-              <li><strong>Upload direct.</strong><span>The browser sends bytes to object storage, not through the PRENEURA API process.</span></li>
-              <li><strong>Verify server-side.</strong><span>PRENEURA reads storage metadata and accepts the business record only if size, type and hash match.</span></li>
+              <li><strong>Verify server-side.</strong><span>PRENEURA accepts the business record only if size, type, hash and template scope match.</span></li>
             </ol>
             <div className={styles.contextBox}>
               <span>Transaction</span>
