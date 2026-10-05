@@ -117,6 +117,9 @@ jobs:
             IF to_regclass('public.auth_delivery_contacts_user_verified') IS NULL THEN RAISE EXCEPTION 'verified contact lookup index missing'; END IF;
             IF to_regclass('public.notification_gateway_deliveries') IS NULL THEN RAISE EXCEPTION 'notification gateway idempotency table missing'; END IF;
             IF to_regclass('public.notification_gateway_deliveries_failed') IS NULL THEN RAISE EXCEPTION 'notification gateway failed-delivery index missing'; END IF;
+            IF to_regclass('public.platform_support_access_sessions') IS NULL THEN RAISE EXCEPTION 'support access session table missing'; END IF;
+            IF to_regclass('public.platform_support_access_operator_active') IS NULL THEN RAISE EXCEPTION 'active support access index missing'; END IF;
+            IF to_regclass('public.platform_support_access_one_active_scope') IS NULL THEN RAISE EXCEPTION 'support access uniqueness index missing'; END IF;
             IF EXISTS (
               SELECT 1 FROM pg_attribute
               WHERE attrelid = 'public.auth_login_aliases'::regclass
@@ -136,6 +139,7 @@ jobs:
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_refresh_commission_after_milestone' AND NOT tgisinternal) THEN RAISE EXCEPTION 'commission milestone refresh trigger missing'; END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_notify_preneura_realtime_event' AND NOT tgisinternal) THEN RAISE EXCEPTION 'realtime LISTEN/NOTIFY trigger missing'; END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_notify_preneura_user_notification' AND NOT tgisinternal) THEN RAISE EXCEPTION 'user notification LISTEN/NOTIFY trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_support_access_project_tenant' AND NOT tgisinternal) THEN RAISE EXCEPTION 'support project/tenant trigger missing'; END IF;
             IF to_regprocedure('public.refresh_broker_commission_case(uuid)') IS NULL THEN RAISE EXCEPTION 'commission refresh function missing'; END IF;
           END $$;
           SQL
