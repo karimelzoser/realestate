@@ -125,9 +125,12 @@ export class ObjectStorageService {
       objectKey: input.objectKey,
       uploadUrl,
       expiresAt,
+      // `Content-Length` is intentionally omitted here. Browsers control that
+      // forbidden request header themselves. The signed PutObject request still
+      // carries the declared byte size and PRENEURA verifies ContentLength again
+      // with HeadObject before finalizing the business record.
       requiredHeaders: {
         'content-type': input.contentType,
-        'content-length': String(input.byteSize),
         'x-amz-checksum-sha256': input.sha256Base64,
         'x-amz-meta-preneura-sha256': this.sha256Hex(input.sha256Base64),
       },

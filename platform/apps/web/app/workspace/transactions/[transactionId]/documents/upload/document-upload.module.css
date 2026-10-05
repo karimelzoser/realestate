@@ -1,0 +1,310 @@
+.page {
+  min-height: 100vh;
+  background: #f4f6f8;
+  color: #17202a;
+}
+
+.topbar {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+  border-bottom: 1px solid #e0e5e8;
+  background: #ffffff;
+}
+
+.backButton {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  margin-right: 2px;
+  border: 1px solid #dce2e6;
+  border-radius: 9px;
+  color: #50606b;
+  text-decoration: none;
+  font-size: 18px;
+}
+
+.brandMark {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #15222c;
+  color: #efb759;
+  font-weight: 900;
+}
+
+.topbar strong,
+.topbar span {
+  display: block;
+}
+
+.topbar strong {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+}
+
+.topbar span {
+  margin-top: 2px;
+  color: #859199;
+  font-size: 9px;
+}
+
+.content {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  padding: 42px 28px 72px;
+}
+
+.heading {
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  color: #9e7129;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.heading h1 {
+  margin: 6px 0 10px;
+  font-size: clamp(30px, 5vw, 48px);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.heading p {
+  max-width: 720px;
+  margin: 0;
+  color: #74818a;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.card,
+.infoCard {
+  border: 1px solid #dfe5e8;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 26px rgba(17, 31, 42, 0.045);
+}
+
+.card {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+.field label {
+  color: #2a3943;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.field label span {
+  color: #99a3aa;
+  font-weight: 500;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #d6dde2;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #22313a;
+  font: inherit;
+  font-size: 11px;
+  outline: none;
+}
+
+.field input[type="file"] {
+  padding: 9px 10px;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: #ad7b2d;
+  box-shadow: 0 0 0 3px rgba(173, 123, 45, 0.09);
+}
+
+.field small {
+  color: #89949c;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.fileSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f5f7f8;
+}
+
+.fileSummary strong,
+.fileSummary span {
+  display: block;
+}
+
+.fileSummary strong {
+  overflow-wrap: anywhere;
+  font-size: 10px;
+}
+
+.fileSummary div span {
+  margin-top: 3px;
+  color: #8a959d;
+  font-size: 9px;
+}
+
+.fileSummary > span {
+  color: #347756;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.card > button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: #192833;
+  color: #ffffff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.card > button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.error,
+.success,
+.stage {
+  padding: 11px 13px;
+  border-radius: 9px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.error {
+  border: 1px solid #e1bebe;
+  background: #fff5f5;
+  color: #944343;
+}
+
+.success {
+  border: 1px solid #b9dfca;
+  background: #f1fbf6;
+  color: #27714b;
+}
+
+.stage {
+  border: 1px solid #e8d3af;
+  background: #fff9ef;
+  color: #775521;
+}
+
+.infoCard {
+  padding: 24px;
+}
+
+.infoCard h2 {
+  margin: 6px 0 18px;
+  font-size: 19px;
+  letter-spacing: -0.025em;
+}
+
+.infoCard ol {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.infoCard li {
+  padding-left: 4px;
+  color: #7a8790;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.infoCard li strong,
+.infoCard li span {
+  display: block;
+}
+
+.infoCard li strong {
+  color: #31414b;
+  font-size: 10px;
+}
+
+.contextBox {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 7px 12px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #edf0f2;
+}
+
+.contextBox span {
+  color: #929ca3;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.contextBox strong,
+.contextBox code {
+  min-width: 0;
+  overflow: hidden;
+  color: #43515b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 9px;
+}
+
+.contextBox code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    padding: 10px 14px;
+  }
+
+  .content {
+    padding: 30px 14px 50px;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

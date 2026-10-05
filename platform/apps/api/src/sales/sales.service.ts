@@ -19,6 +19,7 @@ import type {
   TransactionProgressSnapshot,
 } from '@preneura/contracts/sales';
 import { AccessService } from '../access/access.service.js';
+import { MilestoneEvidenceService } from './milestone-evidence.service.js';
 import { SalesRepository, type BuyerProfileRecord } from './sales.repository.js';
 
 const MILESTONE_PERMISSION: Readonly<Record<TransactionMilestoneCode, PermissionCode>> = {
@@ -37,6 +38,7 @@ export class SalesService {
   constructor(
     private readonly repository: SalesRepository,
     private readonly access: AccessService,
+    private readonly milestoneEvidence: MilestoneEvidenceService,
   ) {}
 
   async createBuyerProfile(input: {
@@ -231,6 +233,14 @@ export class SalesService {
       userId: input.actorUserId,
       permission,
       context: { tenantId: input.data.tenantId, projectId: input.data.projectId },
+    });
+
+    await this.milestoneEvidence.assertReady({
+      tenantId: input.data.tenantId,
+      projectId: input.data.projectId,
+      transactionId: input.data.transactionId,
+      milestoneCode: input.data.milestoneCode,
+      evidenceDocumentId: input.data.evidenceDocumentId ?? null,
     });
 
     const completed = await this.repository.completeMilestone({

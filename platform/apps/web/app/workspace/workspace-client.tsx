@@ -423,7 +423,7 @@ export default function WorkspaceClient() {
             <QueueView queue={queue} loading={loadingProject} />
           ) : null}
           {view === 'transactions' && canReadTransactions ? (
-            <TransactionsView transactions={transactions} loading={loadingProject} />
+            <TransactionsView project={selectedProject} transactions={transactions} loading={loadingProject} />
           ) : null}
         </div>
       </section>
@@ -661,7 +661,11 @@ function QueueView(props: { queue: QueueEntrySnapshot[]; loading: boolean }) {
   );
 }
 
-function TransactionsView(props: { transactions: TransactionListItemSnapshot[]; loading: boolean }) {
+function TransactionsView(props: {
+  project: WorkspaceProjectSnapshot;
+  transactions: TransactionListItemSnapshot[];
+  loading: boolean;
+}) {
   return (
     <>
       <section className={styles.pageHeading}>
@@ -687,32 +691,39 @@ function TransactionsView(props: { transactions: TransactionListItemSnapshot[]; 
                 </tr>
               </thead>
               <tbody>
-                {props.transactions.map((transaction) => (
-                  <tr key={transaction.transactionId}>
-                    <td><code>{shortId(transaction.transactionId)}</code></td>
-                    <td>
-                      <strong className={styles.tablePrimary}>{transaction.unitTypeName}</strong>
-                      <span className={styles.tableSecondary}>{transaction.unitTypeCode}</span>
-                    </td>
-                    <td>
-                      <code>{shortId(transaction.buyerProfileId)}</code>
-                      <span className={styles.tableSecondary}>{formatToken(transaction.buyerSource)}</span>
-                    </td>
-                    <td>
-                      <span className={`${styles.statusBadge} ${transactionStatusClass(transaction.status, styles)}`}>
-                        {formatToken(transaction.status)}
-                      </span>
-                    </td>
-                    <td>
-                      <div className={styles.progressCell}>
-                        <div><span style={{ width: `${clampPercent(transaction.completionPercent)}%` }} /></div>
-                        <strong>{clampPercent(transaction.completionPercent).toFixed(0)}%</strong>
-                      </div>
-                    </td>
-                    <td>{transaction.quotedTotal ? money(transaction.quotedTotal, transaction.currency) : '—'}</td>
-                    <td>{formatDateTime(transaction.openedAt)}</td>
-                  </tr>
-                ))}
+                {props.transactions.map((transaction) => {
+                  const href = `/workspace/transactions/${transaction.transactionId}?tenantId=${encodeURIComponent(props.project.tenantId)}&projectId=${encodeURIComponent(props.project.projectId)}`;
+                  return (
+                    <tr key={transaction.transactionId}>
+                      <td>
+                        <a href={href} style={{ color: 'inherit', textDecoration: 'none', fontWeight: 750 }}>
+                          <code>{shortId(transaction.transactionId)}</code>
+                        </a>
+                      </td>
+                      <td>
+                        <strong className={styles.tablePrimary}>{transaction.unitTypeName}</strong>
+                        <span className={styles.tableSecondary}>{transaction.unitTypeCode}</span>
+                      </td>
+                      <td>
+                        <code>{shortId(transaction.buyerProfileId)}</code>
+                        <span className={styles.tableSecondary}>{formatToken(transaction.buyerSource)}</span>
+                      </td>
+                      <td>
+                        <span className={`${styles.statusBadge} ${transactionStatusClass(transaction.status, styles)}`}>
+                          {formatToken(transaction.status)}
+                        </span>
+                      </td>
+                      <td>
+                        <div className={styles.progressCell}>
+                          <div><span style={{ width: `${clampPercent(transaction.completionPercent)}%` }} /></div>
+                          <strong>{clampPercent(transaction.completionPercent).toFixed(0)}%</strong>
+                        </div>
+                      </td>
+                      <td>{transaction.quotedTotal ? money(transaction.quotedTotal, transaction.currency) : '—'}</td>
+                      <td>{formatDateTime(transaction.openedAt)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             {props.transactions.length === 0 && !props.loading ? <Empty text="No transactions are visible in your current project scope." /> : null}

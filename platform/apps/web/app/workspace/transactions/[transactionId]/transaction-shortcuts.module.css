@@ -1,0 +1,29 @@
+.uploadShortcut {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: #192833;
+  color: #ffffff;
+  box-shadow: 0 12px 32px rgba(20, 34, 44, 0.2);
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.uploadShortcut:hover {
+  background: #243845;
+}
+
+@media (max-width: 640px) {
+  .uploadShortcut {
+    right: 14px;
+    bottom: 14px;
+  }
+}
