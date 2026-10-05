@@ -5,10 +5,15 @@ on:
     paths:
       - "platform/packages/database/migrations/**"
       - "platform/packages/database/tests/gate3_document_contract_trust_certification.sql"
+      - "platform/packages/contracts/package.json"
+      - "platform/packages/contracts/src/index.ts"
       - "platform/packages/contracts/src/documents.ts"
+      - "platform/packages/contracts/src/contract-execution.ts"
       - "platform/apps/api/package.json"
       - "platform/apps/api/src/storage/**"
       - "platform/apps/api/src/documents/**"
+      - "platform/apps/web/app/workspace/transactions/**"
+      - "platform/docs/document-contract-trust.md"
       - ".github/workflows/document-contract-trust-certification.yml"
   push:
     branches:
@@ -16,10 +21,15 @@ on:
     paths:
       - "platform/packages/database/migrations/**"
       - "platform/packages/database/tests/gate3_document_contract_trust_certification.sql"
+      - "platform/packages/contracts/package.json"
+      - "platform/packages/contracts/src/index.ts"
       - "platform/packages/contracts/src/documents.ts"
+      - "platform/packages/contracts/src/contract-execution.ts"
       - "platform/apps/api/package.json"
       - "platform/apps/api/src/storage/**"
       - "platform/apps/api/src/documents/**"
+      - "platform/apps/web/app/workspace/transactions/**"
+      - "platform/docs/document-contract-trust.md"
       - ".github/workflows/document-contract-trust-certification.yml"
 
 permissions:
