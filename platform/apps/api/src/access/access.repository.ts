@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Kysely } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 import type { Database } from '@preneura/database';
 import type {
   RoleCode,
@@ -37,6 +37,12 @@ export abstract class AccessRepository {
     tenantId: string;
     brokerCompanyId: string;
     projectId: string;
+    at: Date;
+  }): Promise<boolean>;
+  abstract hasActivePlatformSupportAccess(input: {
+    userId: string;
+    tenantId: string;
+    projectId?: string;
     at: Date;
   }): Promise<boolean>;
 }
@@ -209,6 +215,38 @@ export class PostgresAccessRepository extends AccessRepository {
       .executeTakeFirst();
 
     return Boolean(row);
+  }
+
+  async hasActivePlatformSupportAccess(input: {
+    userId: string;
+    tenantId: string;
+    projectId?: string;
+    at: Date;
+  }): Promise<boolean> {
+    const result = input.projectId
+      ? await sql<{ allowed: boolean }>`
+          SELECT EXISTS (
+            SELECT 1
+            FROM platform_support_access_sessions session
+            WHERE session.operator_user_id = ${input.userId}::uuid
+              AND session.tenant_id = ${input.tenantId}::uuid
+              AND session.status = 'ACTIVE'
+              AND session.expires_at > ${input.at}
+              AND (session.project_id IS NULL OR session.project_id = ${input.projectId}::uuid)
+          ) AS allowed
+        `.execute(this.db)
+      : await sql<{ allowed: boolean }>`
+          SELECT EXISTS (
+            SELECT 1
+            FROM platform_support_access_sessions session
+            WHERE session.operator_user_id = ${input.userId}::uuid
+              AND session.tenant_id = ${input.tenantId}::uuid
+              AND session.status = 'ACTIVE'
+              AND session.expires_at > ${input.at}
+              AND session.project_id IS NULL
+          ) AS allowed
+        `.execute(this.db);
+    return result.rows[0]?.allowed ?? false;
   }
 }
 
