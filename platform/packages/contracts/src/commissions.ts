@@ -23,6 +23,12 @@ export const updateCommissionCaseStatusSchema = z.object({
 });
 export type UpdateCommissionCaseStatusInput = z.infer<typeof updateCommissionCaseStatusSchema>;
 
+export interface BrokerCommissionContextSnapshot {
+  brokerCompanyId: string;
+  code: string;
+  name: string;
+}
+
 export interface CommissionCaseSnapshot {
   commissionCaseId: string;
   transactionId: string;

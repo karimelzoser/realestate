@@ -1,9 +1,10 @@
 import { hostname } from 'node:os';
 import { createDatabase } from '@preneura/database';
 import { refreshCommissionDueStates } from './commissions.js';
+import { scheduleInstallmentReminders } from './installment-reminders.js';
+import { scheduleMilestoneReminders } from './milestone-reminders.js';
 import { dispatchOutbox } from './outbox.js';
 import { dispatchNotifications } from './notifications.js';
-import { scheduleMilestoneSlas } from './sla.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required');
@@ -43,7 +44,12 @@ async function main(): Promise<void> {
     runLoop('notifications', Number(process.env.NOTIFICATION_POLL_MS ?? 1000), () =>
       dispatchNotifications(db, workerId, 25),
     ),
-    runLoop('sla', Number(process.env.SLA_SCAN_MS ?? 30_000), () => scheduleMilestoneSlas(db)),
+    runLoop('milestone_reminders', Number(process.env.SLA_SCAN_MS ?? 30_000), () =>
+      scheduleMilestoneReminders(db),
+    ),
+    runLoop('installment_reminders', Number(process.env.INSTALLMENT_REMINDER_SCAN_MS ?? 30_000), () =>
+      scheduleInstallmentReminders(db),
+    ),
     runLoop('commission_due', Number(process.env.COMMISSION_DUE_SCAN_MS ?? 30_000), () =>
       refreshCommissionDueStates(db),
     ),
