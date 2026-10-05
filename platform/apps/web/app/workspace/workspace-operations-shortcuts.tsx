@@ -54,6 +54,7 @@ export default function WorkspaceOperationsShortcuts() {
   return (
     <nav className={styles.shortcuts} aria-label="Additional operations">
       {showAdmin ? <a href="/admin">Platform Admin</a> : null}
+      {showAdmin ? <a href="/admin/support">Support View</a> : null}
       {showAccounts ? <a href="/workspace/accounts">Accounts</a> : null}
       {showRefunds ? <a href="/workspace/refunds">Refunds</a> : null}
       {showCommissions ? <a href="/workspace/commissions">Commissions</a> : null}
