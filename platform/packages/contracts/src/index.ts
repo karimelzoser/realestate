@@ -8,6 +8,7 @@ export * from './project-catalog.js';
 export * from './pricing-quote.js';
 export * from './sales.js';
 export * from './documents.js';
+export * from './contract-execution.js';
 export * from './finance.js';
 export * from './commissions.js';
 export * from './notifications.js';

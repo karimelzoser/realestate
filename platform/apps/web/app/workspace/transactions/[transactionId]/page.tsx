@@ -1,3 +1,4 @@
+import ContractExecutionPanel from './contract-execution-panel';
 import TransactionDetailClient from './transaction-detail-client';
 import TransactionFinanceSetup from './transaction-finance-setup';
 import TransactionIdentityPanel from './transaction-identity-panel';
@@ -33,6 +34,11 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
         projectId={resolvedProjectId}
       />
       <TransactionPricePanel
+        transactionId={transactionId}
+        tenantId={resolvedTenantId}
+        projectId={resolvedProjectId}
+      />
+      <ContractExecutionPanel
         transactionId={transactionId}
         tenantId={resolvedTenantId}
         projectId={resolvedProjectId}

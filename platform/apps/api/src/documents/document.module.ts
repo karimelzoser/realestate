@@ -3,6 +3,9 @@ import { AccessModule } from '../access/access.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { CommissionModule } from '../commissions/commission.module.js';
 import { StorageModule } from '../storage/storage.module.js';
+import { ContractExecutionController } from './contract-execution.controller.js';
+import { ContractExecutionRepository } from './contract-execution.repository.js';
+import { ContractExecutionService } from './contract-execution.service.js';
 import { DocumentRequirementController } from './document-requirement.controller.js';
 import { DocumentRequirementRepository } from './document-requirement.repository.js';
 import { DocumentRequirementService } from './document-requirement.service.js';
@@ -18,17 +21,20 @@ import { DocumentTemplateController, TransactionDocumentController } from './doc
   controllers: [
     DocumentTemplateController,
     TransactionDocumentController,
+    ContractExecutionController,
     DocumentRequirementController,
     DocumentTemplateListController,
   ],
   providers: [
     DocumentRepository,
+    ContractExecutionRepository,
+    ContractExecutionService,
     DocumentService,
     DocumentRequirementRepository,
     DocumentRequirementService,
     DocumentTemplateListRepository,
     DocumentTemplateListService,
   ],
-  exports: [DocumentService, DocumentRequirementService, DocumentTemplateListService],
+  exports: [DocumentService, ContractExecutionService, DocumentRequirementService, DocumentTemplateListService],
 })
 export class DocumentModule {}
