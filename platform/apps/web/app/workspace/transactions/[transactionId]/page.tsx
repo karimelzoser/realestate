@@ -1,6 +1,7 @@
 import TransactionDetailClient from './transaction-detail-client';
 import TransactionFinanceSetup from './transaction-finance-setup';
 import TransactionIdentityPanel from './transaction-identity-panel';
+import TransactionPricePanel from './transaction-price-panel';
 import TransactionShortcuts from './transaction-shortcuts';
 import TransactionTimelinePanel from './transaction-timeline-panel';
 
@@ -27,6 +28,11 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
         projectId={resolvedProjectId}
       />
       <TransactionIdentityPanel
+        transactionId={transactionId}
+        tenantId={resolvedTenantId}
+        projectId={resolvedProjectId}
+      />
+      <TransactionPricePanel
         transactionId={transactionId}
         tenantId={resolvedTenantId}
         projectId={resolvedProjectId}

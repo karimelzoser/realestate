@@ -17,6 +17,9 @@ import { SalesService } from './sales.service.js';
 import { TransactionListController } from './transaction-list.controller.js';
 import { TransactionListRepository } from './transaction-list.repository.js';
 import { TransactionListService } from './transaction-list.service.js';
+import { TransactionPriceController } from './transaction-price.controller.js';
+import { TransactionPriceRepository } from './transaction-price.repository.js';
+import { TransactionPriceService } from './transaction-price.service.js';
 import { TransactionTimelineController } from './transaction-timeline.controller.js';
 import { TransactionTimelineRepository } from './transaction-timeline.repository.js';
 import { TransactionTimelineService } from './transaction-timeline.service.js';
@@ -29,6 +32,7 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
     EoiRefundController,
     QueueDispatchController,
     TransactionListController,
+    TransactionPriceController,
     TransactionTimelineController,
   ],
   providers: [
@@ -43,6 +47,8 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
     QueueDispatchService,
     TransactionListRepository,
     TransactionListService,
+    TransactionPriceRepository,
+    TransactionPriceService,
     TransactionTimelineRepository,
     TransactionTimelineService,
   ],

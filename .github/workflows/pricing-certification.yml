@@ -1,0 +1,107 @@
+name: Gate 2 Pricing Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/gate2_pricing_certification.sql"
+      - "platform/packages/contracts/src/pricing-quote.ts"
+      - "platform/apps/api/src/catalog/**"
+      - "platform/apps/api/src/sales/**"
+      - "platform/apps/web/app/workspace/transactions/**"
+      - "platform/docs/pricing-certification.md"
+      - ".github/workflows/pricing-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+    paths:
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/gate2_pricing_certification.sql"
+      - "platform/packages/contracts/src/pricing-quote.ts"
+      - "platform/apps/api/src/catalog/**"
+      - "platform/apps/api/src/sales/**"
+      - "platform/apps/web/app/workspace/transactions/**"
+      - "platform/docs/pricing-certification.md"
+      - ".github/workflows/pricing-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  pricing-certification:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migrations from zero
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          for migration in platform/packages/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 -f "${migration}"
+          done
+
+      - name: Verify pricing certification structures
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='pricing_rates' AND column_name='area_sqm'
+            ) THEN RAISE EXCEPTION 'pricing area snapshot column missing'; END IF;
+
+            IF to_regprocedure('public.calculate_unit_type_price(uuid,uuid)') IS NULL
+              THEN RAISE EXCEPTION 'canonical unit-type pricing function missing'; END IF;
+
+            IF to_regclass('public.reservation_price_components') IS NULL
+              THEN RAISE EXCEPTION 'reservation price component snapshot table missing'; END IF;
+            IF to_regclass('public.reservation_price_components_reservation') IS NULL
+              THEN RAISE EXCEPTION 'reservation price component lookup index missing'; END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_pricing_rates_00_mutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'pricing-rate immutability trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_pricing_rates_20_snapshot_area' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'pricing-rate area snapshot trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_pricing_versions_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'pricing-version immutability trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_catalog_unit_types_priced_area_guard' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'priced-area history guard missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_catalog_unit_types_refresh_draft_pricing' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'draft pricing area refresh trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_reservations_price_snapshot' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'reservation price validation trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_reservations_snapshot_price_components' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'reservation price component snapshot trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_reservation_price_components_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'reservation price component immutability trigger missing'; END IF;
+          END $$;
+          SQL
+
+      - name: Execute deterministic pricing and quote snapshot certification
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
+            -f platform/packages/database/tests/gate2_pricing_certification.sql
