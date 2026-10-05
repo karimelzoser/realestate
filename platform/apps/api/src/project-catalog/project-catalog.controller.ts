@@ -4,7 +4,6 @@ import {
   createProjectBuildingSchema,
   createProjectFloorSchema,
   createProjectImportJobSchema,
-  createProjectMasterPlanAssetSchema,
   createProjectPaymentPlanSchema,
   createProjectPhaseSchema,
   createProjectSalesWindowSchema,
@@ -44,11 +43,6 @@ export class ProjectCatalogController {
   @Post('physical-units')
   createPhysicalUnit(@Param('tenantId') tenantId: string, @Param('projectId') projectId: string, @Body() body: unknown, @CurrentSession() session: ResolvedSession) {
     return this.parseAndRun(createPhysicalUnitSchema, body, (data) => this.service.createPhysicalUnit({ actorUserId: session.userId, tenantId, projectId, data }), tenantId, projectId);
-  }
-
-  @Post('assets')
-  createAsset(@Param('tenantId') tenantId: string, @Param('projectId') projectId: string, @Body() body: unknown, @CurrentSession() session: ResolvedSession) {
-    return this.parseAndRun(createProjectMasterPlanAssetSchema, body, (data) => this.service.createAsset({ actorUserId: session.userId, tenantId, projectId, data }), tenantId, projectId);
   }
 
   @Post('payment-plans')
