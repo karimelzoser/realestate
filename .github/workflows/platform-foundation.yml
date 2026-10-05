@@ -138,6 +138,18 @@ jobs:
             IF to_regclass('public.project_milestone_slas') IS NULL THEN
               RAISE EXCEPTION 'project milestone SLA table missing';
             END IF;
+            IF to_regclass('public.project_milestone_reminder_policies') IS NULL THEN
+              RAISE EXCEPTION 'multi-audience milestone reminder policy table missing';
+            END IF;
+            IF to_regclass('public.project_milestone_reminder_policies_active') IS NULL THEN
+              RAISE EXCEPTION 'active milestone reminder policy index missing';
+            END IF;
+            IF to_regclass('public.project_installment_reminder_policies') IS NULL THEN
+              RAISE EXCEPTION 'installment reminder policy table missing';
+            END IF;
+            IF to_regclass('public.project_installment_reminder_policies_active') IS NULL THEN
+              RAISE EXCEPTION 'active installment reminder policy index missing';
+            END IF;
             IF to_regclass('public.document_template_signer_requirements') IS NULL THEN
               RAISE EXCEPTION 'document template signer requirements missing';
             END IF;
