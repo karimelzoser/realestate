@@ -78,6 +78,22 @@ export class ObjectStorageService {
     ].join('/');
   }
 
+  projectAssetObjectKey(input: {
+    tenantId: string;
+    projectId: string;
+    assetType: string;
+  }): string {
+    return [
+      'tenants',
+      input.tenantId,
+      'projects',
+      input.projectId,
+      'master-plan-assets',
+      this.safeSegment(input.assetType.toLowerCase()),
+      randomUUID(),
+    ].join('/');
+  }
+
   signatureObjectKey(input: {
     tenantId: string;
     projectId: string;

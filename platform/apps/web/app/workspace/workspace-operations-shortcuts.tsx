@@ -10,6 +10,7 @@ import styles from './workspace-operations-shortcuts.module.css';
 
 export default function WorkspaceOperationsShortcuts() {
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showProjectSetup, setShowProjectSetup] = useState(false);
   const [showAccounts, setShowAccounts] = useState(false);
   const [showRefunds, setShowRefunds] = useState(false);
   const [showDocumentPolicy, setShowDocumentPolicy] = useState(false);
@@ -26,6 +27,9 @@ export default function WorkspaceOperationsShortcuts() {
         setShowAdmin(workspace.assignments.some((assignment) =>
           roleHasPermission(assignment.role, 'platform.tenants.read'),
         ));
+        setShowProjectSetup(workspace.projects.some((project) => project.roles.some((role) =>
+          roleHasPermission(role, 'project.import.manage') || roleHasPermission(role, 'project.manage'),
+        )));
         setShowAccounts(workspace.projects.some((project) => project.roles.some((role) =>
           roleHasPermission(role, 'tenant.users.manage') || roleHasPermission(role, 'broker.users.manage'),
         )));
@@ -55,12 +59,13 @@ export default function WorkspaceOperationsShortcuts() {
     };
   }, []);
 
-  if (!showAdmin && !showAccounts && !showRefunds && !showDocumentPolicy && !showDocumentTemplates && !showCommissions && !showReminders && !showAi) return null;
+  if (!showAdmin && !showProjectSetup && !showAccounts && !showRefunds && !showDocumentPolicy && !showDocumentTemplates && !showCommissions && !showReminders && !showAi) return null;
 
   return (
     <nav className={styles.shortcuts} aria-label="Additional operations">
       {showAdmin ? <a href="/admin">Platform Admin</a> : null}
       {showAdmin ? <a href="/admin/support">Support View</a> : null}
+      {showProjectSetup ? <a href="/workspace/project-setup">Project Setup</a> : null}
       {showAi ? <a href="/workspace/ai">AI Workspace</a> : null}
       {showAccounts ? <a href="/workspace/accounts">Accounts</a> : null}
       {showRefunds ? <a href="/workspace/refunds">Refunds</a> : null}

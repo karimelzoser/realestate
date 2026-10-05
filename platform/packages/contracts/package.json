@@ -11,6 +11,7 @@
     "./platform-admin": "./src/platform-admin.ts",
     "./ai": "./src/ai.ts",
     "./catalog": "./src/catalog.ts",
+    "./project-catalog": "./src/project-catalog.ts",
     "./sales": "./src/sales.ts",
     "./documents": "./src/documents.ts",
     "./finance": "./src/finance.ts",

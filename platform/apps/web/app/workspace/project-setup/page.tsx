@@ -1,0 +1,11 @@
+import ProjectAssetUploadPanel from './project-asset-upload-panel';
+import ProjectSetupClient from './project-setup-client';
+
+export default function ProjectSetupPage() {
+  return (
+    <>
+      <ProjectSetupClient />
+      <ProjectAssetUploadPanel />
+    </>
+  );
+}
