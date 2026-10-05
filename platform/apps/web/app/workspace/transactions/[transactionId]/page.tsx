@@ -1,5 +1,6 @@
 import TransactionDetailClient from './transaction-detail-client';
 import TransactionShortcuts from './transaction-shortcuts';
+import TransactionTimelinePanel from './transaction-timeline-panel';
 
 type PageProps = {
   params: Promise<{ transactionId: string }>;
@@ -24,6 +25,11 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
         projectId={resolvedProjectId}
       />
       <TransactionShortcuts
+        transactionId={transactionId}
+        tenantId={resolvedTenantId}
+        projectId={resolvedProjectId}
+      />
+      <TransactionTimelinePanel
         transactionId={transactionId}
         tenantId={resolvedTenantId}
         projectId={resolvedProjectId}
