@@ -120,6 +120,11 @@ jobs:
             IF to_regclass('public.platform_support_access_sessions') IS NULL THEN RAISE EXCEPTION 'support access session table missing'; END IF;
             IF to_regclass('public.platform_support_access_operator_active') IS NULL THEN RAISE EXCEPTION 'active support access index missing'; END IF;
             IF to_regclass('public.platform_support_access_one_active_scope') IS NULL THEN RAISE EXCEPTION 'support access uniqueness index missing'; END IF;
+            IF to_regclass('public.project_ai_settings') IS NULL THEN RAISE EXCEPTION 'project AI settings table missing'; END IF;
+            IF to_regclass('public.project_ai_settings_provider') IS NULL THEN RAISE EXCEPTION 'project AI enabled-provider index missing'; END IF;
+            IF to_regclass('public.ai_invocations') IS NULL THEN RAISE EXCEPTION 'AI invocation audit table missing'; END IF;
+            IF to_regclass('public.ai_invocations_project_created') IS NULL THEN RAISE EXCEPTION 'AI invocation project audit index missing'; END IF;
+            IF to_regclass('public.ai_invocations_failures') IS NULL THEN RAISE EXCEPTION 'AI fallback/failure index missing'; END IF;
             IF EXISTS (
               SELECT 1 FROM pg_attribute
               WHERE attrelid = 'public.auth_login_aliases'::regclass
@@ -135,11 +140,18 @@ jobs:
               SELECT 1 FROM information_schema.columns
               WHERE table_schema = 'public' AND table_name = 'realtime_events' AND column_name = 'source_aggregate_id'
             ) THEN RAISE EXCEPTION 'realtime source aggregate id missing'; END IF;
+            IF EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema = 'public' AND table_name = 'ai_invocations'
+                AND column_name IN ('prompt','question','response','request_body','response_body')
+            ) THEN RAISE EXCEPTION 'AI invocation audit must not persist raw prompts or responses'; END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_create_broker_commission_case' AND NOT tgisinternal) THEN RAISE EXCEPTION 'commission case creation trigger missing'; END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_refresh_commission_after_milestone' AND NOT tgisinternal) THEN RAISE EXCEPTION 'commission milestone refresh trigger missing'; END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_notify_preneura_realtime_event' AND NOT tgisinternal) THEN RAISE EXCEPTION 'realtime LISTEN/NOTIFY trigger missing'; END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_notify_preneura_user_notification' AND NOT tgisinternal) THEN RAISE EXCEPTION 'user notification LISTEN/NOTIFY trigger missing'; END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_support_access_project_tenant' AND NOT tgisinternal) THEN RAISE EXCEPTION 'support project/tenant trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_ai_settings_project_tenant' AND NOT tgisinternal) THEN RAISE EXCEPTION 'AI settings project/tenant trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_ai_invocations_project_tenant' AND NOT tgisinternal) THEN RAISE EXCEPTION 'AI invocation project/tenant trigger missing'; END IF;
             IF to_regprocedure('public.refresh_broker_commission_case(uuid)') IS NULL THEN RAISE EXCEPTION 'commission refresh function missing'; END IF;
           END $$;
           SQL
