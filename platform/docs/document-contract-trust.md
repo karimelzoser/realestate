@@ -142,6 +142,21 @@ PRENEURA audit tables store object identity, hashes, detected/declared MIME, sca
 
 The external scanner receives a short-lived signed object URL. Scanner operators are responsible for securing scanner logs, downloads and any retained malware samples according to the deployment security policy.
 
+## Production deployment checklist
+
+Before enabling document or contract uploads in a production environment:
+
+1. Provision the scanner service on a network path reachable by the API and configure `DOCUMENT_SCANNER_URL`.
+2. Configure scanner authentication with `DOCUMENT_SCANNER_TOKEN` when the scanner endpoint requires it.
+3. Verify the scanner can download PRENEURA's short-lived signed object URLs from the production object store.
+4. Test one known-clean file of every permitted production MIME type and confirm the object reaches `CLEAN` with an immutable scan-attempt row.
+5. Test the approved anti-malware test fixture in an isolated non-customer transaction and confirm it is rejected and cannot become `VERIFIED`.
+6. Test a declared-MIME/binary-MIME mismatch and confirm the object is rejected before business verification.
+7. Verify execution evidence after a test contract: document hash, template version/hash, certified price components, signer evidence and manifest hash must all be present.
+8. Confirm scanner outages fail closed: uploads may exist in object storage, but they must not become trusted/verified/signed until a valid scan verdict is obtained.
+
+Do not route real customer documents through a scanner that has not passed these checks.
+
 ## Release certification
 
 `.github/workflows/document-contract-trust-certification.yml` rebuilds PostgreSQL 18 from zero and runs `platform/packages/database/tests/gate3_document_contract_trust_certification.sql`.
