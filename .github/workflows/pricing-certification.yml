@@ -5,8 +5,10 @@ on:
     paths:
       - "platform/packages/database/migrations/**"
       - "platform/packages/database/tests/gate2_pricing_certification.sql"
+      - "platform/packages/contracts/src/pricing-quote.ts"
       - "platform/apps/api/src/catalog/**"
       - "platform/apps/api/src/sales/**"
+      - "platform/apps/web/app/workspace/transactions/**"
       - ".github/workflows/pricing-certification.yml"
   push:
     branches:
@@ -14,8 +16,10 @@ on:
     paths:
       - "platform/packages/database/migrations/**"
       - "platform/packages/database/tests/gate2_pricing_certification.sql"
+      - "platform/packages/contracts/src/pricing-quote.ts"
       - "platform/apps/api/src/catalog/**"
       - "platform/apps/api/src/sales/**"
+      - "platform/apps/web/app/workspace/transactions/**"
       - ".github/workflows/pricing-certification.yml"
 
 permissions:
