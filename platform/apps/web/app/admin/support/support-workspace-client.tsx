@@ -1,6 +1,7 @@
 'use client';
 
 import type { UnitTypeCommercialSnapshot } from '@preneura/contracts/catalog';
+import type { PlatformControlPlaneSnapshot, SupportAccessSessionSnapshot } from '@preneura/contracts/platform-admin';
 import type { TransactionListItemSnapshot } from '@preneura/contracts/sales';
 import { useEffect, useMemo, useState } from 'react';
 import { ApiError, apiFetch } from '../../lib/api';
@@ -11,18 +12,33 @@ type Props = { tenantId: string; projectId: string };
 export default function SupportWorkspaceClient({ tenantId, projectId }: Props) {
   const [catalog, setCatalog] = useState<UnitTypeCommercialSnapshot[]>([]);
   const [transactions, setTransactions] = useState<TransactionListItemSnapshot[]>([]);
+  const [sessions, setSessions] = useState<SupportAccessSessionSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!tenantId || !projectId) {
-      setLoading(false);
-      setError('Choose a project-scoped support session from Platform Admin.');
-      return;
-    }
     let cancelled = false;
     setLoading(true);
     setError('');
+
+    if (!tenantId || !projectId) {
+      void apiFetch<PlatformControlPlaneSnapshot>('/v1/platform/control-plane')
+        .then((snapshot) => {
+          if (cancelled) return;
+          setSessions(snapshot.activeSupportSessions.filter((session) => session.projectId !== null));
+        })
+        .catch((reason) => {
+          if (cancelled) return;
+          if (reason instanceof ApiError && reason.status === 401) {
+            window.location.replace('/login');
+            return;
+          }
+          setError(reason instanceof Error ? reason.message : 'Unable to load support sessions.');
+        })
+        .finally(() => { if (!cancelled) setLoading(false); });
+      return () => { cancelled = true; };
+    }
+
     Promise.all([
       apiFetch<UnitTypeCommercialSnapshot[]>(`/v1/tenants/${tenantId}/projects/${projectId}/catalog`),
       apiFetch<TransactionListItemSnapshot[]>(`/v1/tenants/${tenantId}/projects/${projectId}/transactions`),
@@ -53,6 +69,7 @@ export default function SupportWorkspaceClient({ tenantId, projectId }: Props) {
     openTransactions: transactions.filter((row) => row.status === 'IN_PROGRESS' || row.status === 'READY_FOR_COMPLETION').length,
   }), [catalog, transactions]);
 
+  const selectingSession = !tenantId || !projectId;
   return (
     <main className={styles.page}>
       <header className={styles.topbar}>
@@ -62,12 +79,23 @@ export default function SupportWorkspaceClient({ tenantId, projectId }: Props) {
       </header>
       <section className={styles.content}>
         <div className={styles.hero}>
-          <div><span className={styles.eyebrow}>Break-glass support workspace</span><h1>Operational inspection</h1><p>This view is available only while your audited support session covers this tenant/project. All mutations remain denied by the server.</p></div>
-          <div className={styles.scope}><span>Tenant</span><code>{shortId(tenantId)}</code><span>Project</span><code>{shortId(projectId)}</code></div>
+          <div><span className={styles.eyebrow}>Break-glass support workspace</span><h1>{selectingSession ? 'Select active support scope' : 'Operational inspection'}</h1><p>{selectingSession ? 'Only currently active, audited project support sessions can be opened here.' : 'This view is available only while your audited support session covers this tenant/project. All mutations remain denied by the server.'}</p></div>
+          {!selectingSession ? <div className={styles.scope}><span>Tenant</span><code>{shortId(tenantId)}</code><span>Project</span><code>{shortId(projectId)}</code></div> : null}
         </div>
         {error ? <div className={styles.error}>{error}</div> : null}
-        {loading ? <div className={styles.loading}>Loading live project state…</div> : null}
-        {!loading && !error ? <>
+        {loading ? <div className={styles.loading}>Loading support state…</div> : null}
+
+        {!loading && !error && selectingSession ? <section className={styles.panel}>
+          <div className={styles.panelHeading}><div><span className={styles.eyebrow}>Active access</span><h2>Project support sessions</h2></div><span>{sessions.length}</span></div>
+          <div className={styles.sessionGrid}>
+            {sessions.map((session) => <a className={styles.sessionCard} key={session.sessionId} href={`/admin/support?tenantId=${encodeURIComponent(session.tenantId)}&projectId=${encodeURIComponent(session.projectId!)}`}>
+              <strong>{session.tenantName}</strong><span>{session.projectName ?? 'Project'}</span><small>{session.reason}</small><small>Expires {new Date(session.expiresAt).toLocaleString()}</small>
+            </a>)}
+          </div>
+          {sessions.length === 0 ? <div className={styles.empty}>No active project-scoped support session. Open one from <a href="/admin">Platform Admin</a>.</div> : null}
+        </section> : null}
+
+        {!loading && !error && !selectingSession ? <>
           <section className={styles.metrics}>
             <Metric label="Available" value={metrics.available} />
             <Metric label="Reserved" value={metrics.reserved} />
