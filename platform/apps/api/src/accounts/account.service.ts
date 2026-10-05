@@ -177,6 +177,7 @@ export class AccountService {
     })).some((account) => account.userId === input.data.userId);
     if (!targetExists) throw new NotFoundException('Account not found in this tenant.');
 
+    await this.assertCanManageTarget(input.actorUserId, input.data.tenantId, input.data.userId);
     await this.assertCanGrant({
       actorUserId: input.actorUserId,
       tenantId: input.data.tenantId,
@@ -227,7 +228,11 @@ export class AccountService {
     if (input.actorUserId === input.data.userId) {
       throw new ForbiddenException('Self-disable is blocked in Account Center.');
     }
-    await this.assertCanManageTarget(input.actorUserId, input.data.tenantId, input.data.userId);
+    await this.access.assert({
+      userId: input.actorUserId,
+      permission: 'tenant.users.manage',
+      context: { tenantId: input.data.tenantId },
+    });
     const updated = await this.repository.setUserStatus({
       tenantId: input.data.tenantId,
       userId: input.data.userId,
