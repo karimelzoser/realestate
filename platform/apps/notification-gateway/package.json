@@ -1,5 +1,5 @@
 {
-  "name": "@preneura/api",
+  "name": "@preneura/notification-gateway",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,26 +12,12 @@
     "lint": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "3.1145.0",
-    "@aws-sdk/s3-request-presigner": "3.1145.0",
-    "@fastify/cookie": "^11.0.2",
-    "@nestjs/common": "12.1.2",
-    "@nestjs/core": "12.1.2",
-    "@nestjs/platform-fastify": "12.1.2",
-    "@preneura/contracts": "workspace:*",
     "@preneura/database": "workspace:*",
     "@preneura/security": "workspace:*",
-    "fastify": "^5.7.3",
-    "jose": "^6.1.0",
-    "kysely": "^0.28.8",
-    "libphonenumber-js": "^1.12.24",
-    "pg": "^8.16.3",
-    "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "kysely": "^0.28.8"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",
-    "@types/pg": "^8.15.5",
     "tsx": "^4.20.6",
     "typescript": "7.0.2"
   }

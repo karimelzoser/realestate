@@ -1,5 +1,6 @@
 export * from './auth.js';
 export * from './access.js';
+export * from './accounts.js';
 export * from './catalog.js';
 export * from './sales.js';
 export * from './documents.js';
