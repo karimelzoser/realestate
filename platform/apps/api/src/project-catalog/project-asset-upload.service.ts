@@ -19,6 +19,11 @@ export interface ProjectAssetFinalizeRequest extends ProjectAssetUploadRequest {
   objectKey: string;
 }
 
+const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const MODEL_TYPES = new Set(['model/gltf+json', 'model/gltf-binary']);
+const FLOOR_PLAN_TYPES = new Set([...IMAGE_TYPES, 'application/pdf']);
+const OTHER_TYPES = new Set([...IMAGE_TYPES, ...MODEL_TYPES, 'application/pdf']);
+
 @Injectable()
 export class ProjectAssetUploadService {
   constructor(
@@ -98,15 +103,48 @@ export class ProjectAssetUploadService {
   }
 
   private validateUpload(data: ProjectAssetUploadRequest): void {
-    if (!data.label.trim() || data.label.trim().length > 200) throw new BadRequestException('Asset label is required and must be 200 characters or fewer.');
-    if (!Number.isInteger(data.byteSize) || data.byteSize <= 0 || data.byteSize > 100 * 1024 * 1024) throw new BadRequestException('Master-plan assets must be between 1 byte and 100 MB.');
-    const allowed = new Set([
-      'image/jpeg', 'image/png', 'image/webp', 'application/pdf',
-      'model/gltf+json', 'model/gltf-binary', 'application/octet-stream',
-    ]);
-    if (!allowed.has(data.contentType.toLowerCase())) throw new BadRequestException('Unsupported master-plan asset content type.');
+    if (!data.label.trim() || data.label.trim().length > 200) {
+      throw new BadRequestException('Asset label is required and must be 200 characters or fewer.');
+    }
+    if (!Number.isInteger(data.byteSize) || data.byteSize <= 0 || data.byteSize > 100 * 1024 * 1024) {
+      throw new BadRequestException('Master-plan assets must be between 1 byte and 100 MB.');
+    }
+
+    let metadataBytes: number;
+    try {
+      metadataBytes = Buffer.byteLength(JSON.stringify(data.metadata), 'utf8');
+    } catch {
+      throw new BadRequestException('Asset metadata must be valid JSON.');
+    }
+    if (metadataBytes > 8 * 1024) throw new BadRequestException('Asset metadata must be 8 KB or smaller.');
+
+    const contentType = data.contentType.toLowerCase();
+    const allowed = this.allowedContentTypes(data.assetType);
+    if (!allowed.has(contentType)) {
+      throw new BadRequestException(`Unsupported content type for ${data.assetType}.`);
+    }
+
     let digest: Buffer;
-    try { digest = Buffer.from(data.sha256Base64, 'base64'); } catch { throw new BadRequestException('Invalid SHA-256 checksum.'); }
+    try {
+      digest = Buffer.from(data.sha256Base64, 'base64');
+    } catch {
+      throw new BadRequestException('Invalid SHA-256 checksum.');
+    }
     if (digest.length !== 32) throw new BadRequestException('SHA-256 checksum must decode to exactly 32 bytes.');
+  }
+
+  private allowedContentTypes(assetType: ProjectMasterPlanAssetType): ReadonlySet<string> {
+    switch (assetType) {
+      case 'MASTER_PLAN_IMAGE':
+        return IMAGE_TYPES;
+      case 'MASTER_PLAN_3D':
+      case 'BUILDING_MODEL':
+      case 'UNIT_MODEL':
+        return MODEL_TYPES;
+      case 'FLOOR_PLAN':
+        return FLOOR_PLAN_TYPES;
+      case 'OTHER':
+        return OTHER_TYPES;
+    }
   }
 }
