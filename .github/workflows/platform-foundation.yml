@@ -125,6 +125,43 @@ jobs:
             IF to_regclass('public.ai_invocations') IS NULL THEN RAISE EXCEPTION 'AI invocation audit table missing'; END IF;
             IF to_regclass('public.ai_invocations_project_created') IS NULL THEN RAISE EXCEPTION 'AI invocation project audit index missing'; END IF;
             IF to_regclass('public.ai_invocations_failures') IS NULL THEN RAISE EXCEPTION 'AI fallback/failure index missing'; END IF;
+
+            -- Project hierarchy and type-based-selling/internal-unit reconciliation.
+            IF to_regclass('public.project_phases') IS NULL THEN RAISE EXCEPTION 'project phase table missing'; END IF;
+            IF to_regclass('public.project_buildings') IS NULL THEN RAISE EXCEPTION 'project building table missing'; END IF;
+            IF to_regclass('public.project_floors') IS NULL THEN RAISE EXCEPTION 'project floor table missing'; END IF;
+            IF to_regclass('public.physical_units') IS NULL THEN RAISE EXCEPTION 'internal physical unit table missing'; END IF;
+            IF to_regclass('public.inventory_slots_one_physical_unit') IS NULL THEN RAISE EXCEPTION 'physical unit to inventory slot uniqueness index missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='inventory_slots' AND column_name='physical_unit_id'
+            ) THEN RAISE EXCEPTION 'inventory physical-unit mapping column missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_constraint
+              WHERE conname='inventory_slots_physical_unit_fk'
+                AND conrelid='public.inventory_slots'::regclass
+                AND contype='f'
+            ) THEN RAISE EXCEPTION 'inventory physical-unit integrity foreign key missing'; END IF;
+
+            -- Project setup commercial/configuration data.
+            IF to_regclass('public.project_master_plan_assets') IS NULL THEN RAISE EXCEPTION 'master-plan asset table missing'; END IF;
+            IF to_regclass('public.project_master_plan_assets_lookup') IS NULL THEN RAISE EXCEPTION 'master-plan asset lookup index missing'; END IF;
+            IF to_regclass('public.project_payment_plan_definitions') IS NULL THEN RAISE EXCEPTION 'payment plan definition table missing'; END IF;
+            IF to_regclass('public.project_payment_plan_active_version') IS NULL THEN RAISE EXCEPTION 'active payment plan uniqueness index missing'; END IF;
+            IF to_regclass('public.project_sales_windows') IS NULL THEN RAISE EXCEPTION 'project sales window table missing'; END IF;
+
+            -- Controlled import, preview, publication lineage and rollback support.
+            IF to_regclass('public.project_import_jobs') IS NULL THEN RAISE EXCEPTION 'project import jobs table missing'; END IF;
+            IF to_regclass('public.project_import_rows') IS NULL THEN RAISE EXCEPTION 'project import rows table missing'; END IF;
+            IF to_regclass('public.project_import_published_entities') IS NULL THEN RAISE EXCEPTION 'project import publication lineage table missing'; END IF;
+            IF to_regclass('public.project_import_jobs_project_created') IS NULL THEN RAISE EXCEPTION 'project import audit index missing'; END IF;
+            IF to_regclass('public.project_import_rows_review') IS NULL THEN RAISE EXCEPTION 'project import row review index missing'; END IF;
+            IF to_regclass('public.project_import_published_entities_rollback') IS NULL THEN RAISE EXCEPTION 'project import rollback lineage index missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='project_import_jobs' AND column_name='rollback_status'
+            ) THEN RAISE EXCEPTION 'project import rollback status missing'; END IF;
+
             IF EXISTS (
               SELECT 1 FROM pg_attribute
               WHERE attrelid = 'public.auth_login_aliases'::regclass
@@ -152,6 +189,8 @@ jobs:
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_support_access_project_tenant' AND NOT tgisinternal) THEN RAISE EXCEPTION 'support project/tenant trigger missing'; END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_ai_settings_project_tenant' AND NOT tgisinternal) THEN RAISE EXCEPTION 'AI settings project/tenant trigger missing'; END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_ai_invocations_project_tenant' AND NOT tgisinternal) THEN RAISE EXCEPTION 'AI invocation project/tenant trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_master_plan_asset_hierarchy' AND NOT tgisinternal) THEN RAISE EXCEPTION 'master-plan asset hierarchy trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_sync_import_rollback_state' AND NOT tgisinternal) THEN RAISE EXCEPTION 'import rollback-state trigger missing'; END IF;
             IF to_regprocedure('public.refresh_broker_commission_case(uuid)') IS NULL THEN RAISE EXCEPTION 'commission refresh function missing'; END IF;
           END $$;
           SQL
