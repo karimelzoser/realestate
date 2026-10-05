@@ -35,8 +35,7 @@ CREATE TABLE project_buildings (
   FOREIGN KEY (phase_id, tenant_id, project_id)
     REFERENCES project_phases(id, tenant_id, project_id) ON DELETE RESTRICT,
   UNIQUE (project_id, code),
-  UNIQUE (id, tenant_id, project_id),
-  UNIQUE (id, tenant_id, project_id, phase_id)
+  UNIQUE (id, tenant_id, project_id)
 );
 
 CREATE INDEX project_buildings_project_phase
@@ -122,15 +121,34 @@ CREATE TABLE project_master_plan_assets (
   FOREIGN KEY (phase_id, tenant_id, project_id)
     REFERENCES project_phases(id, tenant_id, project_id) ON DELETE RESTRICT,
   FOREIGN KEY (building_id, tenant_id, project_id)
-    REFERENCES project_buildings(id, tenant_id, project_id) ON DELETE RESTRICT,
-  CHECK (building_id IS NULL OR phase_id IS NULL OR EXISTS (
-    SELECT 1 FROM project_buildings b WHERE b.id = building_id AND b.phase_id = phase_id
-  ))
+    REFERENCES project_buildings(id, tenant_id, project_id) ON DELETE RESTRICT
 );
 
 CREATE INDEX project_master_plan_assets_lookup
   ON project_master_plan_assets(project_id, phase_id, building_id, asset_type, created_at DESC)
   WHERE status = 'ACTIVE';
+
+CREATE OR REPLACE FUNCTION enforce_master_plan_asset_hierarchy()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.building_id IS NOT NULL AND NEW.phase_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1
+    FROM project_buildings b
+    WHERE b.id = NEW.building_id
+      AND b.tenant_id = NEW.tenant_id
+      AND b.project_id = NEW.project_id
+      AND b.phase_id = NEW.phase_id
+  ) THEN
+    RAISE EXCEPTION 'Master-plan asset building does not belong to selected phase';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_master_plan_asset_hierarchy
+BEFORE INSERT OR UPDATE OF tenant_id, project_id, phase_id, building_id
+ON project_master_plan_assets
+FOR EACH ROW EXECUTE FUNCTION enforce_master_plan_asset_hierarchy();
 
 CREATE TABLE project_payment_plan_definitions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
