@@ -4,6 +4,7 @@ export * from './accounts.js';
 export * from './platform-admin.js';
 export * from './ai.js';
 export * from './catalog.js';
+export * from './project-catalog.js';
 export * from './sales.js';
 export * from './documents.js';
 export * from './finance.js';
