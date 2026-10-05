@@ -3,6 +3,7 @@ name: Gate 3 Document & Contract Trust Certification
 on:
   pull_request:
     paths:
+      - "platform/.env.example"
       - "platform/packages/database/migrations/**"
       - "platform/packages/database/tests/gate3_document_contract_trust_certification.sql"
       - "platform/packages/contracts/package.json"
@@ -19,6 +20,7 @@ on:
     branches:
       - "feature/production-*"
     paths:
+      - "platform/.env.example"
       - "platform/packages/database/migrations/**"
       - "platform/packages/database/tests/gate3_document_contract_trust_certification.sql"
       - "platform/packages/contracts/package.json"
