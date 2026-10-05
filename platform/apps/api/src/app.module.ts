@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AccessModule } from './access/access.module.js';
 import { AccountModule } from './accounts/account.module.js';
+import { AiModule } from './ai/ai.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CatalogModule } from './catalog/catalog.module.js';
 import { CommissionModule } from './commissions/commission.module.js';
@@ -23,6 +24,7 @@ import { StorageModule } from './storage/storage.module.js';
     PlatformAdminModule,
     StorageModule,
     CatalogModule,
+    AiModule,
     SalesModule,
     CommissionModule,
     DocumentModule,
