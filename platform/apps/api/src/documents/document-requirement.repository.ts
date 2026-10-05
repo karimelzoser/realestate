@@ -32,6 +32,17 @@ export class DocumentRequirementRepository {
     }));
   }
 
+  async hasTransactionActivity(input: { tenantId: string; projectId: string }): Promise<boolean> {
+    const row = await this.db
+      .selectFrom('transactions')
+      .select('id')
+      .where('tenant_id', '=', input.tenantId)
+      .where('project_id', '=', input.projectId)
+      .limit(1)
+      .executeTakeFirst();
+    return Boolean(row);
+  }
+
   async upsert(input: {
     actorUserId: string;
     data: UpsertProjectDocumentRequirementInput;
