@@ -9,6 +9,7 @@ on:
       - "platform/apps/api/src/catalog/**"
       - "platform/apps/api/src/sales/**"
       - "platform/apps/web/app/workspace/transactions/**"
+      - "platform/docs/pricing-certification.md"
       - ".github/workflows/pricing-certification.yml"
   push:
     branches:
@@ -20,6 +21,7 @@ on:
       - "platform/apps/api/src/catalog/**"
       - "platform/apps/api/src/sales/**"
       - "platform/apps/web/app/workspace/transactions/**"
+      - "platform/docs/pricing-certification.md"
       - ".github/workflows/pricing-certification.yml"
 
 permissions:
