@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -141,16 +142,43 @@ export class ObjectStorageService {
       objectKey: input.objectKey,
       uploadUrl,
       expiresAt,
-      // `Content-Length` is intentionally omitted here. Browsers control that
-      // forbidden request header themselves. The signed PutObject request still
-      // carries the declared byte size and PRENEURA verifies ContentLength again
-      // with HeadObject before finalizing the business record.
       requiredHeaders: {
         'content-type': input.contentType,
         'x-amz-checksum-sha256': input.sha256Base64,
         'x-amz-meta-preneura-sha256': this.sha256Hex(input.sha256Base64),
       },
     };
+  }
+
+  async createDownloadUrl(input: {
+    objectKey: string;
+    expiresInSeconds?: number;
+  }): Promise<{ downloadUrl: string; expiresAt: string }> {
+    const expiresInSeconds = Math.min(Math.max(input.expiresInSeconds ?? 300, 30), 600);
+    const command = new GetObjectCommand({ Bucket: this.bucket, Key: input.objectKey });
+    const downloadUrl = await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+    return {
+      downloadUrl,
+      expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString(),
+    };
+  }
+
+  async readObjectBytes(input: { objectKey: string; maxBytes: number }): Promise<Uint8Array> {
+    if (!Number.isInteger(input.maxBytes) || input.maxBytes <= 0) {
+      throw new Error('maxBytes must be a positive integer.');
+    }
+    const response = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: input.objectKey }),
+    );
+    if (response.ContentLength !== undefined && response.ContentLength > input.maxBytes) {
+      throw new Error('Stored object exceeds the permitted inspection size.');
+    }
+    if (!response.Body) throw new Error('Stored object has no readable body.');
+    const bytes = await response.Body.transformToByteArray();
+    if (bytes.byteLength > input.maxBytes) {
+      throw new Error('Stored object exceeds the permitted inspection size.');
+    }
+    return bytes;
   }
 
   async verifyObject(input: {
