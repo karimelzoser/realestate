@@ -11,6 +11,7 @@ import styles from './workspace-operations-shortcuts.module.css';
 export default function WorkspaceOperationsShortcuts() {
   const [showRefunds, setShowRefunds] = useState(false);
   const [showDocumentPolicy, setShowDocumentPolicy] = useState(false);
+  const [showDocumentTemplates, setShowDocumentTemplates] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -20,9 +21,11 @@ export default function WorkspaceOperationsShortcuts() {
         setShowRefunds(workspace.projects.some((project) => project.roles.some((role) =>
           roleHasPermission(role, 'refund.read') || roleHasPermission(role, 'refund.request'),
         )));
-        setShowDocumentPolicy(workspace.projects.some((project) => project.roles.some((role) =>
+        const canManageTemplates = workspace.projects.some((project) => project.roles.some((role) =>
           roleHasPermission(role, 'documents.templates.manage'),
-        )));
+        ));
+        setShowDocumentPolicy(canManageTemplates);
+        setShowDocumentTemplates(canManageTemplates);
       })
       .catch(() => undefined);
     return () => {
@@ -30,12 +33,13 @@ export default function WorkspaceOperationsShortcuts() {
     };
   }, []);
 
-  if (!showRefunds && !showDocumentPolicy) return null;
+  if (!showRefunds && !showDocumentPolicy && !showDocumentTemplates) return null;
 
   return (
     <nav className={styles.shortcuts} aria-label="Additional operations">
       {showRefunds ? <a href="/workspace/refunds">Refunds</a> : null}
       {showDocumentPolicy ? <a href="/workspace/document-requirements">Document policy</a> : null}
+      {showDocumentTemplates ? <a href="/workspace/document-templates">Templates</a> : null}
     </nav>
   );
 }

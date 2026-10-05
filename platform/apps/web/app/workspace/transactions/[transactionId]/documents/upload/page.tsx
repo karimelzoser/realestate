@@ -1,4 +1,4 @@
-import DocumentUploadClient from './document-upload-client';
+import DocumentUploadTemplateClient from './document-upload-template-client';
 
 type PageProps = {
   params: Promise<{ transactionId: string }>;
@@ -14,7 +14,7 @@ export default async function TransactionDocumentUploadPage({ params, searchPara
   const projectId = Array.isArray(query.projectId) ? query.projectId[0] : query.projectId;
 
   return (
-    <DocumentUploadClient
+    <DocumentUploadTemplateClient
       transactionId={transactionId}
       tenantId={tenantId ?? ''}
       projectId={projectId ?? ''}

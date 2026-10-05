@@ -40,6 +40,13 @@ export class TransactionListRepository {
           .onRef('b.id', '=', 't.buyer_profile_id')
           .onRef('b.tenant_id', '=', 't.tenant_id'),
       )
+      .innerJoin('users as buyer_user', 'buyer_user.id', 'b.user_id')
+      .leftJoin('broker_companies as broker_company', (join) =>
+        join
+          .onRef('broker_company.id', '=', 'b.broker_company_id')
+          .onRef('broker_company.tenant_id', '=', 't.tenant_id'),
+      )
+      .leftJoin('users as broker_agent', 'broker_agent.id', 'b.broker_agent_user_id')
       .innerJoin('catalog_unit_types as u', (join) =>
         join
           .onRef('u.id', '=', 'r.unit_type_id')
@@ -53,7 +60,12 @@ export class TransactionListRepository {
         't.status',
         't.opened_at',
         'b.user_id as buyer_user_id',
+        'buyer_user.display_name as buyer_display_name',
         'b.source as buyer_source',
+        'b.broker_company_id',
+        'broker_company.name as broker_company_name',
+        'b.broker_agent_user_id',
+        'broker_agent.display_name as broker_agent_display_name',
         'r.unit_type_id',
         'r.quoted_total',
         'r.currency',
@@ -90,7 +102,12 @@ export class TransactionListRepository {
       reservationId: row.reservation_id,
       buyerProfileId: row.buyer_profile_id,
       buyerUserId: row.buyer_user_id,
+      buyerDisplayName: row.buyer_display_name,
       buyerSource: row.buyer_source,
+      brokerCompanyId: row.broker_company_id,
+      brokerCompanyName: row.broker_company_name,
+      brokerAgentUserId: row.broker_agent_user_id,
+      brokerAgentDisplayName: row.broker_agent_display_name,
       unitTypeId: row.unit_type_id,
       unitTypeCode: row.unit_type_code,
       unitTypeName: row.unit_type_name,

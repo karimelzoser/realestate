@@ -73,8 +73,44 @@ export const createDocumentTemplateSchema = z.object({
     )
     .max(10)
     .default([]),
+}).superRefine((value, ctx) => {
+  if (value.requiresSignature && value.signerRequirements.length === 0) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['signerRequirements'],
+      message: 'A signature-enabled template requires at least one signer role.',
+    });
+  }
+  const roles = value.signerRequirements.map((item) => item.signerRole);
+  if (new Set(roles).size !== roles.length) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['signerRequirements'],
+      message: 'Each signer role may appear only once per template.',
+    });
+  }
 });
 export type CreateDocumentTemplateInput = z.infer<typeof createDocumentTemplateSchema>;
+
+export interface DocumentTemplateSnapshot {
+  templateId: string;
+  scope: 'PROJECT' | 'TENANT_DEFAULT';
+  projectId: string | null;
+  code: string;
+  name: string;
+  category: DocumentCategory;
+  versionNumber: number;
+  status: 'DRAFT' | 'ACTIVE' | 'RETIRED' | 'CANCELLED';
+  mimeType: string;
+  requiresSignature: boolean;
+  activatedAt: string | null;
+  createdAt: string;
+  signerRequirements: Array<{
+    signerRole: SignerRole;
+    signingOrder: number;
+    required: boolean;
+  }>;
+}
 
 export const upsertProjectDocumentRequirementSchema = z.object({
   tenantId: z.uuid(),

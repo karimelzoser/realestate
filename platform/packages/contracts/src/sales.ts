@@ -200,7 +200,12 @@ export interface TransactionListItemSnapshot {
   reservationId: string;
   buyerProfileId: string;
   buyerUserId: string;
+  buyerDisplayName: string;
   buyerSource: BuyerSource;
+  brokerCompanyId: string | null;
+  brokerCompanyName: string | null;
+  brokerAgentUserId: string | null;
+  brokerAgentDisplayName: string | null;
   unitTypeId: string;
   unitTypeCode: string;
   unitTypeName: string;
