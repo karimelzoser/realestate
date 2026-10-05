@@ -22,6 +22,7 @@ const internalRoles: RoleCode[] = [
   'TRANSACTION_OPERATOR',
 ];
 const brokerRoles: RoleCode[] = ['BROKER_MANAGER', 'BROKER_FINANCE', 'BROKER_AGENT'];
+const delegatedBrokerRoles: RoleCode[] = ['BROKER_FINANCE', 'BROKER_AGENT'];
 
 export default function AccountCenterClient() {
   const [workspace, setWorkspace] = useState<WorkspaceContextSnapshot | null>(null);
@@ -58,7 +59,7 @@ export default function AccountCenterClient() {
     const options: RoleCode[] = [];
     if (scope.canManageTenantUsers) options.push(...internalRoles);
     if (scope.brokerCompanies.length > 0) {
-      options.push(...(scope.canManageTenantUsers ? brokerRoles : ['BROKER_FINANCE', 'BROKER_AGENT']));
+      options.push(...(scope.canManageTenantUsers ? brokerRoles : delegatedBrokerRoles));
     }
     return [...new Set(options)];
   }, [scope]);
