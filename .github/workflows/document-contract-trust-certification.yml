@@ -1,0 +1,123 @@
+name: Gate 3 Document & Contract Trust Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/gate3_document_contract_trust_certification.sql"
+      - "platform/packages/contracts/src/documents.ts"
+      - "platform/apps/api/package.json"
+      - "platform/apps/api/src/storage/**"
+      - "platform/apps/api/src/documents/**"
+      - ".github/workflows/document-contract-trust-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+    paths:
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/gate3_document_contract_trust_certification.sql"
+      - "platform/packages/contracts/src/documents.ts"
+      - "platform/apps/api/package.json"
+      - "platform/apps/api/src/storage/**"
+      - "platform/apps/api/src/documents/**"
+      - ".github/workflows/document-contract-trust-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  document-contract-trust:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migrations from zero
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          for migration in platform/packages/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 -f "${migration}"
+          done
+
+      - name: Verify trust and execution structures
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF to_regclass('public.storage_object_trust') IS NULL
+              THEN RAISE EXCEPTION 'storage object trust table missing'; END IF;
+            IF to_regclass('public.storage_object_scan_attempts') IS NULL
+              THEN RAISE EXCEPTION 'storage scan audit table missing'; END IF;
+            IF to_regclass('public.contract_execution_snapshots') IS NULL
+              THEN RAISE EXCEPTION 'contract execution snapshot table missing'; END IF;
+
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='document_templates' AND column_name='object_trust_id'
+            ) THEN RAISE EXCEPTION 'document template trust binding missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='transaction_documents' AND column_name='object_trust_id'
+            ) THEN RAISE EXCEPTION 'transaction document trust binding missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='transaction_documents' AND column_name='stamped_at'
+            ) THEN RAISE EXCEPTION 'contract execution timestamp missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='transaction_documents' AND column_name='stamped_by'
+            ) THEN RAISE EXCEPTION 'contract execution actor missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='document_signatures' AND column_name='object_trust_id'
+            ) THEN RAISE EXCEPTION 'signature trust binding missing'; END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_storage_object_trust_00_verdict_authority' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'storage trust verdict authority trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_storage_object_trust_identity_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'storage trust identity immutability trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_storage_object_scan_attempts_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'scan audit immutability trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_document_templates_trust_guard' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'document template trust guard missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_transaction_documents_execution_guard' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'document execution guard missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_document_signatures_guard' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'signature trust/order guard missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_capture_contract_execution_snapshot' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'execution snapshot capture trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_contract_execution_snapshots_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'execution snapshot immutability trigger missing'; END IF;
+
+            IF to_regprocedure('public.preneura_capture_contract_execution(uuid,boolean)') IS NULL
+              THEN RAISE EXCEPTION 'contract execution capture function missing'; END IF;
+          END $$;
+          SQL
+
+      - name: Execute Gate 3 trust certification
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
+            -f platform/packages/database/tests/gate3_document_contract_trust_certification.sql
