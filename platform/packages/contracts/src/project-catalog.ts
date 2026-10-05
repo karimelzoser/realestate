@@ -235,7 +235,7 @@ export const updateProjectImportMappingSchema = z.object({
 });
 export type UpdateProjectImportMappingInput = z.infer<typeof updateProjectImportMappingSchema>;
 
-export type ProjectImportJobStatus = 'DRAFT' | 'VALIDATING' | 'VALIDATED' | 'PUBLISHING' | 'PUBLISHED' | 'FAILED' | 'CANCELLED';
+export type ProjectImportJobStatus = 'DRAFT' | 'VALIDATING' | 'VALIDATED' | 'PUBLISHING' | 'PUBLISHED' | 'ROLLED_BACK' | 'FAILED' | 'CANCELLED';
 export type ProjectImportRowStatus = 'PENDING' | 'VALID' | 'INVALID' | 'PUBLISHED';
 
 export interface ProjectImportRowSnapshot {
