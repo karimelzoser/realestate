@@ -22,6 +22,7 @@ import type {
 import { AccessService } from '../access/access.service.js';
 import { CommissionService } from '../commissions/commission.service.js';
 import { ObjectStorageService } from '../storage/object-storage.service.js';
+import { ObjectTrustService } from '../storage/object-trust.service.js';
 import { DocumentRepository, type TransactionDocumentContext } from './document.repository.js';
 
 @Injectable()
@@ -30,6 +31,7 @@ export class DocumentService {
     private readonly repository: DocumentRepository,
     private readonly access: AccessService,
     private readonly storage: ObjectStorageService,
+    private readonly trust: ObjectTrustService,
     private readonly commissions: CommissionService,
   ) {}
 
@@ -70,6 +72,14 @@ export class DocumentService {
       expectedSha256Base64: input.data.file.sha256Base64,
     });
     if (!verified) throw new BadRequestException('Uploaded template could not be verified.');
+
+    await this.trust.trustVerifiedObject({
+      tenantId: input.data.tenantId,
+      projectId: input.data.projectId ?? null,
+      purpose: 'DOCUMENT_TEMPLATE',
+      verified,
+      maxInspectionBytes: 25 * 1024 * 1024,
+    });
 
     return this.repository.createTemplate({
       actorUserId: input.actorUserId,
@@ -159,6 +169,14 @@ export class DocumentService {
     });
     if (!verified) throw new BadRequestException('Uploaded document could not be verified.');
 
+    await this.trust.trustVerifiedObject({
+      tenantId: input.data.tenantId,
+      projectId: input.data.projectId,
+      purpose: 'TRANSACTION_DOCUMENT',
+      verified,
+      maxInspectionBytes: 25 * 1024 * 1024,
+    });
+
     await this.repository.finalizeUpload({
       actorUserId: input.actorUserId,
       tenantId: input.data.tenantId,
@@ -180,6 +198,16 @@ export class DocumentService {
       permission: 'documents.verify',
       context: { tenantId: input.data.tenantId, projectId: input.data.projectId },
     });
+
+    if (input.data.decision === 'VERIFY') {
+      await this.ensureDocumentObjectClean({
+        tenantId: input.data.tenantId,
+        projectId: input.data.projectId,
+        transactionId: input.data.transactionId,
+        documentId: input.data.documentId,
+      });
+    }
+
     await this.repository.reviewDocument({
       actorUserId: input.actorUserId,
       tenantId: input.data.tenantId,
@@ -239,6 +267,7 @@ export class DocumentService {
   }): Promise<{ signed: true }> {
     const transaction = await this.requireTransaction(input.data.tenantId, input.data.projectId, input.data.transactionId);
     await this.assertSigner(input.actorUserId, transaction, input.data.signerRole);
+    await this.requireSignableContract(input.data.tenantId, input.data.projectId, input.data.transactionId, input.data.documentId);
     await this.repository.addSignature({
       actorUserId: input.actorUserId,
       tenantId: input.data.tenantId,
@@ -276,6 +305,14 @@ export class DocumentService {
       expectedSha256Base64: input.data.file.sha256Base64,
     });
     if (!verified) throw new BadRequestException('Uploaded signature could not be verified.');
+
+    await this.trust.trustVerifiedObject({
+      tenantId: input.data.tenantId,
+      projectId: input.data.projectId,
+      purpose: 'SIGNATURE',
+      verified,
+      maxInspectionBytes: 5 * 1024 * 1024,
+    });
 
     await this.repository.addSignature({
       actorUserId: input.actorUserId,
@@ -412,6 +449,43 @@ export class DocumentService {
     if (!document || document.category !== 'CONTRACT' || !['VERIFIED', 'SIGNED'].includes(document.status)) {
       throw new BadRequestException('A verified contract is required before signing.');
     }
+    await this.ensureDocumentObjectClean({ tenantId, projectId, transactionId, documentId });
+  }
+
+  private async ensureDocumentObjectClean(input: {
+    tenantId: string;
+    projectId: string;
+    transactionId: string;
+    documentId: string;
+  }): Promise<void> {
+    const document = await this.repository.getUploadRecord(input);
+    if (
+      !document ||
+      !document.storage_object_key ||
+      !document.mime_type ||
+      document.byte_size === null ||
+      !document.sha256_hex
+    ) {
+      throw new BadRequestException('Document object metadata is incomplete and cannot be trusted.');
+    }
+
+    const digest = Buffer.from(document.sha256_hex, 'hex');
+    if (digest.length !== 32) throw new BadRequestException('Document SHA-256 evidence is invalid.');
+    const verified = await this.storage.verifyObject({
+      objectKey: document.storage_object_key,
+      expectedContentType: document.mime_type,
+      expectedByteSize: Number(document.byte_size),
+      expectedSha256Base64: digest.toString('base64'),
+    });
+    if (!verified) throw new BadRequestException('Stored document no longer matches its recorded integrity evidence.');
+
+    await this.trust.trustVerifiedObject({
+      tenantId: input.tenantId,
+      projectId: input.projectId,
+      purpose: 'TRANSACTION_DOCUMENT',
+      verified,
+      maxInspectionBytes: 25 * 1024 * 1024,
+    });
   }
 
   private sha256Hex(base64Digest: string): string {
