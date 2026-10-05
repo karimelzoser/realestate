@@ -9,6 +9,17 @@ import { DocumentTemplateListService } from './document-template-list.service.js
 export class DocumentTemplateListController {
   constructor(private readonly templates: DocumentTemplateListService) {}
 
+  @Get('active')
+  active(
+    @Param('tenantId') tenantId: string,
+    @Param('projectId') projectId: string,
+    @CurrentSession() session: ResolvedSession,
+  ): Promise<DocumentTemplateSnapshot[]> {
+    this.assertUuid(tenantId, 'tenantId');
+    this.assertUuid(projectId, 'projectId');
+    return this.templates.listEffectiveActive({ actorUserId: session.userId, tenantId, projectId });
+  }
+
   @Get()
   list(
     @Param('tenantId') tenantId: string,
