@@ -15,7 +15,7 @@ export const permissionCodeSchema = z.enum([
   'documents.read','documents.read.self','documents.upload','documents.upload.self','documents.verify','documents.templates.manage',
   'contract.read','contract.read.self','contract.generate','contract.execute','contract.sign.self','contract.sign.company','property.read.self','installment.read.self',
   'broker.buyers.read','broker.buyers.manage','broker.users.manage','broker.performance.read',
-  'commission.status.read','commission.amount.read','commission.rate.read','commission.payment.manage','commission.plan.manage','refund.read','refund.request','refund.approve','notifications.read','notifications.manage','audit.read','ai.buyer.use','ai.manager.use',
+  'commission.status.read','commission.amount.read','commission.rate.read','commission.payment.manage','commission.plan.manage','refund.read','refund.request','refund.approve','notifications.read','notifications.manage','audit.read','ai.buyer.use','ai.manager.use','ai.settings.manage',
 ]);
 export type PermissionCode = z.infer<typeof permissionCodeSchema>;
 
@@ -55,12 +55,12 @@ export const roleCapabilityMap: Readonly<Record<RoleCode, readonly PermissionCod
     'tenant.read','tenant.users.manage','tenant.projects.manage','project.read','project.manage','project.import.manage','pricing.read','pricing.publish','buyers.read','buyers.manage','eoi.read','eoi.manage',
     'queue.read','queue.manage','inventory.read','allocation.assist','unit.lock','transaction.read','transaction.manage','payment.read','payment.verify','payment.schedule.manage','documents.read','documents.upload','documents.verify','documents.templates.manage',
     'contract.read','contract.generate','contract.execute','contract.sign.company','broker.buyers.read','broker.buyers.manage','broker.users.manage','broker.performance.read','commission.status.read','commission.amount.read','commission.rate.read',
-    'commission.payment.manage','commission.plan.manage','refund.read','refund.request','refund.approve','notifications.read','notifications.manage','audit.read','ai.manager.use',
+    'commission.payment.manage','commission.plan.manage','refund.read','refund.request','refund.approve','notifications.read','notifications.manage','audit.read','ai.manager.use','ai.settings.manage',
   ],
   MANAGER: [
     'project.read','project.manage','project.import.manage','pricing.read','pricing.publish','buyers.read','buyers.manage','eoi.read','eoi.manage','queue.read','queue.manage','inventory.read','transaction.read','transaction.manage','payment.read','payment.verify','payment.schedule.manage',
     'documents.read','documents.upload','documents.verify','documents.templates.manage','contract.read','contract.generate','contract.execute','contract.sign.company','broker.buyers.read','broker.performance.read','commission.status.read','commission.amount.read','commission.rate.read','commission.plan.manage',
-    'refund.read','refund.approve','notifications.read','notifications.manage','audit.read','ai.manager.use',
+    'refund.read','refund.approve','notifications.read','notifications.manage','audit.read','ai.manager.use','ai.settings.manage',
   ],
   SALES: ['project.read','pricing.read','buyers.read','buyers.manage','eoi.read','eoi.manage','queue.read','inventory.read','transaction.read','documents.read','notifications.read'],
   QUEUE_RECEPTIONIST: ['project.read','buyers.read','buyers.manage','eoi.read','queue.read','queue.checkin','queue.manage','inventory.read'],
