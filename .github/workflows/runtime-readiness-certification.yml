@@ -5,6 +5,8 @@ on:
     paths:
       - "platform/apps/api/src/health/**"
       - "platform/apps/worker/src/main.ts"
+      - "platform/packages/contracts/package.json"
+      - "platform/packages/security/package.json"
       - "platform/packages/database/src/runtime-readiness.ts"
       - "platform/packages/database/migrations/**"
       - "platform/packages/database/package.json"
@@ -17,6 +19,8 @@ on:
     paths:
       - "platform/apps/api/src/health/**"
       - "platform/apps/worker/src/main.ts"
+      - "platform/packages/contracts/package.json"
+      - "platform/packages/security/package.json"
       - "platform/packages/database/src/runtime-readiness.ts"
       - "platform/packages/database/migrations/**"
       - "platform/packages/database/package.json"
@@ -64,13 +68,13 @@ jobs:
         working-directory: platform
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck and build runtime services
+      - name: Typecheck and build deployable runtime graph
         working-directory: platform
         run: |
           set -euo pipefail
           pnpm typecheck
-          pnpm --filter @preneura/api build
-          pnpm --filter @preneura/worker build
+          pnpm --filter @preneura/api... build
+          pnpm --filter @preneura/worker... build
 
       - name: Create readiness test databases
         env:
