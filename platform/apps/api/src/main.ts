@@ -3,7 +3,8 @@ import cookie from '@fastify/cookie';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { annotateActiveSpan, requestIdFromHeader } from '@preneura/observability';
-import type { FastifyRequest } from 'fastify';
+import type { IncomingMessage } from 'node:http';
+import type { Http2ServerRequest } from 'node:http2';
 import { AppModule } from './app.module.js';
 import { assertApiRuntimeConfiguration } from './runtime-config.js';
 
@@ -33,7 +34,8 @@ async function bootstrap(): Promise<void> {
           },
         },
     trustProxy: true,
-    genReqId: (request: FastifyRequest) => requestIdFromHeader(request.headers['x-request-id']),
+    genReqId: (request: IncomingMessage | Http2ServerRequest) =>
+      requestIdFromHeader(request.headers['x-request-id']),
   });
 
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter);
