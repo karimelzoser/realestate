@@ -13,11 +13,15 @@ interface LiveHealthResponse {
   service: 'preneura-api';
 }
 
-interface ReadyHealthResponse extends LiveHealthResponse {
+interface ReadyHealthResponse {
+  status: 'ready';
+  service: 'preneura-api';
   checks: {
     database: 'ok';
     schema: 'ok';
-    schemaVersion: number;
+    runtimeSchemaVersion: number;
+    databaseSchemaVersion: number;
+    minimumRuntimeVersion: number;
     migrationMarker: string;
     latencyMs: number;
   };
@@ -44,7 +48,8 @@ export class HealthController {
     try {
       const readiness = await assertRuntimeReadiness(this.db);
       return {
-        ...this.live(),
+        status: 'ready',
+        service: 'preneura-api',
         checks: readiness,
       };
     } catch (error) {
