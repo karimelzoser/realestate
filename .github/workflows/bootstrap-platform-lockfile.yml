@@ -1,0 +1,42 @@
+name: Bootstrap Platform Lockfile
+
+on:
+  push:
+    branches:
+      - "feature/production-release-reproducibility"
+
+permissions:
+  contents: write
+
+jobs:
+  generate-lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Generate lockfile with production toolchain
+        working-directory: platform
+        run: pnpm install --lockfile-only --no-frozen-lockfile
+      - name: Commit generated lockfile when missing or changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- platform/pnpm-lock.yaml && git ls-files --error-unmatch platform/pnpm-lock.yaml >/dev/null 2>&1; then
+            echo "platform/pnpm-lock.yaml is already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add platform/pnpm-lock.yaml
+          git commit -m "build(release): commit platform dependency lockfile"
+          git push origin HEAD:feature/production-release-reproducibility
