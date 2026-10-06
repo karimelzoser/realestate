@@ -1,0 +1,264 @@
+.panel {
+  margin: 24px 0;
+  padding: 24px;
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 20px;
+  background: var(--surface, #fff);
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.05);
+}
+
+.heading,
+.sectionHeading,
+.chequeTop,
+.eventMain,
+.eventMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.heading {
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.heading h2,
+.sectionHeading h3 {
+  margin: 4px 0 6px;
+  color: var(--text-primary, #111827);
+}
+
+.heading p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.6;
+}
+
+.eyebrow,
+.sectionHeading span,
+.metric span,
+.chequeTop span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+}
+
+.immutableBadge,
+.status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.09);
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.metric {
+  padding: 15px 16px;
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 14px;
+  background: var(--surface-muted, #f8fafc);
+}
+
+.metric strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-primary, #0f172a);
+  font-size: 18px;
+}
+
+.section {
+  padding-top: 22px;
+  margin-top: 22px;
+  border-top: 1px solid var(--border-subtle, #e5e7eb);
+}
+
+.sectionHeading {
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+
+.sectionHeading small {
+  color: var(--text-secondary, #64748b);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 14px;
+}
+
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle, #e5e7eb);
+  font-size: 13px;
+}
+
+.table th {
+  background: var(--surface-muted, #f8fafc);
+  color: var(--text-secondary, #64748b);
+  font-weight: 700;
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.eventList {
+  display: grid;
+  gap: 10px;
+}
+
+.event {
+  padding: 14px 16px;
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 14px;
+}
+
+.eventMain {
+  justify-content: flex-start;
+}
+
+.eventMain div {
+  display: grid;
+  gap: 2px;
+}
+
+.eventMain strong {
+  color: var(--text-primary, #0f172a);
+}
+
+.eventMain span,
+.eventMeta span,
+.chequeMeta span {
+  color: var(--text-secondary, #64748b);
+  font-size: 12px;
+}
+
+.eventMeta {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-left: 2px;
+}
+
+.eventMeta code {
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--surface-muted, #f1f5f9);
+  color: var(--text-secondary, #475569);
+  font-size: 11px;
+}
+
+.chequeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cheque {
+  padding: 15px 16px;
+  border: 1px solid var(--border-subtle, #e5e7eb);
+  border-radius: 14px;
+}
+
+.chequeTop {
+  align-items: flex-start;
+}
+
+.chequeTop div {
+  display: grid;
+  gap: 4px;
+}
+
+.chequeTop strong {
+  font-size: 17px;
+  color: var(--text-primary, #0f172a);
+}
+
+.chequeMeta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 14px;
+  margin-top: 12px;
+}
+
+.empty,
+.notice {
+  padding: 16px;
+  border: 1px dashed var(--border-subtle, #cbd5e1);
+  border-radius: 14px;
+  color: var(--text-secondary, #64748b);
+  background: var(--surface-muted, #f8fafc);
+}
+
+.notice {
+  display: grid;
+  gap: 4px;
+}
+
+.notice strong {
+  color: var(--text-primary, #0f172a);
+}
+
+.auditNote {
+  margin: 18px 0 0;
+  color: var(--text-secondary, #64748b);
+  font-size: 11px;
+}
+
+.skeleton {
+  height: 180px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.12), rgba(148, 163, 184, 0.24), rgba(148, 163, 184, 0.12));
+}
+
+@media (max-width: 900px) {
+  .metrics,
+  .chequeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .panel {
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .heading,
+  .sectionHeading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .metrics,
+  .chequeGrid,
+  .chequeMeta {
+    grid-template-columns: 1fr;
+  }
+}
