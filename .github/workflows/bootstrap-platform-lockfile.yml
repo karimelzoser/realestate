@@ -1,4 +1,4 @@
-name: Bootstrap Platform Lockfile
+name: Finalize Platform Lockfile Bootstrap
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  generate-lockfile:
+  finalize-reproducibility:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -25,18 +25,52 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Generate lockfile with production toolchain
+      - name: Prove generated lock is frozen-installable
         working-directory: platform
-        run: pnpm install --lockfile-only --no-frozen-lockfile
-      - name: Commit generated lockfile when missing or changed
+        run: pnpm install --frozen-lockfile
+      - name: Switch permanent production commands to frozen installs
         run: |
           set -euo pipefail
-          if git diff --quiet -- platform/pnpm-lock.yaml && git ls-files --error-unmatch platform/pnpm-lock.yaml >/dev/null 2>&1; then
-            echo "platform/pnpm-lock.yaml is already current"
-            exit 0
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          foundation = Path('.github/workflows/platform-foundation.yml')
+          text = foundation.read_text()
+          old = 'run: pnpm install --no-frozen-lockfile'
+          if old not in text:
+              raise SystemExit('platform-foundation install command was not found')
+          foundation.write_text(text.replace(old, 'run: pnpm install --frozen-lockfile'))
+
+          readme = Path('platform/README.md')
+          text = readme.read_text()
+          text = text.replace('pnpm install --no-frozen-lockfile', 'pnpm install --frozen-lockfile')
+          text = text.replace('\npnpm install\n', '\npnpm install --frozen-lockfile\n')
+          replacement = '''## Reproducible dependency installs
+
+          The production workspace commits `platform/pnpm-lock.yaml`, generated with Node 24 and pnpm 12.9.1 to match CI. Production CI and Railway install with `pnpm install --frozen-lockfile`, so a package manifest cannot silently resolve a different dependency graph.
+
+          When a dependency changes, regenerate the lockfile with the pinned workspace package manager, review the lock diff, commit it with the manifest change, and require **Release Dependency Reproducibility** to pass before merge.
+          '''
+          updated, count = re.subn(r'## Release-hardening item still open\n\n.*\Z', replacement, text, flags=re.S)
+          if count != 1:
+              raise SystemExit('README release-hardening section was not replaced exactly once')
+          readme.write_text(updated)
+          PY
+      - name: Remove one-time write-enabled bootstrap workflow
+        run: git rm .github/workflows/bootstrap-platform-lockfile.yml
+      - name: Verify no production install allows lockfile drift
+        run: |
+          set -euo pipefail
+          if grep -R --line-number --fixed-strings -- '--no-frozen-lockfile' platform .github/workflows; then
+            echo 'A production install still allows lockfile drift.' >&2
+            exit 1
           fi
+      - name: Commit permanent reproducibility boundary
+        run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add platform/pnpm-lock.yaml
-          git commit -m "build(release): commit platform dependency lockfile"
+          git add .github/workflows/platform-foundation.yml platform/README.md
+          git commit -m "build(release): enforce frozen production installs"
           git push origin HEAD:feature/production-release-reproducibility
