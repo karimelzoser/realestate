@@ -5,12 +5,14 @@ on:
     paths:
       - "platform/**"
       - ".github/workflows/platform-foundation.yml"
+      - ".github/workflows/release-reproducibility.yml"
   push:
     branches:
       - "feature/production-*"
     paths:
       - "platform/**"
       - ".github/workflows/platform-foundation.yml"
+      - ".github/workflows/release-reproducibility.yml"
 
 permissions:
   contents: read
@@ -34,7 +36,7 @@ jobs:
         with:
           node-version: 24
       - name: Install
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Typecheck
         run: pnpm typecheck
       - name: Build production applications
