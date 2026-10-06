@@ -100,4 +100,5 @@ The readiness layer uses bounded failure codes:
 5. additive future schema remains compatible with the current runtime;
 6. a future schema that raises `minimum_runtime_version` rejects the old runtime;
 7. the runtime contract cannot be deleted or moved backwards;
-8. strict TypeScript and production API/worker builds remain green.
+8. strict TypeScript and the complete deployable API/worker dependency graph build successfully;
+9. the emitted API process reaches Nest startup and resolves its runtime module/dependency graph before readiness is accepted.
