@@ -1,5 +1,6 @@
 import ContractExecutionPanel from './contract-execution-panel';
 import TransactionDetailClient from './transaction-detail-client';
+import TransactionFinanceLedgerPanel from './transaction-finance-ledger-panel';
 import TransactionFinanceSetup from './transaction-finance-setup';
 import TransactionIdentityPanel from './transaction-identity-panel';
 import TransactionPricePanel from './transaction-price-panel';
@@ -49,6 +50,11 @@ export default async function TransactionDetailPage({ params, searchParams }: Pa
         projectId={resolvedProjectId}
       />
       <TransactionFinanceSetup
+        transactionId={transactionId}
+        tenantId={resolvedTenantId}
+        projectId={resolvedProjectId}
+      />
+      <TransactionFinanceLedgerPanel
         transactionId={transactionId}
         tenantId={resolvedTenantId}
         projectId={resolvedProjectId}

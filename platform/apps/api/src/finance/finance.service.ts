@@ -1,15 +1,22 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { PermissionCode } from '@preneura/contracts/access';
 import type {
+  ChequeHistorySnapshot,
   ChequeSnapshot,
+  CompensatePaymentInput,
   CreateChequeScheduleInput,
   CreatePaymentScheduleInput,
+  FinanceLedgerSnapshot,
   MarkPaymentItemPaidInput,
   PaymentScheduleSnapshot,
+  PostManualPaymentInput,
+  ProviderFinanceEventInput,
+  ReplaceChequeInput,
   UpdateChequeStatusInput,
 } from '@preneura/contracts/finance';
 import { AccessService } from '../access/access.service.js';
 import { CommissionService } from '../commissions/commission.service.js';
+import { FinanceLedgerRepository } from './finance-ledger.repository.js';
 import { FinanceRepository, type FinanceTransactionContext } from './finance.repository.js';
 
 const BROKER_ROLES = new Set(['BROKER_MANAGER', 'BROKER_FINANCE', 'BROKER_AGENT']);
@@ -18,6 +25,7 @@ const BROKER_ROLES = new Set(['BROKER_MANAGER', 'BROKER_FINANCE', 'BROKER_AGENT'
 export class FinanceService {
   constructor(
     private readonly repository: FinanceRepository,
+    private readonly ledger: FinanceLedgerRepository,
     private readonly access: AccessService,
     private readonly commissions: CommissionService,
   ) {}
@@ -28,11 +36,7 @@ export class FinanceService {
   }): Promise<{ scheduleId: string }> {
     const transaction = await this.requireTransaction(input.data.tenantId, input.data.projectId, input.data.transactionId);
     this.assertOpen(transaction);
-    await this.access.assert({
-      userId: input.actorUserId,
-      permission: 'payment.schedule.manage',
-      context: { tenantId: input.data.tenantId, projectId: input.data.projectId },
-    });
+    await this.assertWrite(input.actorUserId, input.data.tenantId, input.data.projectId, 'payment.schedule.manage');
 
     if (transaction.currency !== input.data.currency) {
       throw new BadRequestException('Payment schedule currency must match the reservation currency.');
@@ -63,23 +67,82 @@ export class FinanceService {
   }): Promise<{ paid: true }> {
     const transaction = await this.requireTransaction(input.data.tenantId, input.data.projectId, input.data.transactionId);
     this.assertOpen(transaction);
-    await this.access.assert({
-      userId: input.actorUserId,
-      permission: 'payment.verify',
-      context: { tenantId: input.data.tenantId, projectId: input.data.projectId },
-    });
-    const updated = await this.repository.markPaymentItemPaid({
-      actorUserId: input.actorUserId,
+    await this.assertWrite(input.actorUserId, input.data.tenantId, input.data.projectId, 'payment.verify');
+
+    const remaining = await this.ledger.remainingAmountForItem({
       tenantId: input.data.tenantId,
       projectId: input.data.projectId,
       transactionId: input.data.transactionId,
       paymentItemId: input.data.paymentItemId,
-      paymentReference: input.data.paymentReference,
-      now: new Date(),
     });
-    if (!updated) throw new NotFoundException('Payment item not found.');
+    if (!remaining) throw new NotFoundException('Payment item not found.');
+    if (this.moneyCents(remaining.remainingAmount) <= 0n) {
+      throw new BadRequestException('Payment item is already fully settled.');
+    }
+
+    await this.ledger.postManualPayment({
+      actorUserId: input.actorUserId,
+      currency: remaining.currency,
+      data: {
+        tenantId: input.data.tenantId,
+        projectId: input.data.projectId,
+        transactionId: input.data.transactionId,
+        amount: remaining.remainingAmount,
+        paymentReference: input.data.paymentReference,
+        allocations: [{ paymentItemId: input.data.paymentItemId, amount: remaining.remainingAmount }],
+      },
+    });
     await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
     return { paid: true };
+  }
+
+  async postManualPayment(input: {
+    actorUserId: string;
+    data: PostManualPaymentInput;
+  }): Promise<{ paymentEventId: string }> {
+    const transaction = await this.requireTransaction(input.data.tenantId, input.data.projectId, input.data.transactionId);
+    this.assertOpen(transaction);
+    await this.assertWrite(input.actorUserId, input.data.tenantId, input.data.projectId, 'payment.verify');
+
+    const allocated = input.data.allocations.reduce((sum, allocation) => sum + this.moneyCents(allocation.amount), 0n);
+    if (allocated > this.moneyCents(input.data.amount)) {
+      throw new BadRequestException('Explicit allocations cannot exceed the payment amount.');
+    }
+
+    const result = await this.ledger.postManualPayment({
+      actorUserId: input.actorUserId,
+      currency: transaction.currency,
+      data: input.data,
+    });
+    await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
+    return result;
+  }
+
+  async compensatePayment(input: {
+    actorUserId: string;
+    data: CompensatePaymentInput;
+  }): Promise<{ paymentEventId: string }> {
+    const transaction = await this.requireTransaction(input.data.tenantId, input.data.projectId, input.data.transactionId);
+    this.assertOpen(transaction);
+    await this.assertWrite(input.actorUserId, input.data.tenantId, input.data.projectId, 'payment.verify');
+
+    const result = await this.ledger.compensatePayment({ actorUserId: input.actorUserId, data: input.data });
+    await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
+    return result;
+  }
+
+  async ingestProvider(input: {
+    provider: string;
+    payloadSha256Hex: string;
+    data: ProviderFinanceEventInput;
+  }): Promise<{ paymentEventId: string }> {
+    const transaction = await this.requireTransaction(input.data.tenantId, input.data.projectId, input.data.transactionId);
+    if (transaction.currency !== input.data.currency) {
+      throw new BadRequestException('Provider event currency must match the transaction currency.');
+    }
+    const result = await this.ledger.ingestProvider(input);
+    await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
+    return result;
   }
 
   async getPaymentSchedule(input: {
@@ -90,7 +153,7 @@ export class FinanceService {
   }): Promise<PaymentScheduleSnapshot> {
     const transaction = await this.requireTransaction(input.tenantId, input.projectId, input.transactionId);
     await this.assertRead(input.actorUserId, transaction, 'payment.read', 'installment.read.self');
-    const schedule = await this.repository.getPaymentSchedule({
+    const schedule = await this.ledger.getPaymentSchedule({
       tenantId: input.tenantId,
       projectId: input.projectId,
       transactionId: input.transactionId,
@@ -100,17 +163,24 @@ export class FinanceService {
     return schedule;
   }
 
+  async getLedger(input: {
+    actorUserId: string;
+    tenantId: string;
+    projectId: string;
+    transactionId: string;
+  }): Promise<FinanceLedgerSnapshot> {
+    const transaction = await this.requireTransaction(input.tenantId, input.projectId, input.transactionId);
+    await this.assertRead(input.actorUserId, transaction, 'payment.read', 'installment.read.self');
+    return this.ledger.getLedger(input);
+  }
+
   async createChequeSchedule(input: {
     actorUserId: string;
     data: CreateChequeScheduleInput;
   }): Promise<{ created: number }> {
     const transaction = await this.requireTransaction(input.data.tenantId, input.data.projectId, input.data.transactionId);
     this.assertOpen(transaction);
-    await this.access.assert({
-      userId: input.actorUserId,
-      permission: 'payment.schedule.manage',
-      context: { tenantId: input.data.tenantId, projectId: input.data.projectId },
-    });
+    await this.assertWrite(input.actorUserId, input.data.tenantId, input.data.projectId, 'payment.schedule.manage');
     const uniqueSequences = new Set(input.data.cheques.map((cheque) => cheque.sequenceNumber));
     if (uniqueSequences.size !== input.data.cheques.length) {
       throw new BadRequestException('Cheque sequence numbers must be unique.');
@@ -126,25 +196,22 @@ export class FinanceService {
   }): Promise<{ updated: true }> {
     const transaction = await this.requireTransaction(input.data.tenantId, input.data.projectId, input.data.transactionId);
     this.assertOpen(transaction);
-    await this.access.assert({
-      userId: input.actorUserId,
-      permission: 'payment.verify',
-      context: { tenantId: input.data.tenantId, projectId: input.data.projectId },
-    });
-    const updated = await this.repository.updateChequeStatus({
-      actorUserId: input.actorUserId,
-      tenantId: input.data.tenantId,
-      projectId: input.data.projectId,
-      transactionId: input.data.transactionId,
-      chequeId: input.data.chequeId,
-      status: input.data.status,
-      chequeNumber: input.data.chequeNumber ?? null,
-      bankName: input.data.bankName ?? null,
-      now: new Date(),
-    });
-    if (!updated) throw new NotFoundException('Cheque not found.');
+    await this.assertWrite(input.actorUserId, input.data.tenantId, input.data.projectId, 'payment.verify');
+    const result = await this.ledger.recordChequeStatus({ actorUserId: input.actorUserId, data: input.data });
     await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
-    return { updated: true };
+    return result;
+  }
+
+  async replaceCheque(input: {
+    actorUserId: string;
+    data: ReplaceChequeInput;
+  }): Promise<{ chequeId: string }> {
+    const transaction = await this.requireTransaction(input.data.tenantId, input.data.projectId, input.data.transactionId);
+    this.assertOpen(transaction);
+    await this.assertWrite(input.actorUserId, input.data.tenantId, input.data.projectId, 'payment.verify');
+    const result = await this.ledger.replaceCheque({ actorUserId: input.actorUserId, data: input.data });
+    await this.refreshCommission(input.data.tenantId, input.data.projectId, input.data.transactionId);
+    return result;
   }
 
   async listCheques(input: {
@@ -155,7 +222,28 @@ export class FinanceService {
   }): Promise<ChequeSnapshot[]> {
     const transaction = await this.requireTransaction(input.tenantId, input.projectId, input.transactionId);
     await this.assertRead(input.actorUserId, transaction, 'payment.read', 'installment.read.self');
-    return this.repository.listCheques(input);
+    return this.ledger.listCheques(input);
+  }
+
+  async getChequeHistory(input: {
+    actorUserId: string;
+    tenantId: string;
+    projectId: string;
+    transactionId: string;
+    chequeId: string;
+  }): Promise<ChequeHistorySnapshot> {
+    const transaction = await this.requireTransaction(input.tenantId, input.projectId, input.transactionId);
+    await this.assertRead(input.actorUserId, transaction, 'payment.read', 'installment.read.self');
+    return this.ledger.getChequeHistory(input);
+  }
+
+  private async assertWrite(
+    userId: string,
+    tenantId: string,
+    projectId: string,
+    permission: PermissionCode,
+  ): Promise<void> {
+    await this.access.assert({ userId, permission, context: { tenantId, projectId } });
   }
 
   private async refreshCommission(tenantId: string, projectId: string, transactionId: string): Promise<void> {

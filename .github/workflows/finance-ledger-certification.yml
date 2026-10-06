@@ -1,0 +1,133 @@
+name: Gate 3 Finance Ledger Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/.env.example"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/gate3_finance_ledger_certification.sql"
+      - "platform/packages/contracts/src/finance.ts"
+      - "platform/apps/api/src/finance/**"
+      - "platform/apps/web/app/workspace/transactions/**"
+      - "platform/docs/finance-ledger.md"
+      - ".github/workflows/finance-ledger-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+    paths:
+      - "platform/.env.example"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/gate3_finance_ledger_certification.sql"
+      - "platform/packages/contracts/src/finance.ts"
+      - "platform/apps/api/src/finance/**"
+      - "platform/apps/web/app/workspace/transactions/**"
+      - "platform/docs/finance-ledger.md"
+      - ".github/workflows/finance-ledger-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  finance-ledger:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migrations from zero
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          for migration in platform/packages/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 -f "${migration}"
+          done
+
+      - name: Verify finance ledger structures
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF to_regclass('public.finance_payment_events') IS NULL
+              THEN RAISE EXCEPTION 'finance payment event table missing'; END IF;
+            IF to_regclass('public.finance_ledger_entries') IS NULL
+              THEN RAISE EXCEPTION 'finance ledger table missing'; END IF;
+            IF to_regclass('public.finance_payment_allocations') IS NULL
+              THEN RAISE EXCEPTION 'finance allocation table missing'; END IF;
+            IF to_regclass('public.finance_provider_webhook_events') IS NULL
+              THEN RAISE EXCEPTION 'provider webhook inbox missing'; END IF;
+            IF to_regclass('public.finance_cheque_events') IS NULL
+              THEN RAISE EXCEPTION 'cheque event history missing'; END IF;
+
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='payment_schedule_items' AND column_name='paid_amount'
+            ) THEN RAISE EXCEPTION 'payment paid_amount projection missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='transaction_cheques' AND column_name='generation'
+            ) THEN RAISE EXCEPTION 'cheque generation missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='transaction_cheques' AND column_name='root_cheque_id'
+            ) THEN RAISE EXCEPTION 'cheque root chain missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM information_schema.columns
+              WHERE table_schema='public' AND table_name='transaction_cheques' AND column_name='replaces_cheque_id'
+            ) THEN RAISE EXCEPTION 'cheque replacement link missing'; END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_finance_payment_events_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'payment event immutability trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_finance_ledger_entries_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'ledger immutability trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_finance_payment_allocations_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'allocation immutability trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_payment_schedule_items_projection_guard' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'payment projection guard missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_finance_provider_webhook_guard' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'provider inbox guard missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_transaction_cheques_projection_guard' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'cheque projection guard missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_finance_cheque_events_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'cheque event immutability trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_transaction_cheques_00_initialize_root' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'cheque root initializer missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_transaction_cheques_capture_creation' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'cheque creation event trigger missing'; END IF;
+
+            IF to_regprocedure('public.preneura_post_finance_event(uuid,uuid,uuid,text,numeric,character,text,text,uuid,timestamp with time zone,jsonb,text,text,uuid,jsonb)') IS NULL
+              THEN RAISE EXCEPTION 'central finance posting function missing'; END IF;
+            IF to_regprocedure('public.preneura_ingest_provider_finance_event(text,text,text,uuid,uuid,uuid,text,numeric,character,text,timestamp with time zone,text)') IS NULL
+              THEN RAISE EXCEPTION 'provider finance ingress function missing'; END IF;
+            IF to_regprocedure('public.preneura_record_cheque_event(uuid,text,uuid,timestamp with time zone,text,text,jsonb)') IS NULL
+              THEN RAISE EXCEPTION 'cheque event function missing'; END IF;
+            IF to_regprocedure('public.preneura_replace_returned_cheque(uuid,uuid,numeric,timestamp with time zone,text,text,timestamp with time zone)') IS NULL
+              THEN RAISE EXCEPTION 'cheque replacement function missing'; END IF;
+          END $$;
+          SQL
+
+      - name: Execute finance reconciliation certification
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
+            -f platform/packages/database/tests/gate3_finance_ledger_certification.sql
