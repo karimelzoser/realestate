@@ -3,8 +3,11 @@ import cookie from '@fastify/cookie';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module.js';
+import { assertApiRuntimeConfiguration } from './runtime-config.js';
 
 async function bootstrap(): Promise<void> {
+  assertApiRuntimeConfiguration();
+
   const adapter = new FastifyAdapter({
     logger: process.env.NODE_ENV !== 'test',
     trustProxy: true,
