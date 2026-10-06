@@ -1,0 +1,98 @@
+name: Production Configuration Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/api/src/runtime-config.ts"
+      - "platform/apps/api/src/main.ts"
+      - "platform/apps/worker/src/runtime-config.ts"
+      - "platform/apps/worker/src/main.ts"
+      - "platform/apps/notification-gateway/src/runtime-config.ts"
+      - "platform/apps/notification-gateway/src/bootstrap.ts"
+      - "platform/apps/notification-gateway/package.json"
+      - "platform/scripts/certify-production-config.mts"
+      - "platform/.env.example"
+      - "platform/docs/production-configuration.md"
+      - ".github/workflows/production-config-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/apps/api/src/runtime-config.ts"
+      - "platform/apps/api/src/main.ts"
+      - "platform/apps/worker/src/runtime-config.ts"
+      - "platform/apps/worker/src/main.ts"
+      - "platform/apps/notification-gateway/src/runtime-config.ts"
+      - "platform/apps/notification-gateway/src/bootstrap.ts"
+      - "platform/apps/notification-gateway/package.json"
+      - "platform/scripts/certify-production-config.mts"
+      - "platform/.env.example"
+      - "platform/docs/production-configuration.md"
+      - ".github/workflows/production-config-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  production-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and build production processes
+        working-directory: platform
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4100
+        run: |
+          set -euo pipefail
+          pnpm typecheck
+          pnpm --filter @preneura/api build
+          pnpm --filter @preneura/worker build
+          pnpm --filter @preneura/notification-gateway build
+
+      - name: Certify production configuration matrix
+        working-directory: platform
+        run: pnpm --filter @preneura/api exec tsx ../../scripts/certify-production-config.mts
+
+      - name: Prove real processes fail before startup on invalid production config
+        working-directory: platform
+        run: |
+          set -euo pipefail
+
+          assert_fails_fast() {
+            local package="$1"
+            local log_file="$2"
+            set +e
+            NODE_ENV=production timeout --signal=TERM --kill-after=1s 5s pnpm --filter "$package" start >"$log_file" 2>&1
+            local rc=$?
+            set -e
+            if [[ "$rc" -eq 0 || "$rc" -eq 124 || "$rc" -eq 137 ]]; then
+              cat "$log_file"
+              echo "$package did not fail fast on invalid production configuration." >&2
+              exit 1
+            fi
+            grep -q 'DATABASE_URL is required in production' "$log_file"
+          }
+
+          assert_fails_fast '@preneura/api' /tmp/api-invalid-config.log
+          assert_fails_fast '@preneura/worker' /tmp/worker-invalid-config.log
+          assert_fails_fast '@preneura/notification-gateway' /tmp/gateway-invalid-config.log
