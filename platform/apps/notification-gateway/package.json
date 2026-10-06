@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "pnpm run build:deps && tsc -p tsconfig.json",
+    "build:deps": "pnpm --filter @preneura/database build && pnpm --filter @preneura/security build",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --test",
