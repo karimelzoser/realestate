@@ -10,6 +10,9 @@ on:
       - "platform/apps/notification-gateway/src/runtime-config.ts"
       - "platform/apps/notification-gateway/src/bootstrap.ts"
       - "platform/apps/notification-gateway/package.json"
+      - "platform/apps/web/lib/api.ts"
+      - "platform/apps/web/package.json"
+      - "platform/apps/web/scripts/validate-build-config.mjs"
       - "platform/scripts/certify-production-config.mts"
       - "platform/.env.example"
       - "platform/docs/production-configuration.md"
@@ -26,6 +29,9 @@ on:
       - "platform/apps/notification-gateway/src/runtime-config.ts"
       - "platform/apps/notification-gateway/src/bootstrap.ts"
       - "platform/apps/notification-gateway/package.json"
+      - "platform/apps/web/lib/api.ts"
+      - "platform/apps/web/package.json"
+      - "platform/apps/web/scripts/validate-build-config.mjs"
       - "platform/scripts/certify-production-config.mts"
       - "platform/.env.example"
       - "platform/docs/production-configuration.md"
@@ -61,17 +67,46 @@ jobs:
       - name: Typecheck and build production processes
         working-directory: platform
         env:
-          NEXT_PUBLIC_API_URL: http://localhost:4100
+          NEXT_PUBLIC_API_URL: https://api.preneura.invalid
         run: |
           set -euo pipefail
           pnpm typecheck
           pnpm --filter @preneura/api build
           pnpm --filter @preneura/worker build
           pnpm --filter @preneura/notification-gateway build
+          pnpm --filter @preneura/web build
 
       - name: Certify production configuration matrix
         working-directory: platform
         run: pnpm --filter @preneura/api exec tsx ../../scripts/certify-production-config.mts
+
+      - name: Certify production web API origin
+        working-directory: platform
+        run: |
+          set -euo pipefail
+
+          NEXT_PUBLIC_API_URL='https://api.preneura.invalid' \
+            GITHUB_ACTIONS=false \
+            node apps/web/scripts/validate-build-config.mjs
+
+          assert_web_rejected() {
+            local expected="$1"
+            shift
+            set +e
+            env GITHUB_ACTIONS=false "$@" node apps/web/scripts/validate-build-config.mjs >/tmp/web-config.log 2>&1
+            local rc=$?
+            set -e
+            if [[ "$rc" -eq 0 ]]; then
+              cat /tmp/web-config.log
+              echo 'Unsafe web API origin unexpectedly passed.' >&2
+              exit 1
+            fi
+            grep -q "$expected" /tmp/web-config.log
+          }
+
+          assert_web_rejected 'NEXT_PUBLIC_API_URL is required' env -u NEXT_PUBLIC_API_URL
+          assert_web_rejected 'must use HTTPS' NEXT_PUBLIC_API_URL='http://api.preneura.example'
+          assert_web_rejected 'must not target localhost' NEXT_PUBLIC_API_URL='https://localhost:4100'
 
       - name: Prove real processes fail before startup on invalid production config
         working-directory: platform
