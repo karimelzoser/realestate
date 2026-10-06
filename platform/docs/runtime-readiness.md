@@ -91,7 +91,15 @@ The readiness layer uses bounded failure codes:
 
 ## Executable certification
 
-`.github/workflows/runtime-readiness-certification.yml` proves:
+The reusable executable is:
+
+```text
+platform/scripts/certify-runtime-readiness.sh
+```
+
+It is called by `.github/workflows/runtime-readiness-certification.yml` after a frozen dependency install and deployable API/worker build.
+
+The certification proves:
 
 1. current schema returns API readiness `200`;
 2. pre-contract/stale schema keeps liveness `200` but readiness `503`;
@@ -102,3 +110,5 @@ The readiness layer uses bounded failure codes:
 7. the runtime contract cannot be deleted or moved backwards;
 8. strict TypeScript and the complete deployable API/worker dependency graph build successfully;
 9. the emitted API process reaches Nest startup and resolves its runtime module/dependency graph before readiness is accepted.
+
+The script can also be run against an isolated PostgreSQL 18 instance outside GitHub Actions after the production workspace is built. It creates and destroys only its named certification databases and does not target a production database.
