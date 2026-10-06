@@ -41,7 +41,9 @@ async function main(): Promise<void> {
   log('info', 'worker.starting');
   const readiness = await assertRuntimeReadiness(db);
   log('info', 'worker.ready', {
-    schemaVersion: readiness.schemaVersion,
+    runtimeSchemaVersion: readiness.runtimeSchemaVersion,
+    databaseSchemaVersion: readiness.databaseSchemaVersion,
+    minimumRuntimeVersion: readiness.minimumRuntimeVersion,
     migrationMarker: readiness.migrationMarker,
     databaseLatencyMs: readiness.latencyMs,
   });
