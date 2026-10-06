@@ -1,5 +1,6 @@
 import { hostname } from 'node:os';
 import { createDatabase } from '@preneura/database';
+import { assertRuntimeReadiness } from '@preneura/database/runtime-readiness';
 import { refreshCommissionDueStates } from './commissions.js';
 import { scheduleInstallmentReminders } from './installment-reminders.js';
 import { scheduleMilestoneReminders } from './milestone-reminders.js';
@@ -37,7 +38,13 @@ async function runLoop(
 }
 
 async function main(): Promise<void> {
-  log('info', 'worker.started');
+  log('info', 'worker.starting');
+  const readiness = await assertRuntimeReadiness(db);
+  log('info', 'worker.ready', {
+    schemaVersion: readiness.schemaVersion,
+    migrationMarker: readiness.migrationMarker,
+    databaseLatencyMs: readiness.latencyMs,
+  });
 
   const loops = [
     runLoop('outbox', Number(process.env.OUTBOX_POLL_MS ?? 300), () => dispatchOutbox(db, 100)),
