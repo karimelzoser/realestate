@@ -5,12 +5,14 @@ on:
     paths:
       - "platform/**"
       - ".github/workflows/platform-foundation.yml"
+      - ".github/workflows/release-reproducibility.yml"
   push:
     branches:
       - "feature/production-*"
     paths:
       - "platform/**"
       - ".github/workflows/platform-foundation.yml"
+      - ".github/workflows/release-reproducibility.yml"
 
 permissions:
   contents: read
