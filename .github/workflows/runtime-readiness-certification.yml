@@ -222,10 +222,25 @@ jobs:
           API_PID=$!
           trap 'kill $API_PID 2>/dev/null || true' EXIT
 
+          ready=0
           for attempt in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:4100/v1/health/live >/tmp/live.json; then break; fi
+            if ! kill -0 "$API_PID" 2>/dev/null; then
+              cat /tmp/preneura-api-current.log
+              echo 'API exited before liveness became available.' >&2
+              exit 1
+            fi
+            if curl --fail --silent http://127.0.0.1:4100/v1/health/live >/tmp/live.json; then
+              ready=1
+              break
+            fi
             sleep 1
           done
+          if [[ "$ready" -ne 1 ]]; then
+            cat /tmp/preneura-api-current.log
+            echo 'API did not become live within the startup window.' >&2
+            exit 1
+          fi
+
           curl --fail --silent http://127.0.0.1:4100/v1/health/live | grep -q '"status":"ok"'
           curl --fail --silent http://127.0.0.1:4100/v1/health/ready >/tmp/ready.json
           grep -q '"status":"ready"' /tmp/ready.json
@@ -249,10 +264,25 @@ jobs:
           API_PID=$!
           trap 'kill $API_PID 2>/dev/null || true' EXIT
 
+          live=0
           for attempt in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:4101/v1/health/live >/tmp/stale-live.json; then break; fi
+            if ! kill -0 "$API_PID" 2>/dev/null; then
+              cat /tmp/preneura-api-stale.log
+              echo 'Stale-schema API exited before liveness became available.' >&2
+              exit 1
+            fi
+            if curl --fail --silent http://127.0.0.1:4101/v1/health/live >/tmp/stale-live.json; then
+              live=1
+              break
+            fi
             sleep 1
           done
+          if [[ "$live" -ne 1 ]]; then
+            cat /tmp/preneura-api-stale.log
+            echo 'Stale-schema API did not become live within the startup window.' >&2
+            exit 1
+          fi
+
           curl --fail --silent http://127.0.0.1:4101/v1/health/live | grep -q '"status":"ok"'
 
           status="$(curl --silent --output /tmp/stale-ready.json --write-out '%{http_code}' http://127.0.0.1:4101/v1/health/ready)"
