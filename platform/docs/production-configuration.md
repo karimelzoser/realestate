@@ -65,6 +65,14 @@ Production requirements include:
 
 The gateway is the only PRENEURA service that should hold Meta WhatsApp provider credentials. API and worker services communicate with it through the private gateway contract instead of receiving the Meta access token themselves.
 
+### Web build
+
+The production Next.js build validates `NEXT_PUBLIC_API_URL` before compiling the browser bundle. The value must be an explicit absolute HTTPS URL, cannot contain credentials/query/fragment data, and cannot target localhost/loopback.
+
+The browser API helper has no localhost fallback. A missing build-time API origin therefore fails instead of silently embedding a development endpoint into a production release.
+
+GitHub Actions is allowed one narrowly scoped exception for its existing `http://localhost` build fixture. That exception is activated only when `GITHUB_ACTIONS=true`; the dedicated production-configuration gate overrides that flag and explicitly proves a real production build rejects HTTP and localhost URLs. Railway/normal production builds do not receive the exception.
+
 ## Secret ownership
 
 Use separate secrets wherever the trust boundary differs.
@@ -106,7 +114,7 @@ Never rotate a state-derived cryptographic key by simply changing the environmen
 
 ## Build-time versus runtime values
 
-`NEXT_PUBLIC_API_URL` is embedded into the Next.js browser bundle and therefore is not a secret. Set it to the final public API origin during the web build.
+`NEXT_PUBLIC_API_URL` is embedded into the Next.js browser bundle and therefore is not a secret. Set it to the final public HTTPS API origin during the web build.
 
 All authentication, encryption, provider and database secrets are runtime/private values and must not use the `NEXT_PUBLIC_` prefix.
 
@@ -119,7 +127,7 @@ A production rollout should follow this order:
 3. deploy private provider services such as notification gateway/scanner;
 4. deploy API and wait for `/v1/health/ready`;
 5. deploy worker and require successful `worker.ready` startup;
-6. deploy web using the final public API URL;
+6. deploy web using the final public HTTPS API URL;
 7. run smoke checks for authentication, document trust, notification delivery and finance/provider ingress as appropriate to the release.
 
 For schema compatibility and rollback rules, see `docs/runtime-readiness.md`.
@@ -133,7 +141,7 @@ platform/scripts/certify-production-config.mts
 .github/workflows/production-config-certification.yml
 ```
 
-The certification proves both valid and invalid production matrices and then starts the **real emitted API, worker and notification-gateway processes** with intentionally incomplete production configuration. Each process must exit non-zero before serving or processing work.
+The certification proves both valid and invalid production matrices and then starts the **real emitted API, worker and notification-gateway processes** with intentionally incomplete production configuration. Each process must exit non-zero before serving or processing work. It also builds the real Next.js application with a valid HTTPS origin and separately proves that missing, HTTP and localhost production API origins are rejected.
 
 Cases explicitly covered include:
 
@@ -145,6 +153,7 @@ Cases explicitly covered include:
 - unsafe worker polling values;
 - malformed or incomplete WhatsApp template bindings;
 - invalid optional SMS provider endpoint configuration;
+- invalid/missing browser API origin;
 - development mode remaining usable with local/default settings.
 
 A change to startup configuration, `.env.example`, this document or the certification itself must keep **Production Configuration Certification** green before merge.
