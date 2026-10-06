@@ -1,0 +1,60 @@
+name: Release Dependency Reproducibility
+
+on:
+  pull_request:
+    paths:
+      - "platform/package.json"
+      - "platform/pnpm-workspace.yaml"
+      - "platform/pnpm-lock.yaml"
+      - "platform/apps/**/package.json"
+      - "platform/packages/**/package.json"
+      - ".github/workflows/release-reproducibility.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/package.json"
+      - "platform/pnpm-workspace.yaml"
+      - "platform/pnpm-lock.yaml"
+      - "platform/apps/**/package.json"
+      - "platform/packages/**/package.json"
+      - ".github/workflows/release-reproducibility.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-production-install:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Verify lockfile is unchanged
+        run: git diff --exit-code -- pnpm-lock.yaml
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Build production applications
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4100
+        run: |
+          pnpm --filter @preneura/api build
+          pnpm --filter @preneura/worker build
+          pnpm --filter @preneura/notification-gateway build
+          pnpm --filter @preneura/web build
