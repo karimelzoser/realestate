@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "pnpm run build:deps && next build",
+    "build": "node scripts/validate-build-config.mjs && pnpm run build:deps && next build",
     "build:deps": "pnpm --filter @preneura/contracts build",
     "start": "next start -p ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
