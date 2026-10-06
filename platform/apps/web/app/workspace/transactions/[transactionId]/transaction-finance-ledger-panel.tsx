@@ -230,7 +230,7 @@ function Status({ value }: { value: string }) {
   return <span className={styles.status}>{label(value)}</span>;
 }
 
-async function optionalFetch<T>(path: string, fallback: T): Promise<T> {
+async function optionalFetch<T>(path: string, fallback: T | null): Promise<T | null> {
   try {
     return await apiFetch<T>(path);
   } catch (error) {
