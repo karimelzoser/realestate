@@ -3,23 +3,29 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS platform_runtime_contract (
   singleton_key text PRIMARY KEY CHECK (singleton_key = 'production'),
   schema_version integer NOT NULL CHECK (schema_version > 0),
+  minimum_runtime_version integer NOT NULL CHECK (minimum_runtime_version > 0),
   migration_marker text NOT NULL,
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT platform_runtime_contract_compatibility
+    CHECK (minimum_runtime_version <= schema_version)
 );
 
 INSERT INTO platform_runtime_contract (
   singleton_key,
   schema_version,
+  minimum_runtime_version,
   migration_marker,
   updated_at
 ) VALUES (
   'production',
+  33,
   33,
   '0033_runtime_readiness_contract',
   now()
 )
 ON CONFLICT (singleton_key) DO UPDATE
 SET schema_version = EXCLUDED.schema_version,
+    minimum_runtime_version = EXCLUDED.minimum_runtime_version,
     migration_marker = EXCLUDED.migration_marker,
     updated_at = EXCLUDED.updated_at
 WHERE platform_runtime_contract.schema_version < EXCLUDED.schema_version;
@@ -39,6 +45,14 @@ BEGIN
 
   IF NEW.schema_version < OLD.schema_version THEN
     RAISE EXCEPTION 'platform runtime contract cannot move backwards';
+  END IF;
+
+  IF NEW.minimum_runtime_version < OLD.minimum_runtime_version THEN
+    RAISE EXCEPTION 'minimum compatible runtime version cannot move backwards';
+  END IF;
+
+  IF NEW.minimum_runtime_version > NEW.schema_version THEN
+    RAISE EXCEPTION 'minimum compatible runtime version cannot exceed schema version';
   END IF;
 
   IF NEW.schema_version = OLD.schema_version
