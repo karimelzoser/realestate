@@ -41,7 +41,8 @@ jobs:
         working-directory: .
         run: |
           set -euo pipefail
-          if grep -R --line-number --fixed-strings -- '--no-frozen-lockfile' platform .github/workflows; then
+          forbidden="--no-frozen-""lockfile"
+          if grep -R --line-number --fixed-strings -- "$forbidden" platform .github/workflows; then
             echo 'A production install still permits dependency drift.' >&2
             exit 1
           fi
