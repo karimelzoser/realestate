@@ -39,6 +39,17 @@ The dedicated worker owns:
 
 This separation is required so horizontally scaled API instances do not create duplicate timer execution.
 
+API process liveness and traffic readiness are separate:
+
+```text
+GET /v1/health/live
+GET /v1/health/ready
+```
+
+`/v1/health/live` proves only that the HTTP process is alive. `/v1/health/ready` also verifies PostgreSQL connectivity and the database/runtime compatibility contract. Production load balancers and Railway health checks must use `/v1/health/ready`.
+
+The worker performs the same compatibility check before starting any job loop and exits non-zero when the database is stale or incompatible. Rolling-deployment and rollback rules are documented in `docs/runtime-readiness.md`.
+
 ## Realtime model
 
 Realtime transport is intentionally signal-only. Browser streams never receive raw transactional outbox payloads.
@@ -112,7 +123,12 @@ pnpm --filter @preneura/api start
 
 pnpm --filter @preneura/worker build
 pnpm --filter @preneura/worker start
+
+pnpm --filter @preneura/notification-gateway build
+pnpm --filter @preneura/notification-gateway start
 ```
+
+Each deployable application's `build` script compiles the shared workspace packages it needs at Node runtime before building the leaf application.
 
 Default local endpoints:
 
@@ -192,6 +208,8 @@ A first-time Google identity is `PENDING`; identity verification alone never gra
 - realtime and user-notification `LISTEN/NOTIFY` triggers
 - durable replay and notification tables/indexes
 
+`.github/workflows/runtime-readiness-certification.yml` additionally boots the emitted API and worker against real PostgreSQL databases to prove current, stale, future-compatible and future-incompatible schema behavior. This catches runtime package resolution and Nest module wiring defects that static typecheck alone cannot prove.
+
 ## Railway service layout
 
 Use separate Railway services against the same repository/database.
@@ -240,6 +258,14 @@ pnpm --filter @preneura/api start
 
 Expose the API service publicly and set `PORT`, `WEB_ORIGIN`, `DATABASE_URL`, authentication variables and object-storage variables. `WEB_ORIGIN` must include the deployed web origin so credentialed browser requests and SSE can use the HttpOnly session cookie.
 
+Configure the Railway health check to:
+
+```text
+/v1/health/ready
+```
+
+Do not use the liveness-only endpoint for traffic readiness.
+
 ### Worker service
 
 Working/root directory:
@@ -260,7 +286,29 @@ Start command:
 pnpm --filter @preneura/worker start
 ```
 
-The worker does not need a public domain or HTTP port. Set `DATABASE_URL`, worker polling variables and notification-gateway variables.
+The worker does not need a public domain or HTTP port. Set `DATABASE_URL`, worker polling variables and notification-gateway variables. The process validates database/runtime compatibility before starting loops and should be restarted by Railway when it exits non-zero.
+
+### Notification gateway service
+
+Working/root directory:
+
+```text
+platform
+```
+
+Build command:
+
+```bash
+pnpm install --frozen-lockfile && pnpm --filter @preneura/notification-gateway build
+```
+
+Start command:
+
+```bash
+pnpm --filter @preneura/notification-gateway start
+```
+
+Set `DATABASE_URL` and the provider/gateway variables documented in `.env.example`. Keep this service independently deployable from the worker so provider delivery failures cannot block the worker's durable scheduling and claiming loops.
 
 ## Reproducible dependency installs
 
