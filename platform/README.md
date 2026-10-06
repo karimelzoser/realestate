@@ -84,7 +84,7 @@ cp .env.example .env
 # Replace all placeholder secrets and configure local S3-compatible storage.
 
 docker compose -f docker-compose.dev.yml up -d
-pnpm install
+pnpm install --frozen-lockfile
 ```
 
 Apply every migration in order:
@@ -207,7 +207,7 @@ platform
 Build command:
 
 ```bash
-pnpm install --no-frozen-lockfile && pnpm --filter @preneura/web build
+pnpm install --frozen-lockfile && pnpm --filter @preneura/web build
 ```
 
 Start command:
@@ -229,7 +229,7 @@ platform
 Build command:
 
 ```bash
-pnpm install --no-frozen-lockfile && pnpm --filter @preneura/api build
+pnpm install --frozen-lockfile && pnpm --filter @preneura/api build
 ```
 
 Start command:
@@ -251,7 +251,7 @@ platform
 Build command:
 
 ```bash
-pnpm install --no-frozen-lockfile && pnpm --filter @preneura/worker build
+pnpm install --frozen-lockfile && pnpm --filter @preneura/worker build
 ```
 
 Start command:
@@ -262,6 +262,8 @@ pnpm --filter @preneura/worker start
 
 The worker does not need a public domain or HTTP port. Set `DATABASE_URL`, worker polling variables and notification-gateway variables.
 
-## Release-hardening item still open
+## Reproducible dependency installs
 
-The workspace does not yet contain a committed `pnpm-lock.yaml`, so CI and Railway must currently use `--no-frozen-lockfile`. Before the production release branch is cut, generate and commit the workspace lockfile and switch CI/deploy installs to `--frozen-lockfile` so dependency resolution is fully reproducible.
+The production workspace commits `platform/pnpm-lock.yaml`, generated with Node 24 and pnpm 12.9.1 to match CI. Production CI and Railway install with `pnpm install --frozen-lockfile`, so a package manifest cannot silently resolve a different dependency graph.
+
+When a dependency changes, regenerate the lockfile with the pinned workspace package manager, review the lock diff, commit it with the manifest change, and require **Release Dependency Reproducibility** to pass before merge.
