@@ -6,6 +6,9 @@ import { scheduleInstallmentReminders } from './installment-reminders.js';
 import { scheduleMilestoneReminders } from './milestone-reminders.js';
 import { dispatchOutbox } from './outbox.js';
 import { dispatchNotifications } from './notifications.js';
+import { assertWorkerRuntimeConfiguration } from './runtime-config.js';
+
+assertWorkerRuntimeConfiguration();
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required');
