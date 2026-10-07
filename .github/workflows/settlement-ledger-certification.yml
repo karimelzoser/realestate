@@ -4,32 +4,36 @@ on:
   pull_request:
     paths:
       - "platform/.env.example"
+      - "platform/pnpm-lock.yaml"
       - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
       - "platform/packages/database/tests/gate4_settlement_ledger_certification.sql"
+      - "platform/packages/database/tests/gate4_settlement_command_authority_certification.sql"
       - "platform/packages/database/src/runtime-readiness.ts"
       - "platform/packages/contracts/src/access.ts"
       - "platform/packages/contracts/src/settlements.ts"
       - "platform/packages/contracts/src/commissions.ts"
       - "platform/apps/api/src/settlements/**"
       - "platform/apps/api/src/commissions/**"
-      - "platform/apps/web/app/workspace/refunds/**"
-      - "platform/apps/web/app/workspace/commissions/**"
+      - "platform/apps/web/app/workspace/settlements/**"
       - ".github/workflows/settlement-ledger-certification.yml"
   push:
     branches:
       - "feature/production-*"
     paths:
       - "platform/.env.example"
+      - "platform/pnpm-lock.yaml"
       - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
       - "platform/packages/database/tests/gate4_settlement_ledger_certification.sql"
+      - "platform/packages/database/tests/gate4_settlement_command_authority_certification.sql"
       - "platform/packages/database/src/runtime-readiness.ts"
       - "platform/packages/contracts/src/access.ts"
       - "platform/packages/contracts/src/settlements.ts"
       - "platform/packages/contracts/src/commissions.ts"
       - "platform/apps/api/src/settlements/**"
       - "platform/apps/api/src/commissions/**"
-      - "platform/apps/web/app/workspace/refunds/**"
-      - "platform/apps/web/app/workspace/commissions/**"
+      - "platform/apps/web/app/workspace/settlements/**"
       - ".github/workflows/settlement-ledger-certification.yml"
 
 permissions:
@@ -52,19 +56,34 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply migrations from zero
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply schema with production migrator
+        working-directory: platform
         env:
-          PGPASSWORD: postgres
-        run: |
-          set -euo pipefail
-          for migration in platform/packages/database/migrations/*.sql; do
-            echo "Applying ${migration}"
-            psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 -f "${migration}"
-          done
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
+          MIGRATION_ACTOR: gate4-settlement-certification
+        run: pnpm --filter @preneura/database migrate
 
       - name: Verify settlement authority structures
         env:
@@ -73,7 +92,34 @@ jobs:
           set -euo pipefail
           psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 <<'SQL'
           DO $$
+          DECLARE
+            v_latest integer;
           BEGIN
+            SELECT max(version) INTO v_latest FROM platform_schema_migrations;
+            IF v_latest <> 36 THEN
+              RAISE EXCEPTION 'production migrator did not finish at settlement schema 36; got %', v_latest;
+            END IF;
+
+            IF EXISTS (
+              SELECT 1 FROM platform_schema_migrations
+              WHERE filename !~ '^[0-9]{4}_[a-z0-9_]+[.]sql$'
+            ) THEN
+              RAISE EXCEPTION 'noncanonical migration entered production settlement history';
+            END IF;
+
+            IF NOT EXISTS (
+              SELECT 1 FROM platform_schema_migrations
+              WHERE version = 34 AND filename = '0034_settlement_disbursement_ledger.sql'
+            ) THEN RAISE EXCEPTION 'settlement ledger migration missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM platform_schema_migrations
+              WHERE version = 35 AND filename = '0035_settlement_state_authority.sql'
+            ) THEN RAISE EXCEPTION 'settlement state-authority migration missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM platform_schema_migrations
+              WHERE version = 36 AND filename = '0036_settlement_command_authority.sql'
+            ) THEN RAISE EXCEPTION 'settlement command-authority migration missing'; END IF;
+
             IF to_regclass('public.settlement_disbursements') IS NULL
               THEN RAISE EXCEPTION 'settlement disbursement table missing'; END IF;
             IF to_regclass('public.settlement_events') IS NULL
@@ -88,7 +134,7 @@ jobs:
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_settlement_ledger_immutable' AND NOT tgisinternal)
               THEN RAISE EXCEPTION 'settlement ledger immutability trigger missing'; END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_settlement_terminal_evidence' AND NOT tgisinternal)
-              THEN RAISE EXCEPTION 'terminal settlement evidence trigger missing'; END IF;
+              THEN RAISE EXCEPTION 'settlement state evidence trigger missing'; END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_eoi_refund_paid_by_settlement' AND NOT tgisinternal)
               THEN RAISE EXCEPTION 'refund paid-state authority trigger missing'; END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_commission_paid_by_settlement' AND NOT tgisinternal)
@@ -103,8 +149,15 @@ jobs:
             IF to_regprocedure('public.preneura_apply_settlement_outcome(uuid,text,uuid,text,text,text,timestamp with time zone,jsonb)') IS NULL
               THEN RAISE EXCEPTION 'settlement outcome function missing'; END IF;
 
-            IF (SELECT schema_version FROM platform_runtime_contract WHERE singleton_key='production') <> 35
-              THEN RAISE EXCEPTION 'runtime schema contract is not 35'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM platform_runtime_contract
+              WHERE singleton_key='production'
+                AND schema_version = 36
+                AND minimum_runtime_version = 36
+                AND migration_marker = '0036_settlement_command_authority'
+            ) THEN
+              RAISE EXCEPTION 'runtime contract is not settlement schema 36';
+            END IF;
           END $$;
           SQL
 
@@ -115,3 +168,11 @@ jobs:
           set -euo pipefail
           psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
             -f platform/packages/database/tests/gate4_settlement_ledger_certification.sql
+
+      - name: Execute settlement command-authority certification
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
+            -f platform/packages/database/tests/gate4_settlement_command_authority_certification.sql
