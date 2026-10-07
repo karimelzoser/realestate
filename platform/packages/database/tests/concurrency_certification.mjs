@@ -350,7 +350,7 @@ async function certifyProviderReplayContention() {
   assert(new Set(eventIds).size === 1, `provider replay produced ${new Set(eventIds).size} payment event IDs`);
 
   const inbox = await pool.query(
-    `SELECT count(*)::int AS count, min(status) AS status, min(payment_event_id)::text AS payment_event_id
+    `SELECT count(*)::int AS count, min(status) AS status, min(payment_event_id::text) AS payment_event_id
      FROM finance_provider_webhook_events WHERE provider=$1 AND provider_event_id=$2`,
     [provider, providerEventId],
   );
