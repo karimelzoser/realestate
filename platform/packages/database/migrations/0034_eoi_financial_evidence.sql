@@ -48,9 +48,17 @@ CREATE UNIQUE INDEX eoi_finance_provider_dedupe
 CREATE UNIQUE INDEX eoi_finance_reference_dedupe
   ON eoi_finance_events(tenant_id, project_id, source, external_reference);
 
-CREATE UNIQUE INDEX eoi_finance_one_receipt
-  ON eoi_finance_events(eoi_id)
+-- Historical receipts remain immutable after compensation. An EOI may receive
+-- a corrected replacement receipt only after its previous receipt is reversed.
+-- The buyer_eois row lock in the posting function serializes active-receipt
+-- creation; the indexes below make active receipt/reversal lookup deterministic.
+CREATE INDEX eoi_finance_receipts
+  ON eoi_finance_events(eoi_id, occurred_at DESC, created_at DESC, id DESC)
   WHERE event_type = 'PAYMENT_RECEIVED';
+
+CREATE UNIQUE INDEX eoi_finance_one_reversal_per_receipt
+  ON eoi_finance_events(related_event_id)
+  WHERE event_type = 'PAYMENT_REVERSED';
 
 CREATE UNIQUE INDEX eoi_finance_one_refund_per_request
   ON eoi_finance_events(refund_request_id)
@@ -212,9 +220,18 @@ BEGIN
 
   IF NOT FOUND THEN RAISE EXCEPTION 'EOI not found'; END IF;
 
-  SELECT * INTO v_existing
-  FROM eoi_finance_events
-  WHERE eoi_id = p_eoi_id AND event_type = 'PAYMENT_RECEIVED';
+  SELECT receipt.* INTO v_existing
+  FROM eoi_finance_events receipt
+  WHERE receipt.eoi_id = p_eoi_id
+    AND receipt.event_type = 'PAYMENT_RECEIVED'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM eoi_finance_events reversal
+      WHERE reversal.event_type = 'PAYMENT_REVERSED'
+        AND reversal.related_event_id = receipt.id
+    )
+  ORDER BY receipt.occurred_at DESC, receipt.created_at DESC, receipt.id DESC
+  LIMIT 1;
 
   IF FOUND THEN
     IF v_existing.external_reference = p_external_reference
@@ -222,7 +239,7 @@ BEGIN
        AND v_existing.currency = v_eoi.currency THEN
       RETURN v_existing.id;
     END IF;
-    RAISE EXCEPTION 'EOI already has a different immutable payment receipt';
+    RAISE EXCEPTION 'EOI already has a different active immutable payment receipt';
   END IF;
 
   IF v_eoi.status <> 'PAYMENT_PENDING' THEN
@@ -304,10 +321,20 @@ BEGIN
     RAISE EXCEPTION 'EOI payment cannot be reversed after refund workflow begins';
   END IF;
 
-  SELECT * INTO v_receipt FROM eoi_finance_events
-  WHERE eoi_id = p_eoi_id AND event_type = 'PAYMENT_RECEIVED'
+  SELECT receipt.* INTO v_receipt
+  FROM eoi_finance_events receipt
+  WHERE receipt.eoi_id = p_eoi_id
+    AND receipt.event_type = 'PAYMENT_RECEIVED'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM eoi_finance_events reversal
+      WHERE reversal.event_type = 'PAYMENT_REVERSED'
+        AND reversal.related_event_id = receipt.id
+    )
+  ORDER BY receipt.occurred_at DESC, receipt.created_at DESC, receipt.id DESC
+  LIMIT 1
   FOR SHARE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'EOI receipt evidence not found'; END IF;
+  IF NOT FOUND THEN RAISE EXCEPTION 'active EOI receipt evidence not found'; END IF;
 
   SELECT * INTO v_existing FROM eoi_finance_events
   WHERE related_event_id = v_receipt.id AND event_type = 'PAYMENT_REVERSED';
@@ -403,11 +430,20 @@ BEGIN
     RAISE EXCEPTION 'EOI is not awaiting an approved refund payout';
   END IF;
 
-  SELECT * INTO v_receipt
-  FROM eoi_finance_events
-  WHERE eoi_id = v_eoi.id AND event_type = 'PAYMENT_RECEIVED'
+  SELECT receipt.* INTO v_receipt
+  FROM eoi_finance_events receipt
+  WHERE receipt.eoi_id = v_eoi.id
+    AND receipt.event_type = 'PAYMENT_RECEIVED'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM eoi_finance_events reversal
+      WHERE reversal.event_type = 'PAYMENT_REVERSED'
+        AND reversal.related_event_id = receipt.id
+    )
+  ORDER BY receipt.occurred_at DESC, receipt.created_at DESC, receipt.id DESC
+  LIMIT 1
   FOR SHARE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'immutable EOI payment receipt is required before refund payout'; END IF;
+  IF NOT FOUND THEN RAISE EXCEPTION 'active immutable EOI payment receipt is required before refund payout'; END IF;
 
   IF v_request.currency <> v_receipt.currency
      OR v_request.original_eoi_amount <> v_receipt.amount
