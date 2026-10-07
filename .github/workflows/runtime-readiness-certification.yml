@@ -124,7 +124,16 @@ jobs:
 
           rm -rf /tmp/preneura-migrations-drift
           cp -R packages/database/migrations /tmp/preneura-migrations-drift
-          printf '\n-- historical checksum drift for certification\n' >> /tmp/preneura-migrations-drift/0001_auth_foundation.sql
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/preneura-migrations-drift/0001_auth_foundation.sql')
+          text = path.read_text()
+          marker = '\nCOMMIT;'
+          if marker not in text:
+              raise SystemExit('expected final COMMIT in migration 0001')
+          text = text.rsplit(marker, 1)[0] + '\n-- historical checksum drift for certification' + marker + '\n'
+          path.write_text(text)
+          PY
           set +e
           DATABASE_URL="$FRESH_URL" MIGRATIONS_DIR=/tmp/preneura-migrations-drift \
             pnpm --filter @preneura/database migrate >/tmp/preneura-migration-drift.log 2>&1
