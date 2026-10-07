@@ -14,6 +14,11 @@ export function validateApiRuntimeConfig(env: NodeJS.ProcessEnv = process.env): 
   requireSecret(env, 'CONTACT_VERIFICATION_PEPPER', failures);
   requireBase64Key(env, 'CONTACT_ENCRYPTION_KEY_BASE64', 32, failures);
 
+  if (env.SESSION_COOKIE_NAME?.trim() && !env.SESSION_COOKIE_NAME.trim().startsWith('__Host-')) {
+    failures.push('SESSION_COOKIE_NAME must use the __Host- prefix in production when overridden.');
+  }
+  requirePositiveIntegerIfPresent(env, 'API_RATE_LIMIT_PER_MINUTE', failures);
+
   if (env.OTP_PROVIDER !== 'gateway') {
     failures.push('OTP_PROVIDER must be gateway in production.');
   }
@@ -33,6 +38,10 @@ export function validateApiRuntimeConfig(env: NodeJS.ProcessEnv = process.env): 
 
   requireAbsoluteUrl(env, 'DOCUMENT_SCANNER_URL', failures);
   requireSecret(env, 'DOCUMENT_SCANNER_TOKEN', failures, 16);
+
+  if (env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT?.trim()) {
+    requireAbsoluteUrl(env, 'OTEL_EXPORTER_OTLP_TRACES_ENDPOINT', failures);
+  }
 
   if (failures.length > 0) {
     throw new Error(`Invalid production configuration:\n- ${failures.join('\n- ')}`);
@@ -132,6 +141,17 @@ function requireHttpsOrigins(env: NodeJS.ProcessEnv, name: string, failures: str
       failures.push(`${name} contains an invalid origin.`);
     }
   }
+}
+
+function requirePositiveIntegerIfPresent(
+  env: NodeJS.ProcessEnv,
+  name: string,
+  failures: string[],
+): void {
+  const value = env[name]?.trim();
+  if (!value) return;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) failures.push(`${name} must be a positive integer.`);
 }
 
 function isPlaceholder(value: string): boolean {
