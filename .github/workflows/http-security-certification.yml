@@ -1,0 +1,162 @@
+name: HTTP Security Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/api/src/main.ts"
+      - "platform/apps/api/src/config/**"
+      - "platform/apps/api/src/security/**"
+      - "platform/.env.example"
+      - "platform/docs/http-security.md"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/http-security-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/apps/api/src/main.ts"
+      - "platform/apps/api/src/config/**"
+      - "platform/apps/api/src/security/**"
+      - "platform/.env.example"
+      - "platform/docs/http-security.md"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/http-security-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  certify-http-edge:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck and build API
+        run: |
+          set -euo pipefail
+          pnpm --filter @preneura/api typecheck
+          pnpm --filter @preneura/api build
+      - name: Certify proxy and body-limit resolvers
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { resolveApiBodyLimit, resolveTrustProxy } from './apps/api/dist/security/http-security.js';
+
+          if (resolveApiBodyLimit({}) !== 8 * 1024 * 1024) throw new Error('default body limit changed');
+          if (resolveApiBodyLimit({ API_BODY_LIMIT_BYTES: '65536' }) !== 65536) throw new Error('explicit body limit rejected');
+          for (const invalid of ['0', '65535', '16777217', '1.5', 'x']) {
+            let threw = false;
+            try { resolveApiBodyLimit({ API_BODY_LIMIT_BYTES: invalid }); } catch { threw = true; }
+            if (!threw) throw new Error(`invalid body limit accepted: ${invalid}`);
+          }
+
+          if (resolveTrustProxy({}) !== false) throw new Error('proxy trust must default to false');
+          const trust = resolveTrustProxy({ TRUST_PROXY_HOPS: '2' });
+          if (typeof trust !== 'function') throw new Error('trusted proxy resolver missing');
+          if (!trust('10.0.0.1', 0) || !trust('10.0.0.2', 1) || trust('203.0.113.10', 2)) {
+            throw new Error('trusted proxy hop boundary incorrect');
+          }
+          for (const invalid of ['0', '11', '1.5', 'x']) {
+            let threw = false;
+            try { resolveTrustProxy({ TRUST_PROXY_HOPS: invalid }); } catch { threw = true; }
+            if (!threw) throw new Error(`invalid proxy hop setting accepted: ${invalid}`);
+          }
+          NODE
+      - name: Boot real API with bounded body parser
+        env:
+          NODE_ENV: test
+          PORT: 4140
+          WEB_ORIGIN: http://localhost:3000
+          DATABASE_URL: postgresql://unused:unused@127.0.0.1:59999/unused
+          TRUST_PROXY_HOPS: "1"
+          API_BODY_LIMIT_BYTES: "65536"
+          OBJECT_STORAGE_BUCKET: http-security-certification
+          AUTH_IDENTIFIER_HMAC_KEY: http-security-auth-hmac
+          AUTH_OTP_PEPPER: http-security-otp-pepper
+          COOKIE_SIGNING_SECRET: http-security-cookie-secret
+          OIDC_ISSUER: http://localhost:8080/realms/preneura
+          OIDC_CLIENT_ID: preneura-web
+          OIDC_CLIENT_SECRET: http-security-oidc
+          OIDC_REDIRECT_URI: http://localhost:4140/v1/auth/google/callback
+          CONTACT_ENCRYPTION_KEY_BASE64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          CONTACT_HMAC_KEY: http-security-contact-hmac
+          CONTACT_VERIFICATION_PEPPER: http-security-contact-pepper
+          OTP_PROVIDER: console
+        run: |
+          set -Eeuo pipefail
+          pnpm --filter @preneura/api start >/tmp/http-security-api.log 2>&1 &
+          API_PID=$!
+          trap 'kill "$API_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4140/v1/health/live >/dev/null; then
+              break
+            fi
+            if ! kill -0 "$API_PID" 2>/dev/null; then
+              cat /tmp/http-security-api.log
+              exit 1
+            fi
+            sleep 1
+          done
+          curl --silent --fail http://127.0.0.1:4140/v1/health/live >/dev/null
+          echo "$API_PID" >/tmp/http-security-api.pid
+      - name: Certify headers and server-generated correlation IDs
+        run: |
+          set -euo pipefail
+          curl -sS -D /tmp/headers-one -o /tmp/body-one \
+            -H 'x-request-id: attacker-controlled' \
+            http://127.0.0.1:4140/v1/health/live
+          curl -sS -D /tmp/headers-two -o /tmp/body-two http://127.0.0.1:4140/v1/health/live
+
+          header() { awk -v key="$1" 'BEGIN{IGNORECASE=1} $1==key":" {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' "$2"; }
+          REQUEST_ONE="$(header x-request-id /tmp/headers-one)"
+          REQUEST_TWO="$(header x-request-id /tmp/headers-two)"
+          echo "$REQUEST_ONE" | grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+          echo "$REQUEST_TWO" | grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+          test "$REQUEST_ONE" != 'attacker-controlled'
+          test "$REQUEST_ONE" != "$REQUEST_TWO"
+
+          test "$(header x-content-type-options /tmp/headers-one)" = 'nosniff'
+          test "$(header x-frame-options /tmp/headers-one)" = 'DENY'
+          test "$(header referrer-policy /tmp/headers-one)" = 'no-referrer'
+          test "$(header cache-control /tmp/headers-one)" = 'no-store'
+          test "$(header strict-transport-security /tmp/headers-one)" = 'max-age=31536000; includeSubDomains'
+          grep -qi '^permissions-policy:.*camera=()' /tmp/headers-one
+          grep -qi "^content-security-policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'" /tmp/headers-one
+          ! grep -qi '^x-powered-by:' /tmp/headers-one
+      - name: Reject oversized API body before application handling
+        run: |
+          set -euo pipefail
+          python - <<'PY' >/tmp/oversized.json
+          import json
+          print(json.dumps({"method":"phone","identifier":"+201000000000","padding":"x" * 70000}))
+          PY
+          STATUS=$(curl -sS -o /tmp/oversized-response.json -D /tmp/oversized-headers \
+            -w '%{http_code}' -H 'content-type: application/json' \
+            --data-binary @/tmp/oversized.json \
+            http://127.0.0.1:4140/v1/auth/login/start)
+          test "$STATUS" = '413'
+          grep -qi '^x-request-id:' /tmp/oversized-headers
+          grep -qi '^x-content-type-options: nosniff' /tmp/oversized-headers
+      - name: Stop API
+        if: always()
+        run: |
+          if [[ -f /tmp/http-security-api.pid ]]; then
+            kill "$(cat /tmp/http-security-api.pid)" 2>/dev/null || true
+          fi
