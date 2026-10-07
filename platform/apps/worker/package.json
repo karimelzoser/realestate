@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "pnpm run build:deps && tsc -p tsconfig.json",
-    "build:deps": "pnpm --filter @preneura/database build",
+    "build:deps": "pnpm --filter @preneura/database build && pnpm --filter @preneura/observability build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --test",
     "lint": "tsc --noEmit -p tsconfig.json",
@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@preneura/database": "workspace:*",
+    "@preneura/observability": "workspace:*",
     "kysely": "^0.28.8"
   },
   "devDependencies": {
