@@ -25,6 +25,8 @@ export function resolveTrustProxy(env: NodeJS.ProcessEnv = process.env): TrustPr
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 10) {
     throw new Error('TRUST_PROXY_HOPS must be an integer between 1 and 10.');
   }
+  // Fastify provides the remote address plus hop index. Trust only the explicitly
+  // configured proxy chain; the next hop is treated as the client boundary.
   return (_address: string, hop: number): boolean => hop < parsed;
 }
 
