@@ -1,6 +1,4 @@
 \set ON_ERROR_STOP on
-\pset tuples_only on
-\pset format unaligned
 
 WITH evidence AS (
   SELECT jsonb_build_object(
