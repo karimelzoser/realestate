@@ -182,7 +182,8 @@ BEGIN
       updated_at = '2026-02-03T09:00:00+00'
   WHERE id = v_eoi;
 
-  -- Direct payout projection is forbidden even after approval.
+  -- Direct payout projection is forbidden even after prior finance operations
+  -- in this same transaction; projection authority must be one-shot.
   v_rejected := false;
   BEGIN
     UPDATE eoi_refund_requests
@@ -306,15 +307,15 @@ BEGIN
     RAISE EXCEPTION 'database allowed EOI ledger deletion';
   END IF;
 
-  -- Runtime contract must identify the fail-closed EOI finance authority exactly.
+  -- Runtime contract must identify the one-shot EOI finance authority exactly.
   IF NOT EXISTS (
     SELECT 1 FROM platform_runtime_contract
     WHERE singleton_key = 'production'
-      AND schema_version = 35
-      AND minimum_runtime_version = 35
-      AND migration_marker = '0035_eoi_projection_guards_fail_closed'
+      AND schema_version = 36
+      AND minimum_runtime_version = 36
+      AND migration_marker = '0036_eoi_projection_authority_one_shot'
   ) THEN
-    RAISE EXCEPTION 'runtime contract is not pinned to fail-closed EOI finance schema 35';
+    RAISE EXCEPTION 'runtime contract is not pinned to one-shot EOI finance schema 36';
   END IF;
 END $$;
 
