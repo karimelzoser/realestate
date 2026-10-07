@@ -60,7 +60,7 @@ async function main() {
     const jobIds = jobs.map((job) => job.id);
     const userNotifications = await db
       .selectFrom('user_notifications')
-      .select(({ fn }) => fn.countAll<number>().as('count'))
+      .select(({ fn }) => fn.countAll().as('count'))
       .where('notification_job_id', 'in', jobIds)
       .executeTakeFirstOrThrow();
     assert(Number(userNotifications.count) === 100, `expected 100 materialized notifications, got ${userNotifications.count}`);
@@ -68,7 +68,7 @@ async function main() {
     const attempts = await db
       .selectFrom('notification_delivery_attempts')
       .select(({ fn }) => [
-        fn.countAll<number>().as('count'),
+        fn.countAll().as('count'),
         fn.max('attempt_number').as('max_attempt'),
       ])
       .where('notification_job_id', 'in', jobIds)
