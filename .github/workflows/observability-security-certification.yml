@@ -9,6 +9,9 @@ on:
       - "platform/apps/web/lib/api.ts"
       - "platform/packages/observability/**"
       - "platform/pnpm-lock.yaml"
+      - "platform/pnpm-workspace.yaml"
+      - "platform/.env.example"
+      - "platform/docs/observability-security.md"
       - "platform/scripts/certify-observability-security.mjs"
       - ".github/workflows/observability-security-certification.yml"
   push:
@@ -21,6 +24,9 @@ on:
       - "platform/apps/web/lib/api.ts"
       - "platform/packages/observability/**"
       - "platform/pnpm-lock.yaml"
+      - "platform/pnpm-workspace.yaml"
+      - "platform/.env.example"
+      - "platform/docs/observability-security.md"
       - "platform/scripts/certify-observability-security.mjs"
       - ".github/workflows/observability-security-certification.yml"
 
