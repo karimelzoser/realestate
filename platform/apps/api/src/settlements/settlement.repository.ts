@@ -1,7 +1,7 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { SettlementSnapshot } from '@preneura/contracts/settlements';
 import type { Database } from '@preneura/database';
-import { sql, type Kysely } from 'kysely';
+import { sql, type Kysely, type Transaction } from 'kysely';
 import { DATABASE } from '../database/database.module.js';
 
 interface SettlementContextRow {
@@ -11,6 +11,8 @@ interface SettlementContextRow {
   settlement_type: 'EOI_REFUND' | 'BROKER_COMMISSION';
   broker_company_id: string | null;
 }
+
+type Executor = Kysely<Database> | Transaction<Database>;
 
 @Injectable()
 export class SettlementRepository {
@@ -54,12 +56,7 @@ export class SettlementRepository {
 
   async context(settlementId: string): Promise<SettlementContextRow | null> {
     const result = await sql<SettlementContextRow>`
-      SELECT
-        id AS settlement_id,
-        tenant_id,
-        project_id,
-        settlement_type,
-        broker_company_id
+      SELECT id AS settlement_id, tenant_id, project_id, settlement_type, broker_company_id
       FROM settlement_disbursements
       WHERE id = ${settlementId}::uuid
     `.execute(this.db);
@@ -83,78 +80,8 @@ export class SettlementRepository {
     `.execute(this.db);
   }
 
-  async snapshot(settlementId: string): Promise<SettlementSnapshot> {
-    const settlement = await sql<{
-      settlement_id: string;
-      settlement_type: 'EOI_REFUND' | 'BROKER_COMMISSION';
-      status: SettlementSnapshot['status'];
-      eoi_refund_request_id: string | null;
-      commission_case_id: string | null;
-      buyer_profile_id: string | null;
-      broker_company_id: string | null;
-      amount: string;
-      currency: string;
-      provider: string | null;
-      provider_reference: string | null;
-      initiated_at: Date;
-      submitted_at: Date | null;
-      settled_at: Date | null;
-      failed_at: Date | null;
-      reversed_at: Date | null;
-    }>`
-      SELECT
-        id AS settlement_id, settlement_type, status,
-        eoi_refund_request_id, commission_case_id, buyer_profile_id, broker_company_id,
-        amount::text, currency, provider, provider_reference,
-        initiated_at, submitted_at, settled_at, failed_at, reversed_at
-      FROM settlement_disbursements
-      WHERE id = ${settlementId}::uuid
-    `.execute(this.db);
-    const row = settlement.rows[0];
-    if (!row) throw new NotFoundException('Settlement not found.');
-
-    const events = await sql<{
-      settlement_event_id: string;
-      event_type: SettlementSnapshot['events'][number]['eventType'];
-      provider: string | null;
-      provider_event_id: string | null;
-      provider_reference: string | null;
-      occurred_at: Date;
-    }>`
-      SELECT
-        id AS settlement_event_id, event_type, provider, provider_event_id,
-        provider_reference, occurred_at
-      FROM settlement_events
-      WHERE settlement_id = ${settlementId}::uuid
-      ORDER BY occurred_at, id
-    `.execute(this.db);
-
-    return {
-      settlementId: row.settlement_id,
-      settlementType: row.settlement_type,
-      status: row.status,
-      eoiRefundRequestId: row.eoi_refund_request_id,
-      commissionCaseId: row.commission_case_id,
-      buyerProfileId: row.buyer_profile_id,
-      brokerCompanyId: row.broker_company_id,
-      amount: row.amount,
-      currency: row.currency,
-      provider: row.provider,
-      providerReference: row.provider_reference,
-      initiatedAt: row.initiated_at.toISOString(),
-      submittedAt: row.submitted_at?.toISOString() ?? null,
-      settledAt: row.settled_at?.toISOString() ?? null,
-      failedAt: row.failed_at?.toISOString() ?? null,
-      reversedAt: row.reversed_at?.toISOString() ?? null,
-      events: events.rows.map((event) => ({
-        settlementEventId: event.settlement_event_id,
-        eventType: event.event_type,
-        provider: event.provider,
-        providerEventId: event.provider_event_id,
-        providerReference: event.provider_reference,
-        occurredAt: event.occurred_at.toISOString(),
-      })),
-    };
+  snapshot(settlementId: string): Promise<SettlementSnapshot> {
+    return this.snapshotWith(this.db, settlementId);
   }
 
   async ingestProvider(input: {
@@ -221,16 +148,80 @@ export class SettlementRepository {
         `.execute(trx);
       }
 
-      return this.snapshotIn(trx, stored.settlement_id);
+      return this.snapshotWith(trx, stored.settlement_id);
     });
   }
 
-  private async snapshotIn(executor: Kysely<Database>, settlementId: string): Promise<SettlementSnapshot> {
-    const result = await sql<{ id: string }>`SELECT ${settlementId}::uuid AS id`.execute(executor);
-    const id = result.rows[0]?.id;
-    if (!id) throw new NotFoundException('Settlement not found.');
-    // The provider transaction has already serialized this settlement event. Read after commit-equivalent state
-    // using the same underlying database connection through the public snapshot query.
-    return this.snapshot(id);
+  private async snapshotWith(executor: Executor, settlementId: string): Promise<SettlementSnapshot> {
+    const settlement = await sql<{
+      settlement_id: string;
+      settlement_type: 'EOI_REFUND' | 'BROKER_COMMISSION';
+      status: SettlementSnapshot['status'];
+      eoi_refund_request_id: string | null;
+      commission_case_id: string | null;
+      buyer_profile_id: string | null;
+      broker_company_id: string | null;
+      amount: string;
+      currency: string;
+      provider: string | null;
+      provider_reference: string | null;
+      initiated_at: Date;
+      submitted_at: Date | null;
+      settled_at: Date | null;
+      failed_at: Date | null;
+      reversed_at: Date | null;
+    }>`
+      SELECT
+        id AS settlement_id, settlement_type, status,
+        eoi_refund_request_id, commission_case_id, buyer_profile_id, broker_company_id,
+        amount::text, currency, provider, provider_reference,
+        initiated_at, submitted_at, settled_at, failed_at, reversed_at
+      FROM settlement_disbursements
+      WHERE id = ${settlementId}::uuid
+    `.execute(executor);
+    const row = settlement.rows[0];
+    if (!row) throw new NotFoundException('Settlement not found.');
+
+    const events = await sql<{
+      settlement_event_id: string;
+      event_type: SettlementSnapshot['events'][number]['eventType'];
+      provider: string | null;
+      provider_event_id: string | null;
+      provider_reference: string | null;
+      occurred_at: Date;
+    }>`
+      SELECT id AS settlement_event_id, event_type, provider, provider_event_id,
+             provider_reference, occurred_at
+      FROM settlement_events
+      WHERE settlement_id = ${settlementId}::uuid
+      ORDER BY occurred_at, id
+    `.execute(executor);
+
+    return {
+      settlementId: row.settlement_id,
+      settlementType: row.settlement_type,
+      status: row.status,
+      eoiRefundRequestId: row.eoi_refund_request_id,
+      commissionCaseId: row.commission_case_id,
+      buyerProfileId: row.buyer_profile_id,
+      brokerCompanyId: row.broker_company_id,
+      amount: row.amount,
+      currency: row.currency,
+      provider: row.provider,
+      providerReference: row.provider_reference,
+      initiatedAt: row.initiated_at.toISOString(),
+      submittedAt: row.submitted_at?.toISOString() ?? null,
+      settledAt: row.settled_at?.toISOString() ?? null,
+      failedAt: row.failed_at?.toISOString() ?? null,
+      reversedAt: row.reversed_at?.toISOString() ?? null,
+      events: events.rows.map((event) => ({
+        settlementEventId: event.settlement_event_id,
+        eventType: event.event_type,
+        provider: event.provider,
+        providerEventId: event.provider_event_id,
+        providerReference: event.provider_reference,
+        occurredAt: event.occurred_at.toISOString(),
+      })),
+    };
   }
 }
