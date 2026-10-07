@@ -94,7 +94,7 @@ jobs:
 
             IF EXISTS (
               SELECT 1 FROM platform_schema_migrations
-              WHERE filename !~ '^\\d{4}_[a-z0-9_]+\\.sql$'
+              WHERE filename !~ '^[0-9]{4}_[a-z0-9_]+[.]sql$'
             ) THEN
               RAISE EXCEPTION 'noncanonical migration entered production history';
             END IF;
