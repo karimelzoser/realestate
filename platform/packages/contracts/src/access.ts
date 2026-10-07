@@ -56,7 +56,7 @@ export const roleCapabilityMap: Readonly<Record<RoleCode, readonly PermissionCod
     'tenant.read','tenant.users.manage','tenant.projects.manage','project.read','project.manage','project.import.manage','pricing.read','pricing.publish','buyers.read','buyers.manage','eoi.read','eoi.manage',
     'queue.read','queue.manage','inventory.read','allocation.assist','unit.lock','transaction.read','transaction.manage','payment.read','payment.verify','payment.schedule.manage','documents.read','documents.upload','documents.verify','documents.templates.manage',
     'contract.read','contract.generate','contract.execute','contract.sign.company','broker.buyers.read','broker.buyers.manage','broker.users.manage','broker.performance.read','commission.status.read','commission.amount.read','commission.rate.read',
-    'commission.invoice.manage','commission.payout.manage','commission.plan.manage','refund.read','refund.request','refund.approve','refund.payout.manage','notifications.read','notifications.manage','audit.read','ai.manager.use','ai.settings.manage',
+    'commission.invoice.manage','commission.payment.manage','commission.payout.manage','commission.plan.manage','refund.read','refund.request','refund.approve','refund.payout.manage','notifications.read','notifications.manage','audit.read','ai.manager.use','ai.settings.manage',
   ],
   MANAGER: [
     'project.read','project.manage','project.import.manage','pricing.read','pricing.publish','buyers.read','buyers.manage','eoi.read','eoi.manage','queue.read','queue.manage','inventory.read','transaction.read','transaction.manage','payment.read','payment.verify','payment.schedule.manage',
