@@ -26,7 +26,7 @@
 
 ## Runtime boundaries
 
-The API is stateless request/SSE infrastructure. It does **not** own recurring timers.
+The API is stateless request/SSE infrastructure. It does **not** own recurring timers or run schema migrations on startup.
 
 The dedicated worker owns:
 
@@ -48,7 +48,7 @@ GET /v1/health/ready
 
 `/v1/health/live` proves only that the HTTP process is alive. `/v1/health/ready` also verifies PostgreSQL connectivity and the database/runtime compatibility contract. Production load balancers and Railway health checks must use `/v1/health/ready`.
 
-The worker performs the same compatibility check before starting any job loop and exits non-zero when the database is stale or incompatible. Rolling-deployment and rollback rules are documented in `docs/runtime-readiness.md`.
+The worker validates production configuration and the same database/runtime contract before starting any job loop. It exits non-zero when configuration or schema compatibility is unsafe. Rolling deployment, migration, adoption, and rollback rules are documented in `docs/runtime-readiness.md`.
 
 ## Realtime model
 
@@ -96,15 +96,10 @@ cp .env.example .env
 
 docker compose -f docker-compose.dev.yml up -d
 pnpm install --frozen-lockfile
+pnpm --filter @preneura/database migrate
 ```
 
-Apply every migration in order:
-
-```bash
-for migration in packages/database/migrations/*.sql; do
-  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
-done
-```
+`@preneura/database migrate` is the supported migration path. It serializes concurrent migrators with a PostgreSQL advisory lock and verifies immutable SHA-256 history before applying pending migrations.
 
 Run all development applications:
 
@@ -184,9 +179,9 @@ Worker delivery behavior:
 
 ## Document storage
 
-Documents, templates and signature objects are never stored as file bytes in PostgreSQL. The API generates server-scoped S3-compatible object keys and presigned uploads, then verifies byte size, MIME type and SHA-256 before accepting the business record.
+Documents, templates and signature objects are never stored as file bytes in PostgreSQL. The API generates server-scoped S3-compatible object keys and presigned uploads, then verifies byte size, MIME type, SHA-256, file signature, and malware-scanner verdict before trusted business use.
 
-Required storage configuration is documented in `.env.example`.
+Required storage/scanner configuration is documented in `.env.example`.
 
 ## Keycloak setup for Google
 
@@ -196,23 +191,70 @@ A first-time Google identity is `PENDING`; identity verification alone never gra
 
 ## Production validation
 
-`.github/workflows/platform-foundation.yml` currently validates:
+`.github/workflows/platform-foundation.yml` validates:
 
-- strict TypeScript for API, worker, web, contracts and database packages
-- emitted API build
-- emitted worker build
-- production Next.js web build
+- frozen dependency install
+- strict TypeScript for production workspace packages
+- emitted API/worker/notification-gateway/web builds
 - PostgreSQL 18 migrations from an empty database
 - critical uniqueness/index constraints across catalog, sales, documents, finance, commissions and notification runtime
 - commission creation/refresh triggers
 - realtime and user-notification `LISTEN/NOTIFY` triggers
 - durable replay and notification tables/indexes
 
-`.github/workflows/runtime-readiness-certification.yml` additionally boots the emitted API and worker against real PostgreSQL databases to prove current, stale, future-compatible and future-incompatible schema behavior. This catches runtime package resolution and Nest module wiring defects that static typecheck alone cannot prove.
+`.github/workflows/runtime-readiness-certification.yml` additionally boots emitted API/worker processes against real PostgreSQL databases and certifies:
+
+- current, stale, future-compatible and future-incompatible schema states
+- production configuration fail-closed behavior
+- fresh/idempotent migrations
+- one-time legacy schema adoption
+- checksum-tamper rejection
+- concurrent migrator serialization
+
+## Production release sequence
+
+Use this order for every database-affecting release:
+
+1. build the immutable release from the committed lockfile;
+2. run exactly one migration/release job with the same `DATABASE_URL`:
+
+   ```bash
+   pnpm --filter @preneura/database migrate
+   ```
+
+3. require the migration job to succeed before API/worker rollout;
+4. roll API instances and admit traffic only after `/v1/health/ready` returns `200`;
+5. roll workers after the same runtime/schema contract is compatible.
+
+Do not configure API or worker replicas to auto-migrate on startup.
+
+For the one-time transition of a pre-runner database, follow the adoption procedure in `docs/runtime-readiness.md`; do not permanently set `MIGRATION_ADOPT_EXISTING=true`.
 
 ## Railway service layout
 
 Use separate Railway services against the same repository/database.
+
+### Migration/release job
+
+Working/root directory:
+
+```text
+platform
+```
+
+Install/build preparation:
+
+```bash
+pnpm install --frozen-lockfile
+```
+
+One-shot release command:
+
+```bash
+MIGRATION_ACTOR=railway-release pnpm --filter @preneura/database migrate
+```
+
+Run this as a dedicated one-shot release service/job (or the platform's equivalent pre-deploy hook) before rolling API and worker services. It must use the production `DATABASE_URL` and must complete successfully before traffic rollout.
 
 ### Web service
 
@@ -256,7 +298,7 @@ Start command:
 pnpm --filter @preneura/api start
 ```
 
-Expose the API service publicly and set `PORT`, `WEB_ORIGIN`, `DATABASE_URL`, authentication variables and object-storage variables. `WEB_ORIGIN` must include the deployed web origin so credentialed browser requests and SSE can use the HttpOnly session cookie.
+Expose the API service publicly and set `PORT`, `WEB_ORIGIN`, `DATABASE_URL`, authentication/OIDC variables, OTP/contact gateway variables, object-storage variables, and document-scanner variables. Production startup validates this configuration before Nest begins serving requests.
 
 Configure the Railway health check to:
 
@@ -286,7 +328,7 @@ Start command:
 pnpm --filter @preneura/worker start
 ```
 
-The worker does not need a public domain or HTTP port. Set `DATABASE_URL`, worker polling variables and notification-gateway variables. The process validates database/runtime compatibility before starting loops and should be restarted by Railway when it exits non-zero.
+The worker does not need a public domain or HTTP port. Set `DATABASE_URL`, bounded worker polling variables, `NOTIFICATION_GATEWAY_URL`, and `NOTIFICATION_GATEWAY_TOKEN`. Production startup validates configuration and database/runtime compatibility before starting loops; Railway should restart the service when it exits non-zero.
 
 ### Notification gateway service
 
