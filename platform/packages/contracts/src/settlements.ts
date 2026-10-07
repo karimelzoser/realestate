@@ -37,7 +37,7 @@ export interface SettlementEventSnapshot {
   occurredAt: string;
 }
 
-export interface SettlementSnapshot {
+export interface SettlementSummarySnapshot {
   settlementId: string;
   settlementType: SettlementType;
   status: SettlementStatus;
@@ -54,5 +54,8 @@ export interface SettlementSnapshot {
   settledAt: string | null;
   failedAt: string | null;
   reversedAt: string | null;
+}
+
+export interface SettlementSnapshot extends SettlementSummarySnapshot {
   events: SettlementEventSnapshot[];
 }
