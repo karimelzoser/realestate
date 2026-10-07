@@ -34,18 +34,18 @@ create_test_databases() {
 
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_compatible -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 UPDATE platform_runtime_contract
-SET schema_version = 34,
-    minimum_runtime_version = 33,
-    migration_marker = '0034_additive_future',
+SET schema_version = 36,
+    minimum_runtime_version = 35,
+    migration_marker = '0036_additive_future',
     updated_at = now()
 WHERE singleton_key = 'production';
 SQL
 
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_incompatible -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 UPDATE platform_runtime_contract
-SET schema_version = 34,
-    minimum_runtime_version = 34,
-    migration_marker = '0034_breaking_future',
+SET schema_version = 36,
+    minimum_runtime_version = 36,
+    migration_marker = '0036_breaking_future',
     updated_at = now()
 WHERE singleton_key = 'production';
 SQL
@@ -57,7 +57,7 @@ DO $$
 BEGIN
   BEGIN
     UPDATE platform_runtime_contract
-    SET schema_version = 32
+    SET schema_version = 34
     WHERE singleton_key = 'production';
     RAISE EXCEPTION 'schema downgrade unexpectedly succeeded';
   EXCEPTION WHEN OTHERS THEN
@@ -66,7 +66,7 @@ BEGIN
 
   BEGIN
     UPDATE platform_runtime_contract
-    SET minimum_runtime_version = 32
+    SET minimum_runtime_version = 33
     WHERE singleton_key = 'production';
     RAISE EXCEPTION 'runtime compatibility downgrade unexpectedly succeeded';
   EXCEPTION WHEN OTHERS THEN
@@ -126,7 +126,7 @@ try {
 TS
 
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_current" \
-    EXPECT_DATABASE_SCHEMA_VERSION=33 \
+    EXPECT_DATABASE_SCHEMA_VERSION=35 \
     pnpm --filter @preneura/api exec tsx .runtime-readiness-certification.mts
 
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_stale" \
@@ -134,7 +134,7 @@ TS
     pnpm --filter @preneura/api exec tsx .runtime-readiness-certification.mts
 
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_future_compatible" \
-    EXPECT_DATABASE_SCHEMA_VERSION=34 \
+    EXPECT_DATABASE_SCHEMA_VERSION=36 \
     pnpm --filter @preneura/api exec tsx .runtime-readiness-certification.mts
 
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_future_incompatible" \
@@ -179,7 +179,7 @@ certify_api_current() {
   curl --fail --silent http://127.0.0.1:4100/v1/health/live | grep -q '"status":"ok"'
   curl --fail --silent http://127.0.0.1:4100/v1/health/ready >/tmp/ready.json
   grep -q '"status":"ready"' /tmp/ready.json
-  grep -q '"databaseSchemaVersion":33' /tmp/ready.json
+  grep -q '"databaseSchemaVersion":35' /tmp/ready.json
 
   kill "$pid"
   wait "$pid" || true
@@ -236,7 +236,7 @@ certify_worker() {
     return 1
   fi
   grep -q 'worker.ready' /tmp/worker-current.log
-  grep -q '"databaseSchemaVersion":33' /tmp/worker-current.log
+  grep -q '"databaseSchemaVersion":35' /tmp/worker-current.log
 }
 
 create_test_databases
