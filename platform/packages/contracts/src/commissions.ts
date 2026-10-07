@@ -19,7 +19,7 @@ export const updateCommissionCaseStatusSchema = z.object({
   projectId: z.uuid(),
   brokerCompanyId: z.uuid(),
   commissionCaseId: z.uuid(),
-  action: z.enum(['MARK_INVOICED', 'MARK_DISPUTED']),
+  action: z.enum(['MARK_INVOICED', 'MARK_PAID', 'MARK_DISPUTED']),
 });
 export type UpdateCommissionCaseStatusInput = z.infer<typeof updateCommissionCaseStatusSchema>;
 
