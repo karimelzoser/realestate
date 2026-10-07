@@ -1,0 +1,111 @@
+name: Concurrency Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/api/src/catalog/**"
+      - "platform/apps/api/src/sales/queue-dispatch.repository.ts"
+      - "platform/apps/worker/src/notifications.ts"
+      - "platform/apps/worker/scripts/concurrency-certification.mjs"
+      - "platform/packages/database/migrations/0025_finance_immutable_ledger.sql"
+      - "platform/packages/database/migrations/0026_finance_ingest_and_cheque_root.sql"
+      - "platform/packages/database/migrations/0029_finance_concurrency_guards.sql"
+      - "platform/packages/database/migrations/0030_unallocated_cash_compensation.sql"
+      - "platform/packages/database/migrations/0031_finance_compensation_sequence_order.sql"
+      - "platform/packages/database/migrations/0032_finance_compensation_lock_order.sql"
+      - "platform/packages/database/tests/concurrency_certification.mjs"
+      - "platform/packages/database/tests/backup_restore_seed.sql"
+      - "platform/docs/concurrency-certification.md"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/concurrency-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/apps/api/src/catalog/**"
+      - "platform/apps/api/src/sales/queue-dispatch.repository.ts"
+      - "platform/apps/worker/src/notifications.ts"
+      - "platform/apps/worker/scripts/concurrency-certification.mjs"
+      - "platform/packages/database/migrations/0025_finance_immutable_ledger.sql"
+      - "platform/packages/database/migrations/0026_finance_ingest_and_cheque_root.sql"
+      - "platform/packages/database/migrations/0029_finance_concurrency_guards.sql"
+      - "platform/packages/database/migrations/0030_unallocated_cash_compensation.sql"
+      - "platform/packages/database/migrations/0031_finance_compensation_sequence_order.sql"
+      - "platform/packages/database/migrations/0032_finance_compensation_lock_order.sql"
+      - "platform/packages/database/tests/concurrency_certification.mjs"
+      - "platform/packages/database/tests/backup_restore_seed.sql"
+      - "platform/docs/concurrency-certification.md"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/concurrency-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  certify-contention:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura_concurrency
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura_concurrency"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    defaults:
+      run:
+        working-directory: platform
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_concurrency
+      PGPASSWORD: postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Migrate PostgreSQL 18 through production runner
+        run: |
+          set -euo pipefail
+          MIGRATION_ACTOR=concurrency-certification pnpm --filter @preneura/database migrate
+          test "$(psql "$DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
+      - name: Seed certified commercial/legal/finance baseline
+        run: |
+          set -euo pipefail
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/database/tests/backup_restore_seed.sql
+          # The backup fixture intentionally leaves its own queue record waiting.
+          # Isolate it so the queue contention case measures only its 50-row race set.
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+            "UPDATE queue_entries SET status='COMPLETED', completed_at=now(), updated_at=now() WHERE id='00000000-0000-0000-0000-000000009000';"
+      - name: Run database contention certification
+        run: node packages/database/tests/concurrency_certification.mjs | tee /tmp/database-concurrency.json
+      - name: Build and run compiled worker contention certification
+        run: |
+          set -euo pipefail
+          pnpm --filter @preneura/worker build
+          node apps/worker/scripts/concurrency-certification.mjs | tee /tmp/worker-concurrency.json
+      - name: Final invariant reconciliation
+        run: |
+          set -euo pipefail
+          test "$(psql "$DATABASE_URL" -Atqc "SELECT count(*) FROM inventory_locks WHERE status='ACTIVE' AND unit_type_id IN (SELECT id FROM catalog_unit_types WHERE code LIKE 'CONC-%')")" = '1'
+          test "$(psql "$DATABASE_URL" -Atqc "SELECT count(*) FROM notification_jobs WHERE template_code='concurrency.certification' AND status='SENT' AND attempts=1")" = '100'
+          test "$(psql "$DATABASE_URL" -Atqc "SELECT count(*) FROM finance_provider_webhook_events WHERE provider='CONCURRENCY_PROVIDER' AND provider_event_id='provider-event-001'")" = '1'
+          test "$(psql "$DATABASE_URL" -Atqc "SELECT count(*) FROM finance_payment_events WHERE provider='CONCURRENCY_PROVIDER' AND provider_event_id='provider-event-001'")" = '1'
+          test "$(psql "$DATABASE_URL" -Atqc "SELECT coalesce(sum(signed_amount),0) FROM finance_ledger_entries WHERE transaction_id='00000000-0000-0000-0000-000000013000'")" = '0.00'
