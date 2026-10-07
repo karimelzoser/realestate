@@ -1,5 +1,7 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
+import type { IncomingMessage } from 'node:http';
+import type { Http2ServerRequest } from 'node:http2';
 import type { FastifyRequest } from 'fastify';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import {
@@ -53,7 +55,7 @@ async function bootstrap(): Promise<void> {
     logger,
     trustProxy: true,
     requestIdHeader: 'x-request-id',
-    genReqId: (request: FastifyRequest) => {
+    genReqId: (request: IncomingMessage | Http2ServerRequest) => {
       const supplied = request.headers['x-request-id'];
       return typeof supplied === 'string' && isSafeRequestId(supplied) ? supplied : randomUUID();
     },
