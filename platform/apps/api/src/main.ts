@@ -1,17 +1,28 @@
 import 'reflect-metadata';
+import { randomUUID } from 'node:crypto';
 import cookie from '@fastify/cookie';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module.js';
 import { validateApiRuntimeConfig } from './config/runtime-config.js';
+import {
+  registerHttpSecurity,
+  resolveApiBodyLimit,
+  resolveTrustProxy,
+} from './security/http-security.js';
 
 async function bootstrap(): Promise<void> {
   validateApiRuntimeConfig();
 
   const adapter = new FastifyAdapter({
     logger: process.env.NODE_ENV !== 'test',
-    trustProxy: true,
+    trustProxy: resolveTrustProxy(),
+    bodyLimit: resolveApiBodyLimit(),
+    requestIdHeader: false,
+    genReqId: () => randomUUID(),
   });
+
+  registerHttpSecurity(adapter.getInstance());
 
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter);
   const cookieSigningSecret = process.env.COOKIE_SIGNING_SECRET;
