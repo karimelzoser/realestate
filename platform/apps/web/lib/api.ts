@@ -14,13 +14,14 @@ export async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
+  const headers = new Headers(init.headers);
+  if (init.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
+  if (!headers.has('x-request-id')) headers.set('x-request-id', createRequestId());
+
   const response = await fetch(`${apiBase}${path}`, {
     ...init,
     credentials: 'include',
-    headers: {
-      ...(init.body ? { 'content-type': 'application/json' } : {}),
-      ...init.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -41,4 +42,9 @@ export async function apiFetch<T>(
 
 export function eventStreamUrl(path: string): string {
   return `${apiBase}${path}`;
+}
+
+function createRequestId(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID();
+  return `web-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
 }
