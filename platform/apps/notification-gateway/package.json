@@ -7,7 +7,7 @@
     "dev": "tsx watch src/main.ts",
     "build": "pnpm run build:deps && tsc -p tsconfig.json",
     "build:deps": "pnpm --filter @preneura/database build && pnpm --filter @preneura/security build && pnpm --filter @preneura/observability build",
-    "start": "node dist/main.js",
+    "start": "node --import ./dist/telemetry.js dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --test",
     "lint": "tsc --noEmit -p tsconfig.json"
