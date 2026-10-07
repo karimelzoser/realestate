@@ -77,6 +77,7 @@ export class EoiFinanceRepository {
     refundRequestIds: readonly string[];
   }): Promise<Map<string, { payoutReference: string; financeEventId: string; retainedAmount: string | null }>> {
     if (input.refundRequestIds.length === 0) return new Map();
+    const ids = sql.join(input.refundRequestIds.map((id) => sql`${id}::uuid`));
 
     const result = await sql<{
       refund_request_id: string;
@@ -98,7 +99,7 @@ export class EoiFinanceRepository {
        AND retained.event_type = 'RETAINED_AMOUNT_RECOGNIZED'
       WHERE r.tenant_id = ${input.tenantId}::uuid
         AND r.project_id = ${input.projectId}::uuid
-        AND r.id = ANY(${sql.array(input.refundRequestIds, 'uuid')})
+        AND r.id IN (${ids})
     `.execute(this.db);
 
     return new Map(
