@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
+import type { FastifyRequest } from 'fastify';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import {
   currentTelemetryIdentity,
@@ -76,7 +77,7 @@ async function bootstrap(): Promise<void> {
     global: true,
     max: parsePositiveInteger(process.env.API_RATE_LIMIT_PER_MINUTE, 300),
     timeWindow: '1 minute',
-    allowList: (request) => request.url.startsWith('/v1/health'),
+    allowList: (request: FastifyRequest) => request.url.startsWith('/v1/health'),
   });
 
   fastify.addHook('onRequest', async (request, reply) => {
