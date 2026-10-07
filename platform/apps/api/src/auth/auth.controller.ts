@@ -99,6 +99,9 @@ export class AuthController {
   }
 
   private sessionCookieName(): string {
-    return process.env.SESSION_COOKIE_NAME ?? 'preneura_session';
+    return (
+      process.env.SESSION_COOKIE_NAME ??
+      (process.env.NODE_ENV === 'production' ? '__Host-preneura_session' : 'preneura_session')
+    );
   }
 }
