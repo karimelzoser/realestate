@@ -1,0 +1,28 @@
+{
+  "name": "@preneura/observability",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test",
+    "lint": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/auto-instrumentations-node": "0.80.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.222.0",
+    "@opentelemetry/sdk-node": "0.222.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "typescript": "7.0.2"
+  }
+}
