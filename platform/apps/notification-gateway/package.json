@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
+    "dev": "tsx watch src/bootstrap.ts",
     "build": "pnpm run build:deps && tsc -p tsconfig.json",
     "build:deps": "pnpm --filter @preneura/database build && pnpm --filter @preneura/security build && pnpm --filter @preneura/observability build",
-    "start": "node --import ./dist/telemetry.js dist/main.js",
+    "start": "node --import ./dist/telemetry.js dist/bootstrap.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --test",
     "lint": "tsc --noEmit -p tsconfig.json"
