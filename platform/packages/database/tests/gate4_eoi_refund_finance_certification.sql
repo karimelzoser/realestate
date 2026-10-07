@@ -306,15 +306,15 @@ BEGIN
     RAISE EXCEPTION 'database allowed EOI ledger deletion';
   END IF;
 
-  -- Runtime contract must identify this financial authority version exactly.
+  -- Runtime contract must identify the fail-closed EOI finance authority exactly.
   IF NOT EXISTS (
     SELECT 1 FROM platform_runtime_contract
     WHERE singleton_key = 'production'
-      AND schema_version = 34
-      AND minimum_runtime_version = 34
-      AND migration_marker = '0034_eoi_financial_evidence'
+      AND schema_version = 35
+      AND minimum_runtime_version = 35
+      AND migration_marker = '0035_eoi_projection_guards_fail_closed'
   ) THEN
-    RAISE EXCEPTION 'runtime contract is not pinned to EOI finance schema 34';
+    RAISE EXCEPTION 'runtime contract is not pinned to fail-closed EOI finance schema 35';
   END IF;
 END $$;
 
