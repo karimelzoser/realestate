@@ -2,12 +2,10 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import type {
   EoiRefundQuote,
   EoiRefundRequestSnapshot,
-  PayEoiRefundInput,
   RequestEoiRefundInput,
   ReviewEoiRefundInput,
 } from '@preneura/contracts/sales';
 import { AccessService } from '../access/access.service.js';
-import { EoiFinanceService } from './eoi-finance.service.js';
 import { EoiRefundRepository } from './eoi-refund.repository.js';
 
 @Injectable()
@@ -15,7 +13,6 @@ export class EoiRefundService {
   constructor(
     private readonly repository: EoiRefundRepository,
     private readonly access: AccessService,
-    private readonly finance: EoiFinanceService,
   ) {}
 
   async list(input: {
@@ -120,13 +117,6 @@ export class EoiRefundService {
       note: input.data.note ?? null,
       now: new Date(),
     });
-  }
-
-  pay(input: {
-    actorUserId: string;
-    data: PayEoiRefundInput;
-  }): Promise<{ paid: true; financeEventId: string; payoutReference: string }> {
-    return this.finance.payRefund(input);
   }
 
   private publicQuote(

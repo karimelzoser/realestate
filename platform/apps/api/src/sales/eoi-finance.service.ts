@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import type { PayEoiRefundInput } from '@preneura/contracts/sales';
 import { AccessService } from '../access/access.service.js';
 import { EoiFinanceRepository } from './eoi-finance.repository.js';
 
@@ -34,32 +33,4 @@ export class EoiFinanceService {
     return { paid: true, financeEventId: result.financeEventId };
   }
 
-  async payRefund(input: {
-    actorUserId: string;
-    data: PayEoiRefundInput;
-  }): Promise<{ paid: true; financeEventId: string; payoutReference: string }> {
-    await this.access.assert({
-      userId: input.actorUserId,
-      permission: 'refund.payout.manage',
-      context: { tenantId: input.data.tenantId, projectId: input.data.projectId },
-    });
-
-    const result = await this.repository.payRefund({
-      tenantId: input.data.tenantId,
-      projectId: input.data.projectId,
-      refundRequestId: input.data.refundRequestId,
-      payoutReference: input.data.payoutReference,
-      actorUserId: input.actorUserId,
-      occurredAt: new Date(),
-    });
-    return { paid: true, ...result };
-  }
-
-  payoutEvidence(input: {
-    tenantId: string;
-    projectId: string;
-    refundRequestIds: readonly string[];
-  }) {
-    return this.repository.payoutEvidence(input);
-  }
 }

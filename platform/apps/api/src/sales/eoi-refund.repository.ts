@@ -73,7 +73,7 @@ export class EoiRefundRepository {
         r.reviewed_at,
         r.paid_at,
         r.decision_note,
-        payout.external_reference AS payout_reference,
+        settlement.provider_reference AS payout_reference,
         payout.id AS finance_event_id,
         retained.amount::text AS retained_amount
       FROM eoi_refund_requests r
@@ -81,6 +81,9 @@ export class EoiRefundRepository {
         ON b.id = r.buyer_profile_id
        AND b.tenant_id = r.tenant_id
       JOIN users u ON u.id = b.user_id
+      LEFT JOIN settlement_disbursements settlement
+        ON settlement.eoi_refund_request_id = r.id
+       AND settlement.status = 'SETTLED'
       LEFT JOIN eoi_finance_events payout
         ON payout.refund_request_id = r.id
        AND payout.event_type = 'REFUND_ISSUED'

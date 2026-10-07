@@ -1,6 +1,5 @@
 import { BadRequestException, Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import {
-  payEoiRefundSchema,
   requestEoiRefundSchema,
   reviewEoiRefundSchema,
   type EoiRefundQuote,
@@ -67,24 +66,6 @@ export class EoiRefundController {
     });
     if (!parsed.success) throw new BadRequestException('Invalid refund review.');
     return this.refunds.review({ actorUserId: session.userId, data: parsed.data });
-  }
-
-  @Post('refund-requests/:refundRequestId/pay')
-  pay(
-    @Param('tenantId') tenantId: string,
-    @Param('projectId') projectId: string,
-    @Param('refundRequestId') refundRequestId: string,
-    @Body() body: unknown,
-    @CurrentSession() session: ResolvedSession,
-  ) {
-    const parsed = payEoiRefundSchema.safeParse({
-      ...this.objectBody(body),
-      tenantId,
-      projectId,
-      refundRequestId,
-    });
-    if (!parsed.success) throw new BadRequestException('Invalid refund payout.');
-    return this.refunds.pay({ actorUserId: session.userId, data: parsed.data });
   }
 
   private objectBody(body: unknown): Record<string, unknown> {

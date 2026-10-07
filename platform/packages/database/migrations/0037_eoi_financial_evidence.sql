@@ -19,7 +19,8 @@ CREATE TABLE eoi_finance_events (
   eoi_id uuid NOT NULL,
   refund_request_id uuid,
   event_type text NOT NULL CHECK (event_type IN (
-    'PAYMENT_RECEIVED','PAYMENT_REVERSED','REFUND_ISSUED','RETAINED_AMOUNT_RECOGNIZED'
+    'PAYMENT_RECEIVED','PAYMENT_REVERSED','REFUND_ISSUED','REFUND_REVERSED',
+    'RETAINED_AMOUNT_RECOGNIZED','RETAINED_AMOUNT_REVERSED'
   )),
   amount numeric(18,2) NOT NULL CHECK (amount > 0),
   currency char(3) NOT NULL,
@@ -43,7 +44,10 @@ CREATE TABLE eoi_finance_events (
   CHECK (
     (event_type = 'PAYMENT_RECEIVED' AND related_event_id IS NULL AND refund_request_id IS NULL)
     OR (event_type = 'PAYMENT_REVERSED' AND related_event_id IS NOT NULL AND refund_request_id IS NULL)
-    OR (event_type IN ('REFUND_ISSUED','RETAINED_AMOUNT_RECOGNIZED')
+    OR (event_type IN (
+          'REFUND_ISSUED','REFUND_REVERSED',
+          'RETAINED_AMOUNT_RECOGNIZED','RETAINED_AMOUNT_REVERSED'
+        )
         AND related_event_id IS NOT NULL AND refund_request_id IS NOT NULL)
   )
 );
@@ -74,6 +78,14 @@ CREATE UNIQUE INDEX eoi_finance_one_refund_per_request
 CREATE UNIQUE INDEX eoi_finance_one_retained_per_request
   ON eoi_finance_events(refund_request_id)
   WHERE event_type = 'RETAINED_AMOUNT_RECOGNIZED';
+
+CREATE UNIQUE INDEX eoi_finance_one_refund_reversal_per_event
+  ON eoi_finance_events(related_event_id)
+  WHERE event_type = 'REFUND_REVERSED';
+
+CREATE UNIQUE INDEX eoi_finance_one_retained_reversal_per_event
+  ON eoi_finance_events(related_event_id)
+  WHERE event_type = 'RETAINED_AMOUNT_REVERSED';
 
 CREATE INDEX eoi_finance_events_eoi
   ON eoi_finance_events(eoi_id, occurred_at, created_at, id);
