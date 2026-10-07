@@ -29,6 +29,20 @@ permissions:
 jobs:
   certify-http-edge:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: http_security
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d http_security"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     defaults:
       run:
         working-directory: platform
@@ -84,7 +98,7 @@ jobs:
           NODE_ENV: test
           PORT: 4140
           WEB_ORIGIN: http://localhost:3000
-          DATABASE_URL: postgresql://unused:unused@127.0.0.1:59999/unused
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/http_security
           TRUST_PROXY_HOPS: "1"
           API_BODY_LIMIT_BYTES: "65536"
           OBJECT_STORAGE_BUCKET: http-security-certification
