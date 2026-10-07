@@ -88,8 +88,8 @@ jobs:
             v_latest integer;
           BEGIN
             SELECT max(version) INTO v_latest FROM platform_schema_migrations;
-            IF v_latest <> 35 THEN
-              RAISE EXCEPTION 'production migrator did not finish at schema 35; got %', v_latest;
+            IF v_latest <> 36 THEN
+              RAISE EXCEPTION 'production migrator did not finish at schema 36; got %', v_latest;
             END IF;
 
             IF EXISTS (
@@ -103,16 +103,17 @@ jobs:
               SELECT 1 FROM platform_schema_migrations
               WHERE version = 34
                 AND filename = '0034_eoi_financial_evidence.sql'
-            ) THEN
-              RAISE EXCEPTION 'EOI finance migration missing from production migration history';
-            END IF;
+            ) THEN RAISE EXCEPTION 'EOI finance migration missing from production migration history'; END IF;
             IF NOT EXISTS (
               SELECT 1 FROM platform_schema_migrations
               WHERE version = 35
                 AND filename = '0035_eoi_projection_guards_fail_closed.sql'
-            ) THEN
-              RAISE EXCEPTION 'EOI fail-closed guard migration missing from production migration history';
-            END IF;
+            ) THEN RAISE EXCEPTION 'EOI fail-closed guard migration missing from production migration history'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM platform_schema_migrations
+              WHERE version = 36
+                AND filename = '0036_eoi_projection_authority_one_shot.sql'
+            ) THEN RAISE EXCEPTION 'EOI one-shot projection authority migration missing from production history'; END IF;
 
             IF to_regclass('public.eoi_finance_events') IS NULL
               THEN RAISE EXCEPTION 'EOI finance event table missing'; END IF;
@@ -152,10 +153,10 @@ jobs:
             IF NOT EXISTS (
               SELECT 1 FROM platform_runtime_contract
               WHERE singleton_key = 'production'
-                AND schema_version = 35
-                AND minimum_runtime_version = 35
-                AND migration_marker = '0035_eoi_projection_guards_fail_closed'
-            ) THEN RAISE EXCEPTION 'runtime contract is not schema 35 fail-closed EOI finance authority'; END IF;
+                AND schema_version = 36
+                AND minimum_runtime_version = 36
+                AND migration_marker = '0036_eoi_projection_authority_one_shot'
+            ) THEN RAISE EXCEPTION 'runtime contract is not schema 36 one-shot EOI finance authority'; END IF;
           END $$;
           SQL
 
