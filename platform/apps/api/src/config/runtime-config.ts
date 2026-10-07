@@ -1,4 +1,6 @@
 const MIN_SECRET_LENGTH = 32;
+const MIN_API_BODY_LIMIT_BYTES = 64 * 1024;
+const MAX_API_BODY_LIMIT_BYTES = 16 * 1024 * 1024;
 
 export function validateApiRuntimeConfig(env: NodeJS.ProcessEnv = process.env): void {
   if (env.NODE_ENV !== 'production') return;
@@ -6,6 +8,14 @@ export function validateApiRuntimeConfig(env: NodeJS.ProcessEnv = process.env): 
   const failures: string[] = [];
   requirePostgresUrl(env, 'DATABASE_URL', failures);
   requireHttpsOrigins(env, 'WEB_ORIGIN', failures);
+  requireIntegerRange(env, 'TRUST_PROXY_HOPS', 1, 10, failures);
+  requireIntegerRange(
+    env,
+    'API_BODY_LIMIT_BYTES',
+    MIN_API_BODY_LIMIT_BYTES,
+    MAX_API_BODY_LIMIT_BYTES,
+    failures,
+  );
 
   requireSecret(env, 'AUTH_IDENTIFIER_HMAC_KEY', failures);
   requireSecret(env, 'AUTH_OTP_PEPPER', failures);
@@ -79,6 +89,21 @@ function requireBase64Key(
   const decoded = Buffer.from(value, 'base64');
   if (decoded.length !== expectedBytes || decoded.toString('base64') !== value) {
     failures.push(`${name} must be canonical base64 encoding of exactly ${expectedBytes} bytes.`);
+  }
+}
+
+function requireIntegerRange(
+  env: NodeJS.ProcessEnv,
+  name: string,
+  minimum: number,
+  maximum: number,
+  failures: string[],
+): void {
+  const value = requireNonPlaceholder(env, name, failures);
+  if (!value) return;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) {
+    failures.push(`${name} must be an integer between ${minimum} and ${maximum}.`);
   }
 }
 

@@ -5,6 +5,7 @@ on:
     paths:
       - "platform/apps/api/src/config/**"
       - "platform/apps/api/src/health/**"
+      - "platform/apps/api/src/security/**"
       - "platform/apps/api/src/main.ts"
       - "platform/apps/worker/src/main.ts"
       - "platform/apps/worker/src/runtime-config.ts"
@@ -24,6 +25,7 @@ on:
     paths:
       - "platform/apps/api/src/config/**"
       - "platform/apps/api/src/health/**"
+      - "platform/apps/api/src/security/**"
       - "platform/apps/api/src/main.ts"
       - "platform/apps/worker/src/main.ts"
       - "platform/apps/worker/src/runtime-config.ts"
@@ -127,6 +129,8 @@ jobs:
           PORT=4120 \
           DATABASE_URL="$COMMON_DB" \
           WEB_ORIGIN=https://app.preneura.example \
+          TRUST_PROXY_HOPS=1 \
+          API_BODY_LIMIT_BYTES=8388608 \
           AUTH_IDENTIFIER_HMAC_KEY="$COMMON_TOKEN" \
           AUTH_OTP_PEPPER="$COMMON_TOKEN" \
           COOKIE_SIGNING_SECRET="$COMMON_TOKEN" \
@@ -203,17 +207,14 @@ jobs:
           CONCURRENT_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$CONCURRENT_DB"
           CURRENT_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_current"
 
-          DATABASE_URL="$FRESH_URL" MIGRATION_ACTOR=certification-fresh \
-            pnpm --filter @preneura/database migrate
+          DATABASE_URL="$FRESH_URL" MIGRATION_ACTOR=certification-fresh pnpm --filter @preneura/database migrate
           test "$(psql "$FRESH_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
           test "$(psql "$FRESH_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'APPLIED'")" = '33'
 
-          DATABASE_URL="$FRESH_URL" MIGRATION_ACTOR=certification-rerun \
-            pnpm --filter @preneura/database migrate
+          DATABASE_URL="$FRESH_URL" MIGRATION_ACTOR=certification-rerun pnpm --filter @preneura/database migrate
           test "$(psql "$FRESH_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
 
-          DATABASE_URL="$CURRENT_URL" MIGRATION_ADOPT_EXISTING=true MIGRATION_ACTOR=certification-adopt \
-            pnpm --filter @preneura/database migrate
+          DATABASE_URL="$CURRENT_URL" MIGRATION_ADOPT_EXISTING=true MIGRATION_ACTOR=certification-adopt pnpm --filter @preneura/database migrate
           test "$(psql "$CURRENT_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
           test "$(psql "$CURRENT_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'ADOPTED'")" = '33'
 
@@ -230,8 +231,7 @@ jobs:
           path.write_text(text)
           PY
           set +e
-          DATABASE_URL="$FRESH_URL" MIGRATIONS_DIR=/tmp/preneura-migrations-drift \
-            pnpm --filter @preneura/database migrate >/tmp/preneura-migration-drift.log 2>&1
+          DATABASE_URL="$FRESH_URL" MIGRATIONS_DIR=/tmp/preneura-migrations-drift pnpm --filter @preneura/database migrate >/tmp/preneura-migration-drift.log 2>&1
           DRIFT_RC=$?
           set -e
           if [[ "$DRIFT_RC" -eq 0 ]]; then
@@ -241,11 +241,9 @@ jobs:
           fi
           grep -q 'checksum mismatch' /tmp/preneura-migration-drift.log
 
-          DATABASE_URL="$CONCURRENT_URL" MIGRATION_ACTOR=certification-concurrent-a \
-            pnpm --filter @preneura/database migrate >/tmp/preneura-migrator-a.log 2>&1 &
+          DATABASE_URL="$CONCURRENT_URL" MIGRATION_ACTOR=certification-concurrent-a pnpm --filter @preneura/database migrate >/tmp/preneura-migrator-a.log 2>&1 &
           FIRST_PID=$!
-          DATABASE_URL="$CONCURRENT_URL" MIGRATION_ACTOR=certification-concurrent-b \
-            pnpm --filter @preneura/database migrate >/tmp/preneura-migrator-b.log 2>&1 &
+          DATABASE_URL="$CONCURRENT_URL" MIGRATION_ACTOR=certification-concurrent-b pnpm --filter @preneura/database migrate >/tmp/preneura-migrator-b.log 2>&1 &
           SECOND_PID=$!
           wait "$FIRST_PID" || { cat /tmp/preneura-migrator-a.log; exit 1; }
           wait "$SECOND_PID" || { cat /tmp/preneura-migrator-b.log; exit 1; }
