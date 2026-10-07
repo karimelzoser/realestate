@@ -13,12 +13,16 @@ import {
 } from '@preneura/contracts/sales';
 import type { ResolvedSession } from '../auth/auth.repository.js';
 import { CurrentSession, SessionAuthGuard } from '../auth/session-auth.guard.js';
+import { EoiFinanceService } from './eoi-finance.service.js';
 import { SalesService } from './sales.service.js';
 
 @UseGuards(SessionAuthGuard)
 @Controller('tenants/:tenantId/projects/:projectId')
 export class SalesController {
-  constructor(private readonly sales: SalesService) {}
+  constructor(
+    private readonly sales: SalesService,
+    private readonly eoiFinance: EoiFinanceService,
+  ) {}
 
   @Post('buyers')
   createBuyer(
@@ -63,10 +67,16 @@ export class SalesController {
     @Param('eoiId') eoiId: string,
     @Body() body: unknown,
     @CurrentSession() session: ResolvedSession,
-  ): Promise<{ paid: true }> {
+  ): Promise<{ paid: true; financeEventId: string }> {
     const parsed = markEoiPaidSchema.safeParse({ ...this.objectBody(body), tenantId, projectId, eoiId });
     if (!parsed.success) throw new BadRequestException('Invalid EOI payment verification.');
-    return this.sales.markEoiPaid({ actorUserId: session.userId, data: parsed.data });
+    return this.eoiFinance.postPayment({
+      actorUserId: session.userId,
+      tenantId,
+      projectId,
+      eoiId,
+      paymentReference: parsed.data.paymentReference,
+    });
   }
 
   @Post('queue/check-in')
