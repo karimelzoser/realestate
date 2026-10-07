@@ -76,13 +76,9 @@ function requireBase64Key(
 ): void {
   const value = requireNonPlaceholder(env, name, failures);
   if (!value) return;
-  try {
-    const decoded = Buffer.from(value, 'base64');
-    if (decoded.length !== expectedBytes || decoded.toString('base64') !== normalizeBase64(value)) {
-      failures.push(`${name} must be canonical base64 encoding of exactly ${expectedBytes} bytes.`);
-    }
-  } catch {
-    failures.push(`${name} must be valid base64.`);
+  const decoded = Buffer.from(value, 'base64');
+  if (decoded.length !== expectedBytes || decoded.toString('base64') !== value) {
+    failures.push(`${name} must be canonical base64 encoding of exactly ${expectedBytes} bytes.`);
   }
 }
 
@@ -148,8 +144,4 @@ function isPlaceholder(value: string): boolean {
     normalized.includes('your-secret') ||
     normalized === 'secret'
   );
-}
-
-function normalizeBase64(value: string): string {
-  return Buffer.from(value, 'base64').toString('base64');
 }
