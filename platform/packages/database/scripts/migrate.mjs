@@ -82,6 +82,23 @@ async function ensureLedger(client) {
       duration_ms INTEGER NOT NULL CHECK (duration_ms >= 0)
     )
   `);
+  await client.query(`
+    CREATE OR REPLACE FUNCTION preneura_reject_schema_migration_history_mutation()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    BEGIN
+      RAISE EXCEPTION 'platform_schema_migrations is append-only';
+    END;
+    $$
+  `);
+  await client.query('DROP TRIGGER IF EXISTS trg_platform_schema_migrations_immutable ON platform_schema_migrations');
+  await client.query(`
+    CREATE TRIGGER trg_platform_schema_migrations_immutable
+    BEFORE UPDATE OR DELETE ON platform_schema_migrations
+    FOR EACH ROW
+    EXECUTE FUNCTION preneura_reject_schema_migration_history_mutation()
+  `);
 }
 
 async function verifyExistingRows(client, migrations) {
