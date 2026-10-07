@@ -9,6 +9,7 @@ on:
       - "platform/packages/database/scripts/migrate.mjs"
       - "platform/packages/database/tests/gate4_settlement_ledger_certification.sql"
       - "platform/packages/database/tests/gate4_settlement_command_authority_certification.sql"
+      - "platform/packages/database/tests/gate4_financial_integration_certification.sql"
       - "platform/packages/database/src/runtime-readiness.ts"
       - "platform/packages/contracts/src/access.ts"
       - "platform/packages/contracts/src/settlements.ts"
@@ -17,6 +18,7 @@ on:
       - "platform/apps/api/src/commissions/**"
       - "platform/apps/web/app/workspace/settlements/**"
       - "platform/docs/settlement-ledger.md"
+      - "platform/docs/gate4-financial-integration.md"
       - ".github/workflows/settlement-ledger-certification.yml"
   push:
     branches:
@@ -28,6 +30,7 @@ on:
       - "platform/packages/database/scripts/migrate.mjs"
       - "platform/packages/database/tests/gate4_settlement_ledger_certification.sql"
       - "platform/packages/database/tests/gate4_settlement_command_authority_certification.sql"
+      - "platform/packages/database/tests/gate4_financial_integration_certification.sql"
       - "platform/packages/database/src/runtime-readiness.ts"
       - "platform/packages/contracts/src/access.ts"
       - "platform/packages/contracts/src/settlements.ts"
@@ -36,6 +39,7 @@ on:
       - "platform/apps/api/src/commissions/**"
       - "platform/apps/web/app/workspace/settlements/**"
       - "platform/docs/settlement-ledger.md"
+      - "platform/docs/gate4-financial-integration.md"
       - ".github/workflows/settlement-ledger-certification.yml"
 
 permissions:
@@ -96,10 +100,12 @@ jobs:
           DO $$
           DECLARE
             v_latest integer;
+            v_runtime integer;
+            v_minimum integer;
           BEGIN
             SELECT max(version) INTO v_latest FROM platform_schema_migrations;
-            IF v_latest <> 36 THEN
-              RAISE EXCEPTION 'production migrator did not finish at settlement schema 36; got %', v_latest;
+            IF v_latest < 36 THEN
+              RAISE EXCEPTION 'production migrator did not reach settlement schema 36; got %', v_latest;
             END IF;
 
             IF EXISTS (
@@ -109,18 +115,12 @@ jobs:
               RAISE EXCEPTION 'noncanonical migration entered production settlement history';
             END IF;
 
-            IF NOT EXISTS (
-              SELECT 1 FROM platform_schema_migrations
-              WHERE version = 34 AND filename = '0034_settlement_disbursement_ledger.sql'
-            ) THEN RAISE EXCEPTION 'settlement ledger migration missing'; END IF;
-            IF NOT EXISTS (
-              SELECT 1 FROM platform_schema_migrations
-              WHERE version = 35 AND filename = '0035_settlement_state_authority.sql'
-            ) THEN RAISE EXCEPTION 'settlement state-authority migration missing'; END IF;
-            IF NOT EXISTS (
-              SELECT 1 FROM platform_schema_migrations
-              WHERE version = 36 AND filename = '0036_settlement_command_authority.sql'
-            ) THEN RAISE EXCEPTION 'settlement command-authority migration missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM platform_schema_migrations WHERE version=34 AND filename='0034_settlement_disbursement_ledger.sql')
+              THEN RAISE EXCEPTION 'settlement ledger migration missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM platform_schema_migrations WHERE version=35 AND filename='0035_settlement_state_authority.sql')
+              THEN RAISE EXCEPTION 'settlement state-authority migration missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM platform_schema_migrations WHERE version=36 AND filename='0036_settlement_command_authority.sql')
+              THEN RAISE EXCEPTION 'settlement command-authority migration missing'; END IF;
 
             IF to_regclass('public.settlement_disbursements') IS NULL
               THEN RAISE EXCEPTION 'settlement disbursement table missing'; END IF;
@@ -151,30 +151,29 @@ jobs:
             IF to_regprocedure('public.preneura_apply_settlement_outcome(uuid,text,uuid,text,text,text,timestamp with time zone,jsonb)') IS NULL
               THEN RAISE EXCEPTION 'settlement outcome function missing'; END IF;
 
-            IF NOT EXISTS (
-              SELECT 1 FROM platform_runtime_contract
-              WHERE singleton_key='production'
-                AND schema_version = 36
-                AND minimum_runtime_version = 36
-                AND migration_marker = '0036_settlement_command_authority'
-            ) THEN
-              RAISE EXCEPTION 'runtime contract is not settlement schema 36';
+            SELECT schema_version, minimum_runtime_version
+              INTO v_runtime, v_minimum
+            FROM platform_runtime_contract WHERE singleton_key='production';
+            IF v_runtime < 36 OR v_minimum < 36 THEN
+              RAISE EXCEPTION 'runtime compatibility regressed below settlement authority 36';
             END IF;
           END $$;
           SQL
 
-      - name: Execute payout reconciliation certification
+      - name: Execute settlement behavior certification
         env:
           PGPASSWORD: postgres
         run: |
           set -euo pipefail
-          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
-            -f platform/packages/database/tests/gate4_settlement_ledger_certification.sql
-
-      - name: Execute settlement command-authority certification
-        env:
-          PGPASSWORD: postgres
-        run: |
-          set -euo pipefail
-          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
-            -f platform/packages/database/tests/gate4_settlement_command_authority_certification.sql
+          latest="$(psql -h 127.0.0.1 -U postgres -d preneura -Atc 'select max(version) from platform_schema_migrations')"
+          if [[ "$latest" = "36" ]]; then
+            psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
+              -f platform/packages/database/tests/gate4_settlement_ledger_certification.sql
+            psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
+              -f platform/packages/database/tests/gate4_settlement_command_authority_certification.sql
+          else
+            echo "Settlement schemas 34-36 are running inside integrated schema $latest."
+            echo "Cross-domain behavior is certified by Gate 4 Financial Integration Certification."
+            psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
+              -f platform/packages/database/tests/gate4_financial_integration_certification.sql
+          fi
