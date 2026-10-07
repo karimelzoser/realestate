@@ -7,12 +7,7 @@ on:
       - "platform/apps/api/src/sales/queue-dispatch.repository.ts"
       - "platform/apps/worker/src/notifications.ts"
       - "platform/apps/worker/scripts/concurrency-certification.mjs"
-      - "platform/packages/database/migrations/0025_finance_immutable_ledger.sql"
-      - "platform/packages/database/migrations/0026_finance_ingest_and_cheque_root.sql"
-      - "platform/packages/database/migrations/0029_finance_concurrency_guards.sql"
-      - "platform/packages/database/migrations/0030_unallocated_cash_compensation.sql"
-      - "platform/packages/database/migrations/0031_finance_compensation_sequence_order.sql"
-      - "platform/packages/database/migrations/0032_finance_compensation_lock_order.sql"
+      - "platform/packages/database/migrations/**"
       - "platform/packages/database/tests/concurrency_certification.mjs"
       - "platform/packages/database/tests/backup_restore_seed.sql"
       - "platform/docs/concurrency-certification.md"
@@ -27,12 +22,7 @@ on:
       - "platform/apps/api/src/sales/queue-dispatch.repository.ts"
       - "platform/apps/worker/src/notifications.ts"
       - "platform/apps/worker/scripts/concurrency-certification.mjs"
-      - "platform/packages/database/migrations/0025_finance_immutable_ledger.sql"
-      - "platform/packages/database/migrations/0026_finance_ingest_and_cheque_root.sql"
-      - "platform/packages/database/migrations/0029_finance_concurrency_guards.sql"
-      - "platform/packages/database/migrations/0030_unallocated_cash_compensation.sql"
-      - "platform/packages/database/migrations/0031_finance_compensation_sequence_order.sql"
-      - "platform/packages/database/migrations/0032_finance_compensation_lock_order.sql"
+      - "platform/packages/database/migrations/**"
       - "platform/packages/database/tests/concurrency_certification.mjs"
       - "platform/packages/database/tests/backup_restore_seed.sql"
       - "platform/docs/concurrency-certification.md"
@@ -85,13 +75,11 @@ jobs:
         run: |
           set -euo pipefail
           MIGRATION_ACTOR=concurrency-certification pnpm --filter @preneura/database migrate
-          test "$(psql "$DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
+          test "$(psql "$DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '35'
       - name: Seed certified commercial/legal/finance baseline
         run: |
           set -euo pipefail
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/database/tests/backup_restore_seed.sql
-          # The backup fixture intentionally leaves its own queue record waiting.
-          # Isolate it so the queue contention case measures only its 50-row race set.
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c \
             "UPDATE queue_entries SET status='COMPLETED', completed_at=now(), updated_at=now() WHERE id='00000000-0000-0000-0000-000000009000';"
       - name: Run database contention certification

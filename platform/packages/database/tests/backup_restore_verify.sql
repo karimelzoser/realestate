@@ -5,15 +5,15 @@ DECLARE
   v_balance numeric(18,2);
   v_manifest_hash text;
 BEGIN
-  IF (SELECT count(*) FROM platform_schema_migrations) <> 33 THEN
-    RAISE EXCEPTION 'restored migration ledger does not contain all 33 migrations';
+  IF (SELECT count(*) FROM platform_schema_migrations) <> 35 THEN
+    RAISE EXCEPTION 'restored migration ledger does not contain all 35 migrations';
   END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM platform_runtime_contract
     WHERE singleton_key='production'
-      AND schema_version=33
-      AND migration_marker='0033_runtime_readiness_contract'
+      AND schema_version=35
+      AND migration_marker='0035_settlement_state_authority'
   ) THEN
     RAISE EXCEPTION 'restored runtime contract is not current';
   END IF;

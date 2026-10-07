@@ -13,6 +13,7 @@ export default function WorkspaceOperationsShortcuts() {
   const [showProjectSetup, setShowProjectSetup] = useState(false);
   const [showAccounts, setShowAccounts] = useState(false);
   const [showRefunds, setShowRefunds] = useState(false);
+  const [showSettlements, setShowSettlements] = useState(false);
   const [showDocumentPolicy, setShowDocumentPolicy] = useState(false);
   const [showDocumentTemplates, setShowDocumentTemplates] = useState(false);
   const [showCommissions, setShowCommissions] = useState(false);
@@ -35,6 +36,9 @@ export default function WorkspaceOperationsShortcuts() {
         )));
         setShowRefunds(workspace.projects.some((project) => project.roles.some((role) =>
           roleHasPermission(role, 'refund.read') || roleHasPermission(role, 'refund.request'),
+        )));
+        setShowSettlements(workspace.projects.some((project) => project.roles.some((role) =>
+          roleHasPermission(role, 'refund.payout.manage') || roleHasPermission(role, 'commission.payment.manage'),
         )));
         const canManageTemplates = workspace.projects.some((project) => project.roles.some((role) =>
           roleHasPermission(role, 'documents.templates.manage'),
@@ -59,7 +63,7 @@ export default function WorkspaceOperationsShortcuts() {
     };
   }, []);
 
-  if (!showAdmin && !showProjectSetup && !showAccounts && !showRefunds && !showDocumentPolicy && !showDocumentTemplates && !showCommissions && !showReminders && !showAi) return null;
+  if (!showAdmin && !showProjectSetup && !showAccounts && !showRefunds && !showSettlements && !showDocumentPolicy && !showDocumentTemplates && !showCommissions && !showReminders && !showAi) return null;
 
   return (
     <nav className={styles.shortcuts} aria-label="Additional operations">
@@ -70,6 +74,7 @@ export default function WorkspaceOperationsShortcuts() {
       {showAccounts ? <a href="/workspace/accounts">Accounts</a> : null}
       {showRefunds ? <a href="/workspace/refunds">Refunds</a> : null}
       {showCommissions ? <a href="/workspace/commissions">Commissions</a> : null}
+      {showSettlements ? <a href="/workspace/settlements">Settlements</a> : null}
       {showReminders ? <a href="/workspace/reminders">Reminders</a> : null}
       {showDocumentPolicy ? <a href="/workspace/document-requirements">Document policy</a> : null}
       {showDocumentTemplates ? <a href="/workspace/document-templates">Templates</a> : null}
