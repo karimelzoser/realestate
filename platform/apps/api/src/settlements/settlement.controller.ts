@@ -3,6 +3,7 @@ import {
   createSettlementSchema,
   submitSettlementSchema,
   type SettlementSnapshot,
+  type SettlementSummarySnapshot,
 } from '@preneura/contracts/settlements';
 import type { ResolvedSession } from '../auth/auth.repository.js';
 import { CurrentSession, SessionAuthGuard } from '../auth/session-auth.guard.js';
@@ -12,6 +13,35 @@ import { SettlementService } from './settlement.service.js';
 @Controller('tenants/:tenantId/projects/:projectId')
 export class SettlementController {
   constructor(private readonly settlements: SettlementService) {}
+
+  @Get('refund-settlements')
+  listRefundSettlements(
+    @Param('tenantId') tenantId: string,
+    @Param('projectId') projectId: string,
+    @CurrentSession() session: ResolvedSession,
+  ): Promise<SettlementSummarySnapshot[]> {
+    this.assertUuid(tenantId, 'tenantId');
+    this.assertUuid(projectId, 'projectId');
+    return this.settlements.listRefundSettlements({ actorUserId: session.userId, tenantId, projectId });
+  }
+
+  @Get('brokers/:brokerCompanyId/commission-settlements')
+  listCommissionSettlements(
+    @Param('tenantId') tenantId: string,
+    @Param('projectId') projectId: string,
+    @Param('brokerCompanyId') brokerCompanyId: string,
+    @CurrentSession() session: ResolvedSession,
+  ): Promise<SettlementSummarySnapshot[]> {
+    this.assertUuid(tenantId, 'tenantId');
+    this.assertUuid(projectId, 'projectId');
+    this.assertUuid(brokerCompanyId, 'brokerCompanyId');
+    return this.settlements.listCommissionSettlements({
+      actorUserId: session.userId,
+      tenantId,
+      projectId,
+      brokerCompanyId,
+    });
+  }
 
   @Post('refunds/:refundRequestId/settlements')
   createRefund(
