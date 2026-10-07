@@ -3,8 +3,11 @@ name: Runtime Readiness Certification
 on:
   pull_request:
     paths:
+      - "platform/apps/api/src/config/**"
       - "platform/apps/api/src/health/**"
+      - "platform/apps/api/src/main.ts"
       - "platform/apps/worker/src/main.ts"
+      - "platform/apps/worker/src/runtime-config.ts"
       - "platform/packages/contracts/package.json"
       - "platform/packages/security/package.json"
       - "platform/packages/database/src/runtime-readiness.ts"
@@ -19,8 +22,11 @@ on:
       - "feature/production-*"
       - "release/**"
     paths:
+      - "platform/apps/api/src/config/**"
       - "platform/apps/api/src/health/**"
+      - "platform/apps/api/src/main.ts"
       - "platform/apps/worker/src/main.ts"
+      - "platform/apps/worker/src/runtime-config.ts"
       - "platform/packages/contracts/package.json"
       - "platform/packages/security/package.json"
       - "platform/packages/database/src/runtime-readiness.ts"
@@ -80,6 +86,26 @@ jobs:
           pnpm --filter @preneura/api... build
           pnpm --filter @preneura/worker... build
 
+      - name: Reject incomplete production configuration
+        working-directory: platform
+        run: |
+          set -euo pipefail
+          set +e
+          NODE_ENV=production \
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
+          OBJECT_STORAGE_BUCKET=production-test \
+            pnpm --filter @preneura/api start >/tmp/api-invalid-config.log 2>&1
+          API_RC=$?
+          NODE_ENV=production \
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
+            pnpm --filter @preneura/worker start >/tmp/worker-invalid-config.log 2>&1
+          WORKER_RC=$?
+          set -e
+          test "$API_RC" -ne 0
+          test "$WORKER_RC" -ne 0
+          grep -q 'Invalid production configuration' /tmp/api-invalid-config.log
+          grep -q 'Invalid production worker configuration' /tmp/worker-invalid-config.log
+
       - name: Certify current, stale and rolling-compatible runtime states
         working-directory: platform
         env:
@@ -88,6 +114,75 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
         run: bash scripts/certify-runtime-readiness.sh
+
+      - name: Accept complete production-shaped configuration
+        working-directory: platform
+        run: |
+          set -Eeuo pipefail
+          COMMON_DB=postgresql://postgres:postgres@127.0.0.1:5432/preneura_current
+          COMMON_TOKEN=0123456789abcdef0123456789abcdef
+          CONTACT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+
+          NODE_ENV=production \
+          PORT=4120 \
+          DATABASE_URL="$COMMON_DB" \
+          WEB_ORIGIN=https://app.preneura.example \
+          AUTH_IDENTIFIER_HMAC_KEY="$COMMON_TOKEN" \
+          AUTH_OTP_PEPPER="$COMMON_TOKEN" \
+          COOKIE_SIGNING_SECRET="$COMMON_TOKEN" \
+          CONTACT_HMAC_KEY="$COMMON_TOKEN" \
+          CONTACT_VERIFICATION_PEPPER="$COMMON_TOKEN" \
+          CONTACT_ENCRYPTION_KEY_BASE64="$CONTACT_KEY" \
+          OTP_PROVIDER=gateway \
+          AUTH_OTP_GATEWAY_URL=http://notification-gateway.internal/v1/auth/otp \
+          CONTACT_VERIFICATION_GATEWAY_URL=http://notification-gateway.internal/v1/accounts/verify \
+          NOTIFICATION_GATEWAY_TOKEN="$COMMON_TOKEN" \
+          OIDC_ISSUER=https://identity.preneura.example/realms/preneura \
+          OIDC_CLIENT_ID=preneura-web \
+          OIDC_CLIENT_SECRET=0123456789abcdef \
+          OIDC_REDIRECT_URI=https://api.preneura.example/v1/auth/google/callback \
+          OBJECT_STORAGE_BUCKET=preneura-production \
+          DOCUMENT_SCANNER_URL=http://document-scanner.internal/v1/scan \
+          DOCUMENT_SCANNER_TOKEN=0123456789abcdef \
+            pnpm --filter @preneura/api start >/tmp/api-valid-config.log 2>&1 &
+          API_PID=$!
+          trap 'kill "$API_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4120/v1/health/ready >/tmp/api-valid-ready.json; then
+              break
+            fi
+            if ! kill -0 "$API_PID" 2>/dev/null; then
+              cat /tmp/api-valid-config.log
+              exit 1
+            fi
+            sleep 1
+          done
+          grep -q '"status":"ready"' /tmp/api-valid-ready.json
+          kill "$API_PID"
+          wait "$API_PID" || true
+          trap - EXIT
+
+          NODE_ENV=production \
+          DATABASE_URL="$COMMON_DB" \
+          NOTIFICATION_GATEWAY_URL=http://notification-gateway.internal/v1/notifications \
+          NOTIFICATION_GATEWAY_TOKEN="$COMMON_TOKEN" \
+            pnpm --filter @preneura/worker start >/tmp/worker-valid-config.log 2>&1 &
+          WORKER_PID=$!
+          trap 'kill "$WORKER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            if grep -q '"event":"worker.ready"' /tmp/worker-valid-config.log; then
+              break
+            fi
+            if ! kill -0 "$WORKER_PID" 2>/dev/null; then
+              cat /tmp/worker-valid-config.log
+              exit 1
+            fi
+            sleep 1
+          done
+          grep -q '"event":"worker.ready"' /tmp/worker-valid-config.log
+          kill "$WORKER_PID"
+          wait "$WORKER_PID" || true
+          trap - EXIT
 
       - name: Certify production migration runner
         working-directory: platform
