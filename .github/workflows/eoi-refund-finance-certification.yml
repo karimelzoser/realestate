@@ -1,0 +1,161 @@
+name: Gate 4 EOI & Refund Finance Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/pnpm-lock.yaml"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
+      - "platform/packages/database/tests/gate4_eoi_refund_finance_certification.sql"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/contracts/src/access.ts"
+      - "platform/packages/contracts/src/sales.ts"
+      - "platform/apps/api/src/sales/**"
+      - "platform/docs/eoi-refund-finance.md"
+      - ".github/workflows/eoi-refund-finance-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+    paths:
+      - "platform/pnpm-lock.yaml"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
+      - "platform/packages/database/tests/gate4_eoi_refund_finance_certification.sql"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/contracts/src/access.ts"
+      - "platform/packages/contracts/src/sales.ts"
+      - "platform/apps/api/src/sales/**"
+      - "platform/docs/eoi-refund-finance.md"
+      - ".github/workflows/eoi-refund-finance-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  eoi-refund-finance:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply schema with production migrator
+        working-directory: platform
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
+          MIGRATION_ACTOR: gate4-eoi-finance-certification
+        run: pnpm --filter @preneura/database migrate
+
+      - name: Verify migration authority and EOI finance structures
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          DECLARE
+            v_latest integer;
+          BEGIN
+            SELECT max(version) INTO v_latest FROM platform_schema_migrations;
+            IF v_latest <> 34 THEN
+              RAISE EXCEPTION 'production migrator did not finish at schema 34; got %', v_latest;
+            END IF;
+
+            IF EXISTS (
+              SELECT 1 FROM platform_schema_migrations
+              WHERE filename !~ '^\\d{4}_[a-z0-9_]+\\.sql$'
+            ) THEN
+              RAISE EXCEPTION 'noncanonical migration entered production history';
+            END IF;
+
+            IF NOT EXISTS (
+              SELECT 1 FROM platform_schema_migrations
+              WHERE version = 34
+                AND filename = '0034_eoi_financial_evidence.sql'
+            ) THEN
+              RAISE EXCEPTION 'EOI finance migration missing from production migration history';
+            END IF;
+
+            IF to_regclass('public.eoi_finance_events') IS NULL
+              THEN RAISE EXCEPTION 'EOI finance event table missing'; END IF;
+            IF to_regclass('public.eoi_finance_ledger_entries') IS NULL
+              THEN RAISE EXCEPTION 'EOI finance ledger table missing'; END IF;
+
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_constraint
+              WHERE conname = 'buyer_eois_finance_scope_identity'
+                AND conrelid = 'buyer_eois'::regclass
+            ) THEN RAISE EXCEPTION 'EOI tenant/project finance scope identity missing'; END IF;
+
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_trigger
+              WHERE tgname = 'trg_eoi_finance_events_immutable' AND NOT tgisinternal
+            ) THEN RAISE EXCEPTION 'EOI event immutability trigger missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_trigger
+              WHERE tgname = 'trg_eoi_finance_ledger_immutable' AND NOT tgisinternal
+            ) THEN RAISE EXCEPTION 'EOI ledger immutability trigger missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_trigger
+              WHERE tgname = 'trg_buyer_eois_finance_projection_guard' AND NOT tgisinternal
+            ) THEN RAISE EXCEPTION 'EOI projection guard missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_trigger
+              WHERE tgname = 'trg_eoi_refund_payout_projection_guard' AND NOT tgisinternal
+            ) THEN RAISE EXCEPTION 'refund payout projection guard missing'; END IF;
+
+            IF to_regprocedure('public.preneura_post_eoi_payment(uuid,uuid,uuid,text,uuid,timestamp with time zone,text,text,text)') IS NULL
+              THEN RAISE EXCEPTION 'EOI payment posting function missing'; END IF;
+            IF to_regprocedure('public.preneura_reverse_eoi_payment(uuid,uuid,uuid,text,uuid,timestamp with time zone)') IS NULL
+              THEN RAISE EXCEPTION 'EOI payment reversal function missing'; END IF;
+            IF to_regprocedure('public.preneura_pay_eoi_refund(uuid,uuid,uuid,text,uuid,timestamp with time zone)') IS NULL
+              THEN RAISE EXCEPTION 'EOI refund payout function missing'; END IF;
+
+            IF NOT EXISTS (
+              SELECT 1 FROM platform_runtime_contract
+              WHERE singleton_key = 'production'
+                AND schema_version = 34
+                AND minimum_runtime_version = 34
+                AND migration_marker = '0034_eoi_financial_evidence'
+            ) THEN RAISE EXCEPTION 'runtime contract is not schema 34 EOI finance authority'; END IF;
+          END $$;
+          SQL
+
+      - name: Execute EOI/refund finance certification
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
+            -f platform/packages/database/tests/gate4_eoi_refund_finance_certification.sql
