@@ -97,7 +97,7 @@ async function adoptCurrentSchema(client, migrations) {
 
   if (!row || Number(row.schema_version) !== latest.version || row.migration_marker !== marker) {
     throw new Error(
-      `Cannot adopt existing schema: expected runtime contract ${latest.version}/${marker}. Apply/verify the full schema first.`,
+      `Cannot adopt existing schema: expected runtime contract ${latest.version}/${marker}. Apply and verify the full schema first.`,
     );
   }
 
@@ -154,10 +154,14 @@ async function applyPending(client, migrations) {
 }
 
 const client = new Client({ connectionString, connectionTimeoutMillis: 5000 });
+let connected = false;
+let lockAcquired = false;
 try {
   const migrations = await loadMigrations();
   await client.connect();
+  connected = true;
   await client.query('SELECT pg_advisory_lock(hashtext($1))', [lockKey]);
+  lockAcquired = true;
   log('migrations.lock_acquired', { count: migrations.length });
 
   await ensureLedger(client);
@@ -171,8 +175,8 @@ try {
     log('migrations.complete', { appliedCount, total: migrations.length });
   }
 } finally {
-  if (client._connected) {
+  if (connected && lockAcquired) {
     await client.query('SELECT pg_advisory_unlock(hashtext($1))', [lockKey]).catch(() => undefined);
   }
-  await client.end().catch(() => undefined);
+  if (connected) await client.end().catch(() => undefined);
 }
