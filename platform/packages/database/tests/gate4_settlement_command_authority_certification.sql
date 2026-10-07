@@ -5,9 +5,11 @@ BEGIN;
 DO $$
 DECLARE
   v_user uuid;
+  v_user_2 uuid;
   v_tenant uuid;
   v_project uuid;
   v_buyer uuid;
+  v_buyer_2 uuid;
   v_policy uuid;
   v_eoi_1 uuid;
   v_eoi_2 uuid;
@@ -21,6 +23,10 @@ BEGIN
   VALUES ('Settlement Command Authority Operator', 'ACTIVE')
   RETURNING id INTO v_user;
 
+  INSERT INTO users (display_name, status)
+  VALUES ('Settlement Command Collision Buyer', 'ACTIVE')
+  RETURNING id INTO v_user_2;
+
   INSERT INTO tenants (code, name, status, default_currency, default_timezone)
   VALUES ('SET-CMD', 'Settlement Command Tenant', 'ACTIVE', 'EGP', 'Africa/Cairo')
   RETURNING id INTO v_tenant;
@@ -32,6 +38,10 @@ BEGIN
   INSERT INTO buyer_profiles (tenant_id, user_id, status, source, created_by)
   VALUES (v_tenant, v_user, 'ACTIVE', 'DIRECT', v_user)
   RETURNING id INTO v_buyer;
+
+  INSERT INTO buyer_profiles (tenant_id, user_id, status, source, created_by)
+  VALUES (v_tenant, v_user_2, 'ACTIVE', 'DIRECT', v_user)
+  RETURNING id INTO v_buyer_2;
 
   INSERT INTO eoi_refund_policies (
     tenant_id, project_id, version_number, name, status, eoi_amount, currency,
@@ -56,7 +66,7 @@ BEGIN
     tenant_id, project_id, buyer_profile_id, refund_policy_id, amount, currency,
     status, payment_reference, paid_at, refund_requested_at, created_by
   ) VALUES (
-    v_tenant, v_project, v_buyer, v_policy, 100, 'EGP', 'REFUND_REQUESTED',
+    v_tenant, v_project, v_buyer_2, v_policy, 100, 'EGP', 'REFUND_REQUESTED',
     'SET-CMD-EOI-2', '2026-01-02T00:00:00+00', '2026-01-03T00:00:00+00', v_user
   ) RETURNING id INTO v_eoi_2;
 
@@ -78,7 +88,7 @@ BEGIN
     processing_fee, requested_amount, currency, status,
     requested_by, requested_at, reviewed_by, reviewed_at, updated_at
   ) VALUES (
-    v_tenant, v_project, v_eoi_2, v_buyer, v_policy,
+    v_tenant, v_project, v_eoi_2, v_buyer_2, v_policy,
     'BEFORE_RESERVATION', 'PAID', 100, 100, 0, 100, 'EGP', 'APPROVED',
     v_user, '2026-01-03T00:00:00+00', v_user, '2026-01-03T01:00:00+00',
     '2026-01-03T01:00:00+00'
