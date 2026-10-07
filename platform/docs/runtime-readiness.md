@@ -1,6 +1,71 @@
-# Runtime readiness and schema compatibility
+# Runtime readiness, migrations, and schema compatibility
 
 PRENEURA separates **process liveness** from **traffic readiness** so orchestration does not send production traffic to a process that is alive but cannot safely use PostgreSQL.
+
+## Supported production release order
+
+Production uses one explicit sequence:
+
+```text
+build immutable release
+        ↓
+run one migration/release job
+        ↓
+wait for migration success
+        ↓
+start/roll API instances
+        ↓
+/v1/health/ready = 200
+        ↓
+admit traffic
+        ↓
+start/roll workers
+```
+
+The API and worker do **not** auto-run migrations. This avoids several horizontally scaled processes racing to change schema at process startup.
+
+The supported migration command is:
+
+```bash
+pnpm --filter @preneura/database migrate
+```
+
+It uses the same `DATABASE_URL` as the runtime.
+
+## Migration authority
+
+`@preneura/database migrate` is an advisory-locked, checksum-verifying migration runner.
+
+It:
+
+- loads only sequential `NNNN_name.sql` files;
+- requires migration versions to be contiguous;
+- hashes the original migration file with SHA-256;
+- acquires one PostgreSQL advisory lock so concurrent release jobs serialize;
+- records immutable migration identity in `platform_schema_migrations`;
+- executes each migration body and its migration-history row in the same migrator-owned transaction;
+- rejects a historical migration whose filename or checksum no longer matches the applied record;
+- is idempotent when rerun against a fully migrated database.
+
+Historical migration files are therefore append-only release artifacts. Fix a production defect with a new forward migration; do not edit an applied SQL file.
+
+### Existing database adoption
+
+Databases created before the migration runner was introduced do not have `platform_schema_migrations` history. There is one controlled transition path:
+
+1. bring the legacy database to the exact current certified schema, including migration `0033_runtime_readiness_contract.sql`;
+2. verify `/v1/health/ready` against that schema;
+3. run once:
+
+```bash
+MIGRATION_ADOPT_EXISTING=true \
+MIGRATION_ACTOR=legacy-baseline \
+pnpm --filter @preneura/database migrate
+```
+
+Adoption is refused unless the runtime contract exactly matches the latest migration version and marker. It records the current migration set as `ADOPTED` with checksums; it does not rerun the SQL.
+
+`MIGRATION_ADOPT_EXISTING=true` must **not** remain configured after this one-time baseline. Every later release uses normal `migrate` mode.
 
 ## API probes
 
@@ -67,9 +132,31 @@ For a breaking migration, use an **expand/contract** deployment. First deploy co
 
 ## Worker startup
 
-The worker has no public HTTP port. Before starting any outbox, notification, reminder, or commission loop it executes the same database/runtime compatibility probe used by API readiness.
+The worker has no public HTTP port. Before starting any outbox, notification, reminder, or commission loop it validates its production configuration and executes the same database/runtime compatibility probe used by API readiness.
 
 A stale or incompatible database therefore causes the worker process to exit non-zero before it can claim jobs or mutate operational projections.
+
+## Production configuration fail-closed rule
+
+When `NODE_ENV=production`, startup validates required security/runtime configuration before serving or processing work.
+
+The API validates, among other requirements:
+
+- PostgreSQL URL;
+- HTTPS browser origin;
+- authentication/session/HMAC/encryption secrets;
+- gateway OTP mode and verification gateway URLs;
+- Google OIDC issuer/client/redirect configuration;
+- object-storage bucket/endpoint shape;
+- malware-scanner URL/token.
+
+The worker validates:
+
+- PostgreSQL URL;
+- notification gateway URL/token;
+- bounded integer poll/scan intervals.
+
+Development and CI test mode remain flexible, but production does not silently fall back to console OTP, placeholder keys, or missing delivery integrations.
 
 ## Rollback behavior
 
@@ -91,7 +178,7 @@ The readiness layer uses bounded failure codes:
 
 ## Executable certification
 
-The reusable executable is:
+The reusable runtime executable is:
 
 ```text
 platform/scripts/certify-runtime-readiness.sh
@@ -108,7 +195,12 @@ The certification proves:
 5. additive future schema remains compatible with the current runtime;
 6. a future schema that raises `minimum_runtime_version` rejects the old runtime;
 7. the runtime contract cannot be deleted or moved backwards;
-8. strict TypeScript and the complete deployable API/worker dependency graph build successfully;
-9. the emitted API process reaches Nest startup and resolves its runtime module/dependency graph before readiness is accepted.
+8. incomplete production configuration causes API and worker startup to fail closed;
+9. complete production-shaped configuration can boot API/worker against the current schema;
+10. a fresh database is migrated from zero and a rerun is idempotent;
+11. the pre-runner/current schema can be adopted exactly once into checksum history;
+12. modifying historical migration SQL is rejected by checksum verification;
+13. concurrent migrators serialize under the PostgreSQL advisory lock and converge on one 33-row history;
+14. strict TypeScript and the complete deployable API/worker dependency graph build successfully.
 
-The script can also be run against an isolated PostgreSQL 18 instance outside GitHub Actions after the production workspace is built. It creates and destroys only its named certification databases and does not target a production database.
+The runtime script can also be run against an isolated PostgreSQL 18 instance outside GitHub Actions after the production workspace is built. It creates and destroys only its named certification databases and does not target a production database.
