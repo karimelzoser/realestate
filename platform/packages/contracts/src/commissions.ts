@@ -19,7 +19,7 @@ export const updateCommissionCaseStatusSchema = z.object({
   projectId: z.uuid(),
   brokerCompanyId: z.uuid(),
   commissionCaseId: z.uuid(),
-  action: z.enum(['MARK_INVOICED', 'MARK_PAID', 'MARK_DISPUTED']),
+  action: z.enum(['MARK_INVOICED', 'MARK_DISPUTED']),
 });
 export type UpdateCommissionCaseStatusInput = z.infer<typeof updateCommissionCaseStatusSchema>;
 
@@ -51,6 +51,9 @@ export interface CommissionCaseSnapshot {
   overdueSeconds: number | null;
   invoicedAt: string | null;
   paidAt: string | null;
+  settlementId: string | null;
+  settlementStatus: 'PENDING_SUBMISSION' | 'SUBMITTED' | 'SETTLED' | 'FAILED' | 'REVERSED' | 'CANCELLED' | null;
+  settlementProviderReference: string | null;
   basisAmount?: string;
   commissionAmount?: string;
   ratePercent?: string;
