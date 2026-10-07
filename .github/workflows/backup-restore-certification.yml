@@ -80,18 +80,30 @@ jobs:
           psql "$SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/database/tests/backup_restore_verify.sql
           psql "$SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 -Atf packages/database/tests/backup_restore_fingerprint.sql | tr -d '[:space:]' > /tmp/source.fingerprint
           grep -Eq '^[0-9a-f]{64}$' /tmp/source.fingerprint
-      - name: Create checksummed logical backup
+      - name: Create checksummed logical backup with PostgreSQL 18 client
         run: |
           set -euo pipefail
-          pg_dump --format=custom --no-owner --no-acl "$SOURCE_DATABASE_URL" > /tmp/preneura.dump
+          docker run --rm --network host \
+            -e PGPASSWORD="$PGPASSWORD" \
+            -v /tmp:/backup \
+            postgres:18 \
+            pg_dump --host=127.0.0.1 --port=5432 --username=postgres \
+              --dbname=preneura_backup_source --format=custom --no-owner --no-acl \
+              --file=/backup/preneura.dump
           test -s /tmp/preneura.dump
           sha256sum /tmp/preneura.dump > /tmp/preneura.dump.sha256
           (cd /tmp && sha256sum -c preneura.dump.sha256)
-      - name: Restore into isolated database
+      - name: Restore with PostgreSQL 18 client into isolated database
         run: |
           set -euo pipefail
           createdb preneura_backup_restore
-          pg_restore --exit-on-error --no-owner --no-acl --dbname="$RESTORE_DATABASE_URL" /tmp/preneura.dump
+          docker run --rm --network host \
+            -e PGPASSWORD="$PGPASSWORD" \
+            -v /tmp:/backup:ro \
+            postgres:18 \
+            pg_restore --host=127.0.0.1 --port=5432 --username=postgres \
+              --dbname=preneura_backup_restore --exit-on-error --no-owner --no-acl \
+              /backup/preneura.dump
       - name: Reconcile restored authoritative evidence
         run: |
           set -euo pipefail
