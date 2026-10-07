@@ -116,14 +116,16 @@ The operation atomically:
 
 Database triggers reject direct manufacture of EOI paid/refunded state or refund payout state.
 
-The authorized finance functions set the transaction-local flag `preneura.eoi_finance_projection=on` only while deriving projections. Missing settings are treated as unauthorized using fail-closed `COALESCE` logic; SQL `NULL` must never bypass the guard.
+Projection authority is deliberately **one-shot**. Finance functions set `preneura.eoi_finance_projection=on` only for the next authorized projection row. The guard consumes that token immediately so it cannot leak to later statements in the caller's transaction. During refund payout, the refund-request guard consumes the primary token and issues a separate one-shot `preneura.eoi_refund_followup_projection` token solely for the immediately following EOI `REFUNDED` projection; the EOI guard consumes that follow-up token too.
+
+Missing settings are always unauthorized using fail-closed `COALESCE` logic. SQL `NULL` and a prior successful finance operation must never authorize a later direct mutation.
 
 ## Runtime compatibility
 
-The fail-closed financial authority is schema version 35:
+The one-shot financial authority is schema version 36:
 
 ```text
-0035_eoi_projection_guards_fail_closed
+0036_eoi_projection_authority_one_shot
 ```
 
 API/worker runtime readiness must reject databases below that contract when this branch is deployed.
@@ -146,7 +148,7 @@ may enter production migration history. Gate 4 certification applies migrations 
 - tenant/project scoped EOI finance identity;
 - append-only payment and ledger evidence;
 - balanced postings;
-- fail-closed projection guards;
+- fail-closed and one-shot projection guards;
 - payment idempotency;
 - compensating reversal;
 - corrected re-payment after reversal;
