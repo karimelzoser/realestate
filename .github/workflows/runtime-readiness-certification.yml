@@ -9,6 +9,7 @@ on:
       - "platform/packages/security/package.json"
       - "platform/packages/database/src/runtime-readiness.ts"
       - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
       - "platform/packages/database/package.json"
       - "platform/scripts/certify-runtime-readiness.sh"
       - "platform/docs/runtime-readiness.md"
@@ -24,6 +25,7 @@ on:
       - "platform/packages/security/package.json"
       - "platform/packages/database/src/runtime-readiness.ts"
       - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
       - "platform/packages/database/package.json"
       - "platform/scripts/certify-runtime-readiness.sh"
       - "platform/docs/runtime-readiness.md"
@@ -86,3 +88,62 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
         run: bash scripts/certify-runtime-readiness.sh
+
+      - name: Certify production migration runner
+        working-directory: platform
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: |
+          set -Eeuo pipefail
+          export PGPASSWORD
+          FRESH_DB="preneura_migrator_fresh_${GITHUB_RUN_ID}"
+          CONCURRENT_DB="preneura_migrator_concurrent_${GITHUB_RUN_ID}"
+          createdb -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$FRESH_DB"
+          createdb -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$CONCURRENT_DB"
+
+          FRESH_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$FRESH_DB"
+          CONCURRENT_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$CONCURRENT_DB"
+          CURRENT_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_current"
+
+          DATABASE_URL="$FRESH_URL" MIGRATION_ACTOR=certification-fresh \
+            pnpm --filter @preneura/database migrate
+          test "$(psql "$FRESH_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
+          test "$(psql "$FRESH_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'APPLIED'")" = '33'
+
+          DATABASE_URL="$FRESH_URL" MIGRATION_ACTOR=certification-rerun \
+            pnpm --filter @preneura/database migrate
+          test "$(psql "$FRESH_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
+
+          DATABASE_URL="$CURRENT_URL" MIGRATION_ADOPT_EXISTING=true MIGRATION_ACTOR=certification-adopt \
+            pnpm --filter @preneura/database migrate
+          test "$(psql "$CURRENT_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
+          test "$(psql "$CURRENT_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'ADOPTED'")" = '33'
+
+          rm -rf /tmp/preneura-migrations-drift
+          cp -R packages/database/migrations /tmp/preneura-migrations-drift
+          printf '\n-- historical checksum drift for certification\n' >> /tmp/preneura-migrations-drift/0001_auth_foundation.sql
+          set +e
+          DATABASE_URL="$FRESH_URL" MIGRATIONS_DIR=/tmp/preneura-migrations-drift \
+            pnpm --filter @preneura/database migrate >/tmp/preneura-migration-drift.log 2>&1
+          DRIFT_RC=$?
+          set -e
+          if [[ "$DRIFT_RC" -eq 0 ]]; then
+            cat /tmp/preneura-migration-drift.log
+            echo 'Migrator accepted modified historical SQL.' >&2
+            exit 1
+          fi
+          grep -q 'checksum mismatch' /tmp/preneura-migration-drift.log
+
+          DATABASE_URL="$CONCURRENT_URL" MIGRATION_ACTOR=certification-concurrent-a \
+            pnpm --filter @preneura/database migrate >/tmp/preneura-migrator-a.log 2>&1 &
+          FIRST_PID=$!
+          DATABASE_URL="$CONCURRENT_URL" MIGRATION_ACTOR=certification-concurrent-b \
+            pnpm --filter @preneura/database migrate >/tmp/preneura-migrator-b.log 2>&1 &
+          SECOND_PID=$!
+          wait "$FIRST_PID" || { cat /tmp/preneura-migrator-a.log; exit 1; }
+          wait "$SECOND_PID" || { cat /tmp/preneura-migrator-b.log; exit 1; }
+          test "$(psql "$CONCURRENT_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
+          test "$(psql "$CONCURRENT_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'APPLIED'")" = '33'
