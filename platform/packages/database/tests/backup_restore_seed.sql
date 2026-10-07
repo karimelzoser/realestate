@@ -43,14 +43,12 @@ INSERT INTO catalog_unit_types (
 );
 
 INSERT INTO pricing_versions (
-  id, tenant_id, project_id, version_number, label, status, effective_at,
-  published_at, published_by, created_by
+  id, tenant_id, project_id, version_number, label, status, effective_at, created_by
 ) VALUES (
   '00000000-0000-0000-0000-000000005000',
   '00000000-0000-0000-0000-000000001000',
   '00000000-0000-0000-0000-000000002000',
-  1, 'Backup Price', 'PUBLISHED', '2026-01-01T00:00:00+00',
-  '2026-01-01T00:00:00+00', '00000000-0000-0000-0000-000000000001',
+  1, 'Backup Price', 'DRAFT', '2026-01-01T00:00:00+00',
   '00000000-0000-0000-0000-000000000001'
 );
 
@@ -60,6 +58,11 @@ INSERT INTO pricing_rates (
   ('00000000-0000-0000-0000-000000001000','00000000-0000-0000-0000-000000002000','00000000-0000-0000-0000-000000005000','00000000-0000-0000-0000-000000004000','INDOOR',2000),
   ('00000000-0000-0000-0000-000000001000','00000000-0000-0000-0000-000000002000','00000000-0000-0000-0000-000000005000','00000000-0000-0000-0000-000000004000','ROOF',500),
   ('00000000-0000-0000-0000-000000001000','00000000-0000-0000-0000-000000002000','00000000-0000-0000-0000-000000005000','00000000-0000-0000-0000-000000004000','GARDEN',750);
+
+UPDATE pricing_versions
+SET status='PUBLISHED', published_at='2026-01-01T00:00:00+00',
+    published_by='00000000-0000-0000-0000-000000000001', updated_at='2026-01-01T00:00:00+00'
+WHERE id='00000000-0000-0000-0000-000000005000';
 
 INSERT INTO buyer_profiles (id, tenant_id, user_id, status, source, created_by)
 VALUES (
@@ -167,7 +170,6 @@ VALUES
   ('00000000-0000-0000-0000-000000013000','CONTRACT_SIGNED','Contract signed',20,'PENDING'),
   ('00000000-0000-0000-0000-000000013000','CONTRACT_STAMPED','Contract executed',20,'PENDING');
 
--- Trusted contract template object.
 INSERT INTO storage_object_trust (
   id, tenant_id, project_id, purpose, object_key, declared_mime_type, byte_size, sha256_hex, status
 ) VALUES (
@@ -201,7 +203,6 @@ VALUES
   ('00000000-0000-0000-0000-000000014002','BUYER',1,true),
   ('00000000-0000-0000-0000-000000014002','COMPANY',2,true);
 
--- Trusted transaction contract object.
 INSERT INTO storage_object_trust (
   id, tenant_id, project_id, purpose, object_key, declared_mime_type, byte_size, sha256_hex, status
 ) VALUES (
@@ -234,7 +235,6 @@ INSERT INTO transaction_documents (
   '00000000-0000-0000-0000-000000000001', '2026-01-02T00:13:00+00'
 );
 
--- Trusted buyer signature object, then ordered buyer/company signatures.
 INSERT INTO storage_object_trust (
   id, tenant_id, project_id, purpose, object_key, declared_mime_type, byte_size, sha256_hex, status
 ) VALUES (
@@ -272,7 +272,6 @@ UPDATE transaction_documents SET
   stamped_at='2026-01-02T00:16:00+00', updated_at='2026-01-02T00:16:00+00'
 WHERE id='00000000-0000-0000-0000-000000014004';
 
--- Financial evidence: one fully allocated down payment and immutable cheque replacement history.
 INSERT INTO payment_schedules (
   id, tenant_id, project_id, transaction_id, currency, total_contract_amount, status, created_by, activated_at
 ) VALUES (
@@ -326,7 +325,6 @@ SELECT preneura_record_cheque_event(
   'RECEIVED', '00000000-0000-0000-0000-000000000001', '2026-01-11T00:00:00+00', NULL, NULL
 );
 
--- Representative commission evidence linked to the same transaction.
 INSERT INTO broker_commission_plans (
   id, tenant_id, project_id, broker_company_id, version_number, status,
   rate_percent, due_days_after_eligibility, effective_at, activated_at, created_by
