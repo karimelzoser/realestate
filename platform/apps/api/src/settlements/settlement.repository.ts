@@ -19,39 +19,69 @@ export class SettlementRepository {
   constructor(@Inject(DATABASE) private readonly db: Kysely<Database>) {}
 
   async createEoiRefund(input: {
+    tenantId: string;
+    projectId: string;
     refundRequestId: string;
     actorUserId: string;
     idempotencyKey: string;
   }): Promise<string> {
-    const result = await sql<{ id: string }>`
-      SELECT preneura_create_eoi_refund_settlement(
-        ${input.refundRequestId}::uuid,
-        ${input.actorUserId}::uuid,
-        ${input.idempotencyKey},
-        now()
-      ) AS id
-    `.execute(this.db);
-    const id = result.rows[0]?.id;
-    if (!id) throw new ConflictException('EOI refund settlement could not be created.');
-    return id;
+    return this.db.transaction().execute(async (trx) => {
+      const scope = await sql<{ id: string }>`
+        SELECT id
+        FROM eoi_refund_requests
+        WHERE id = ${input.refundRequestId}::uuid
+          AND tenant_id = ${input.tenantId}::uuid
+          AND project_id = ${input.projectId}::uuid
+        FOR UPDATE
+      `.execute(trx);
+      if (!scope.rows[0]) throw new NotFoundException('EOI refund request not found.');
+
+      const result = await sql<{ id: string }>`
+        SELECT preneura_create_eoi_refund_settlement(
+          ${input.refundRequestId}::uuid,
+          ${input.actorUserId}::uuid,
+          ${input.idempotencyKey},
+          now()
+        ) AS id
+      `.execute(trx);
+      const id = result.rows[0]?.id;
+      if (!id) throw new ConflictException('EOI refund settlement could not be created.');
+      return id;
+    });
   }
 
   async createCommission(input: {
+    tenantId: string;
+    projectId: string;
+    brokerCompanyId: string;
     commissionCaseId: string;
     actorUserId: string;
     idempotencyKey: string;
   }): Promise<string> {
-    const result = await sql<{ id: string }>`
-      SELECT preneura_create_commission_settlement(
-        ${input.commissionCaseId}::uuid,
-        ${input.actorUserId}::uuid,
-        ${input.idempotencyKey},
-        now()
-      ) AS id
-    `.execute(this.db);
-    const id = result.rows[0]?.id;
-    if (!id) throw new ConflictException('Commission settlement could not be created.');
-    return id;
+    return this.db.transaction().execute(async (trx) => {
+      const scope = await sql<{ id: string }>`
+        SELECT id
+        FROM broker_commission_cases
+        WHERE id = ${input.commissionCaseId}::uuid
+          AND tenant_id = ${input.tenantId}::uuid
+          AND project_id = ${input.projectId}::uuid
+          AND broker_company_id = ${input.brokerCompanyId}::uuid
+        FOR UPDATE
+      `.execute(trx);
+      if (!scope.rows[0]) throw new NotFoundException('Commission case not found.');
+
+      const result = await sql<{ id: string }>`
+        SELECT preneura_create_commission_settlement(
+          ${input.commissionCaseId}::uuid,
+          ${input.actorUserId}::uuid,
+          ${input.idempotencyKey},
+          now()
+        ) AS id
+      `.execute(trx);
+      const id = result.rows[0]?.id;
+      if (!id) throw new ConflictException('Commission settlement could not be created.');
+      return id;
+    });
   }
 
   async context(settlementId: string): Promise<SettlementContextRow | null> {
