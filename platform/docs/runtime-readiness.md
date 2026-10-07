@@ -43,6 +43,7 @@ It:
 - hashes the original migration file with SHA-256;
 - acquires one PostgreSQL advisory lock so concurrent release jobs serialize;
 - records immutable migration identity in `platform_schema_migrations`;
+- makes recorded migration history append-only in PostgreSQL; UPDATE/DELETE are rejected;
 - executes each migration body and its migration-history row in the same migrator-owned transaction;
 - rejects a historical migration whose filename or checksum no longer matches the applied record;
 - is idempotent when rerun against a fully migrated database.
