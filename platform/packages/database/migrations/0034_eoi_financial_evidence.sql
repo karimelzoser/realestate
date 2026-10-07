@@ -1,5 +1,12 @@
 BEGIN;
 
+-- The production migrator accepts one canonical four-digit migration per
+-- version. Keep the EOI finance scoped identity inside schema 34 rather than
+-- relying on a noncanonical 0033a sidecar migration that production would skip.
+ALTER TABLE buyer_eois
+  ADD CONSTRAINT buyer_eois_finance_scope_identity
+  UNIQUE (id, tenant_id, project_id);
+
 -- ---------------------------------------------------------------------------
 -- EOI money is independent from the transaction/installment ledger. An EOI is
 -- held as a customer deposit liability until it is refunded or the retained
