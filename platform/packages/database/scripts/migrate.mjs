@@ -23,6 +23,20 @@ function sha256(content) {
   return createHash('sha256').update(content).digest('hex');
 }
 
+function migrationBody(sql, filename) {
+  const beginPattern = /^\s*BEGIN\s*;\s*/i;
+  const commitPattern = /\s*COMMIT\s*;\s*$/i;
+  const hasBegin = beginPattern.test(sql);
+  const hasCommit = commitPattern.test(sql);
+
+  if (hasBegin !== hasCommit) {
+    throw new Error(`Migration ${filename} must contain both outer BEGIN and COMMIT, or neither.`);
+  }
+
+  if (!hasBegin) return sql;
+  return sql.replace(beginPattern, '').replace(commitPattern, '');
+}
+
 async function loadMigrations() {
   const filenames = (await readdir(migrationsDir))
     .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/i.test(name))
@@ -38,7 +52,12 @@ async function loadMigrations() {
     if (seenVersions.has(version)) throw new Error(`Duplicate migration version ${version}`);
     seenVersions.add(version);
     const sql = await readFile(join(migrationsDir, filename), 'utf8');
-    migrations.push({ filename, version, sql, checksum: sha256(sql) });
+    migrations.push({
+      filename,
+      version,
+      executionSql: migrationBody(sql, filename),
+      checksum: sha256(sql),
+    });
   }
 
   for (let index = 0; index < migrations.length; index += 1) {
@@ -130,7 +149,7 @@ async function applyPending(client, migrations) {
     log('migration.applying', { version: migration.version, filename: migration.filename });
     await client.query('BEGIN');
     try {
-      await client.query(migration.sql);
+      await client.query(migration.executionSql);
       await client.query(
         `INSERT INTO platform_schema_migrations
            (version, filename, checksum_sha256, apply_mode, applied_by, duration_ms)
