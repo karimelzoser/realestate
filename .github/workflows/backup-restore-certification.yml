@@ -1,1 +1,119 @@
-# This file is moved to the dedicated backup/restore branch in the next commit.
+name: Backup Restore Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
+      - "platform/packages/database/tests/backup_restore_*.sql"
+      - "platform/docs/backup-restore.md"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/backup-restore-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
+      - "platform/packages/database/tests/backup_restore_*.sql"
+      - "platform/docs/backup-restore.md"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/backup-restore-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  logical-backup-restore:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    defaults:
+      run:
+        working-directory: platform
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      SOURCE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_backup_source
+      RESTORE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_backup_restore
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Create and migrate source database
+        run: |
+          set -euo pipefail
+          createdb preneura_backup_source
+          DATABASE_URL="$SOURCE_DATABASE_URL" MIGRATION_ACTOR=backup-certification-source pnpm --filter @preneura/database migrate
+          test "$(psql "$SOURCE_DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
+      - name: Seed persistent authoritative evidence
+        run: |
+          set -euo pipefail
+          psql "$SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/database/tests/backup_restore_seed.sql
+          psql "$SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/database/tests/backup_restore_verify.sql
+          psql "$SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 -Atf packages/database/tests/backup_restore_fingerprint.sql | tr -d '[:space:]' > /tmp/source.fingerprint
+          grep -Eq '^[0-9a-f]{64}$' /tmp/source.fingerprint
+      - name: Create checksummed logical backup
+        run: |
+          set -euo pipefail
+          pg_dump --format=custom --no-owner --no-acl "$SOURCE_DATABASE_URL" > /tmp/preneura.dump
+          test -s /tmp/preneura.dump
+          sha256sum /tmp/preneura.dump > /tmp/preneura.dump.sha256
+          (cd /tmp && sha256sum -c preneura.dump.sha256)
+      - name: Restore into isolated database
+        run: |
+          set -euo pipefail
+          createdb preneura_backup_restore
+          pg_restore --exit-on-error --no-owner --no-acl --dbname="$RESTORE_DATABASE_URL" /tmp/preneura.dump
+      - name: Reconcile restored authoritative evidence
+        run: |
+          set -euo pipefail
+          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/database/tests/backup_restore_verify.sql
+          psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -Atf packages/database/tests/backup_restore_fingerprint.sql | tr -d '[:space:]' > /tmp/restored.fingerprint
+          grep -Eq '^[0-9a-f]{64}$' /tmp/restored.fingerprint
+          cmp --silent /tmp/source.fingerprint /tmp/restored.fingerprint || {
+            echo "source=$(cat /tmp/source.fingerprint)" >&2
+            echo "restore=$(cat /tmp/restored.fingerprint)" >&2
+            exit 1
+          }
+      - name: Certify migration and runtime contracts after restore
+        run: |
+          set -euo pipefail
+          DATABASE_URL="$RESTORE_DATABASE_URL" MIGRATION_ACTOR=backup-certification-restored pnpm --filter @preneura/database migrate
+          test "$(psql "$RESTORE_DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
+          test "$(psql "$RESTORE_DATABASE_URL" -Atqc "SELECT schema_version || ':' || migration_marker FROM platform_runtime_contract WHERE singleton_key='production'")" = '33:0033_runtime_readiness_contract'
+      - name: Record rehearsal evidence
+        run: |
+          set -euo pipefail
+          echo "source_fingerprint=$(cat /tmp/source.fingerprint)"
+          echo "restore_fingerprint=$(cat /tmp/restored.fingerprint)"
+          echo "dump_sha256=$(cut -d' ' -f1 /tmp/preneura.dump.sha256)"
+          echo "migration_count=$(psql "$RESTORE_DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')"
+          echo 'object_storage_provider_restore=required_before_gate7'
