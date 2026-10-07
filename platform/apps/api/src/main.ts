@@ -53,7 +53,7 @@ async function bootstrap(): Promise<void> {
     logger,
     trustProxy: true,
     requestIdHeader: 'x-request-id',
-    genReqId: (request) => {
+    genReqId: (request: FastifyRequest) => {
       const supplied = request.headers['x-request-id'];
       return typeof supplied === 'string' && isSafeRequestId(supplied) ? supplied : randomUUID();
     },
