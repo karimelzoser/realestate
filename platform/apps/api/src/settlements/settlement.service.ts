@@ -50,7 +50,7 @@ export class SettlementService {
   }): Promise<SettlementSnapshot> {
     await this.access.assert({
       userId: input.actorUserId,
-      permission: 'commission.payment.manage',
+      permission: 'commission.payout.manage',
       context: {
         tenantId: input.tenantId,
         projectId: input.projectId,
@@ -160,7 +160,7 @@ export class SettlementService {
     const context = await this.requireContext(input);
     await this.access.assert({
       userId: input.actorUserId,
-      permission: context.settlementType === 'EOI_REFUND' ? 'refund.payout.manage' : 'commission.payment.manage',
+      permission: context.settlementType === 'EOI_REFUND' ? 'refund.payout.manage' : 'commission.payout.manage',
       context: {
         tenantId: input.tenantId,
         projectId: input.projectId,
