@@ -1,8 +1,8 @@
 import { sql, type Kysely } from 'kysely';
 import type { Database } from './index.js';
 
-export const RUNTIME_SCHEMA_VERSION = 35;
-export const RUNTIME_MIGRATION_MARKER = '0035_eoi_projection_guards_fail_closed';
+export const RUNTIME_SCHEMA_VERSION = 36;
+export const RUNTIME_MIGRATION_MARKER = '0036_eoi_projection_authority_one_shot';
 
 export type RuntimeReadinessErrorCode =
   | 'DATABASE_UNAVAILABLE'
