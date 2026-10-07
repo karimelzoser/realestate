@@ -4,6 +4,8 @@ const DEFAULT_BODY_LIMIT_BYTES = 8 * 1024 * 1024;
 const MIN_BODY_LIMIT_BYTES = 64 * 1024;
 const MAX_BODY_LIMIT_BYTES = 16 * 1024 * 1024;
 
+type TrustProxyResolver = false | ((address: string, hop: number) => boolean);
+
 export function resolveApiBodyLimit(env: NodeJS.ProcessEnv = process.env): number {
   const raw = env.API_BODY_LIMIT_BYTES?.trim();
   if (!raw) return DEFAULT_BODY_LIMIT_BYTES;
@@ -16,14 +18,14 @@ export function resolveApiBodyLimit(env: NodeJS.ProcessEnv = process.env): numbe
   return parsed;
 }
 
-export function resolveTrustProxy(env: NodeJS.ProcessEnv = process.env): number | false {
+export function resolveTrustProxy(env: NodeJS.ProcessEnv = process.env): TrustProxyResolver {
   const raw = env.TRUST_PROXY_HOPS?.trim();
   if (!raw) return false;
   const parsed = Number(raw);
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 10) {
     throw new Error('TRUST_PROXY_HOPS must be an integer between 1 and 10.');
   }
-  return parsed;
+  return (_address: string, hop: number): boolean => hop < parsed;
 }
 
 export function registerHttpSecurity(instance: FastifyInstance): void {
