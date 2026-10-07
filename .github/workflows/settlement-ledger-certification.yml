@@ -1,0 +1,117 @@
+name: Gate 4 Settlement Ledger Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/.env.example"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/gate4_settlement_ledger_certification.sql"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/contracts/src/access.ts"
+      - "platform/packages/contracts/src/settlements.ts"
+      - "platform/packages/contracts/src/commissions.ts"
+      - "platform/apps/api/src/settlements/**"
+      - "platform/apps/api/src/commissions/**"
+      - "platform/apps/web/app/workspace/refunds/**"
+      - "platform/apps/web/app/workspace/commissions/**"
+      - ".github/workflows/settlement-ledger-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+    paths:
+      - "platform/.env.example"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/gate4_settlement_ledger_certification.sql"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/contracts/src/access.ts"
+      - "platform/packages/contracts/src/settlements.ts"
+      - "platform/packages/contracts/src/commissions.ts"
+      - "platform/apps/api/src/settlements/**"
+      - "platform/apps/api/src/commissions/**"
+      - "platform/apps/web/app/workspace/refunds/**"
+      - "platform/apps/web/app/workspace/commissions/**"
+      - ".github/workflows/settlement-ledger-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  outgoing-settlements:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migrations from zero
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          for migration in platform/packages/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 -f "${migration}"
+          done
+
+      - name: Verify settlement authority structures
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF to_regclass('public.settlement_disbursements') IS NULL
+              THEN RAISE EXCEPTION 'settlement disbursement table missing'; END IF;
+            IF to_regclass('public.settlement_events') IS NULL
+              THEN RAISE EXCEPTION 'settlement event table missing'; END IF;
+            IF to_regclass('public.settlement_ledger_entries') IS NULL
+              THEN RAISE EXCEPTION 'settlement ledger table missing'; END IF;
+            IF to_regclass('public.settlement_provider_events') IS NULL
+              THEN RAISE EXCEPTION 'settlement provider inbox missing'; END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_settlement_events_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'settlement event immutability trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_settlement_ledger_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'settlement ledger immutability trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_settlement_terminal_evidence' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'terminal settlement evidence trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_eoi_refund_paid_by_settlement' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'refund paid-state authority trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_commission_paid_by_settlement' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'commission paid-state authority trigger missing'; END IF;
+
+            IF to_regprocedure('public.preneura_create_eoi_refund_settlement(uuid,uuid,text,timestamp with time zone)') IS NULL
+              THEN RAISE EXCEPTION 'EOI settlement creation function missing'; END IF;
+            IF to_regprocedure('public.preneura_create_commission_settlement(uuid,uuid,text,timestamp with time zone)') IS NULL
+              THEN RAISE EXCEPTION 'commission settlement creation function missing'; END IF;
+            IF to_regprocedure('public.preneura_submit_settlement(uuid,uuid,text,text,timestamp with time zone)') IS NULL
+              THEN RAISE EXCEPTION 'settlement submission function missing'; END IF;
+            IF to_regprocedure('public.preneura_apply_settlement_outcome(uuid,text,uuid,text,text,text,timestamp with time zone,jsonb)') IS NULL
+              THEN RAISE EXCEPTION 'settlement outcome function missing'; END IF;
+
+            IF (SELECT schema_version FROM platform_runtime_contract WHERE singleton_key='production') <> 35
+              THEN RAISE EXCEPTION 'runtime schema contract is not 35'; END IF;
+          END $$;
+          SQL
+
+      - name: Execute payout reconciliation certification
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
+            -f platform/packages/database/tests/gate4_settlement_ledger_certification.sql
