@@ -95,7 +95,9 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c \
             "UPDATE queue_entries SET status='COMPLETED', completed_at=now(), updated_at=now() WHERE id='00000000-0000-0000-0000-000000009000';"
       - name: Run database contention certification
-        run: node packages/database/tests/concurrency_certification.mjs | tee /tmp/database-concurrency.json
+        run: |
+          set -euo pipefail
+          node packages/database/tests/concurrency_certification.mjs | tee /tmp/database-concurrency.json
       - name: Build and run compiled worker contention certification
         run: |
           set -euo pipefail
