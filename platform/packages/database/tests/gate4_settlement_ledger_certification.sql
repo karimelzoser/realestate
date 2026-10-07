@@ -101,6 +101,17 @@ BEGIN
     RAISE EXCEPTION 'refund settlement did not project PAID/REFUNDED state';
   END IF;
 
+  -- PAID cannot be manually reopened while the disbursement is still SETTLED.
+  v_rejected := false;
+  BEGIN
+    UPDATE eoi_refund_requests
+    SET status = 'APPROVED', paid_at = NULL, updated_at = now()
+    WHERE id = v_refund;
+  EXCEPTION WHEN OTHERS THEN
+    v_rejected := position('reversed disbursement evidence' in SQLERRM) > 0;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'paid refund was reopened without settlement reversal'; END IF;
+
   v_event := preneura_apply_settlement_outcome(
     v_refund_settlement, 'REVERSED', NULL, 'BANK', 'BANK-EVENT-002',
     'BANK-REF-001', '2026-01-05T00:00:00+00', '{}'::jsonb
@@ -206,6 +217,17 @@ BEGIN
     RAISE EXCEPTION 'commission did not become PAID from settlement evidence';
   END IF;
 
+  -- Commission PAID cannot be manually reopened before the payout reverses.
+  v_rejected := false;
+  BEGIN
+    UPDATE broker_commission_cases
+    SET status = 'INVOICED', paid_at = NULL, updated_at = now()
+    WHERE id = v_case;
+  EXCEPTION WHEN OTHERS THEN
+    v_rejected := position('reversed disbursement evidence' in SQLERRM) > 0;
+  END;
+  IF NOT v_rejected THEN RAISE EXCEPTION 'paid commission reopened without settlement reversal'; END IF;
+
   v_event := preneura_apply_settlement_outcome(
     v_commission_settlement, 'REVERSED', NULL, 'BANK', 'BANK-COM-EVENT-002',
     'BANK-COM-001', '2026-01-10T00:00:00+00', '{}'::jsonb
@@ -230,8 +252,14 @@ BEGIN
   END;
   IF NOT v_rejected THEN RAISE EXCEPTION 'settlement ledger entry was mutable'; END IF;
 
-  IF (SELECT schema_version FROM platform_runtime_contract WHERE singleton_key = 'production') <> 35 THEN
-    RAISE EXCEPTION 'runtime schema contract did not advance to 35';
+  IF NOT EXISTS (
+    SELECT 1 FROM platform_runtime_contract
+    WHERE singleton_key = 'production'
+      AND schema_version = 36
+      AND minimum_runtime_version = 36
+      AND migration_marker = '0036_settlement_command_authority'
+  ) THEN
+    RAISE EXCEPTION 'runtime schema contract did not advance to settlement authority 36';
   END IF;
 END;
 $$;
