@@ -1,0 +1,153 @@
+name: Gate 4 Financial Integration Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/pnpm-lock.yaml"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
+      - "platform/packages/database/tests/gate4_financial_integration_certification.sql"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/contracts/src/sales.ts"
+      - "platform/apps/api/src/sales/**"
+      - "platform/apps/api/src/settlements/**"
+      - "platform/scripts/certify-runtime-readiness.sh"
+      - "platform/docs/gate4-financial-integration.md"
+      - ".github/workflows/gate4-financial-integration-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+    paths:
+      - "platform/pnpm-lock.yaml"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
+      - "platform/packages/database/tests/gate4_financial_integration_certification.sql"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/contracts/src/sales.ts"
+      - "platform/apps/api/src/sales/**"
+      - "platform/apps/api/src/settlements/**"
+      - "platform/scripts/certify-runtime-readiness.sh"
+      - "platform/docs/gate4-financial-integration.md"
+      - ".github/workflows/gate4-financial-integration-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  integrated-financial-authority:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply schema with production migrator
+        working-directory: platform
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
+          MIGRATION_ACTOR: gate4-financial-integration
+        run: pnpm --filter @preneura/database migrate
+
+      - name: Verify integrated Gate 4 migration authority
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          DECLARE
+            v_latest integer;
+          BEGIN
+            SELECT max(version) INTO v_latest FROM platform_schema_migrations;
+            IF v_latest <> 39 THEN
+              RAISE EXCEPTION 'production migrator did not finish at integrated schema 39; got %', v_latest;
+            END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM platform_schema_migrations WHERE version=34 AND filename='0034_settlement_disbursement_ledger.sql')
+              THEN RAISE EXCEPTION 'settlement ledger migration 34 missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM platform_schema_migrations WHERE version=35 AND filename='0035_settlement_state_authority.sql')
+              THEN RAISE EXCEPTION 'settlement state migration 35 missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM platform_schema_migrations WHERE version=36 AND filename='0036_settlement_command_authority.sql')
+              THEN RAISE EXCEPTION 'settlement command migration 36 missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM platform_schema_migrations WHERE version=37 AND filename='0037_eoi_financial_evidence.sql')
+              THEN RAISE EXCEPTION 'EOI evidence migration 37 missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM platform_schema_migrations WHERE version=38 AND filename='0038_eoi_projection_authority.sql')
+              THEN RAISE EXCEPTION 'EOI projection migration 38 missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM platform_schema_migrations WHERE version=39 AND filename='0039_gate4_financial_integration.sql')
+              THEN RAISE EXCEPTION 'Gate 4 integration migration 39 missing'; END IF;
+
+            IF to_regclass('public.settlement_disbursements') IS NULL
+              THEN RAISE EXCEPTION 'settlement disbursements missing'; END IF;
+            IF to_regclass('public.eoi_finance_events') IS NULL
+              THEN RAISE EXCEPTION 'EOI finance events missing'; END IF;
+            IF to_regclass('public.eoi_finance_ledger_entries') IS NULL
+              THEN RAISE EXCEPTION 'EOI finance ledger missing'; END IF;
+            IF to_regclass('public.eoi_refund_financial_reconciliation') IS NULL
+              THEN RAISE EXCEPTION 'EOI/settlement reconciliation view missing'; END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_eoi_finance_events_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'EOI event immutability trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_eoi_finance_ledger_immutable' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'EOI ledger immutability trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_eoi_accounting_from_settlement' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'settlement-to-EOI accounting bridge missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_buyer_eois_finance_projection_guard' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'EOI projection authority trigger missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_eoi_refund_payout_projection_guard' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'refund projection integration guard missing'; END IF;
+
+            IF to_regprocedure('public.preneura_post_eoi_payment(uuid,uuid,uuid,text,uuid,timestamp with time zone)') IS NULL
+              THEN RAISE EXCEPTION 'EOI payment authority missing'; END IF;
+            IF to_regprocedure('public.preneura_reverse_eoi_payment(uuid,uuid,uuid,text,uuid,timestamp with time zone)') IS NULL
+              THEN RAISE EXCEPTION 'EOI payment reversal authority missing'; END IF;
+            IF to_regprocedure('public.preneura_record_eoi_settlement_accounting(uuid,text,timestamp with time zone)') IS NULL
+              THEN RAISE EXCEPTION 'EOI settlement accounting bridge missing'; END IF;
+
+            IF NOT EXISTS (
+              SELECT 1 FROM platform_runtime_contract
+              WHERE singleton_key='production'
+                AND schema_version=39
+                AND minimum_runtime_version=39
+                AND migration_marker='0039_gate4_financial_integration'
+            ) THEN RAISE EXCEPTION 'runtime contract is not integrated Gate 4 schema 39'; END IF;
+          END $$;
+          SQL
+
+      - name: Execute combined financial reconciliation certification
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
+            -f platform/packages/database/tests/gate4_financial_integration_certification.sql
