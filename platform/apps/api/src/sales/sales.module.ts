@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { AccessModule } from '../access/access.module.js';
 import { AuthModule } from '../auth/auth.module.js';
+import { EoiFinanceRepository } from './eoi-finance.repository.js';
+import { EoiFinanceService } from './eoi-finance.service.js';
 import { EoiListController } from './eoi-list.controller.js';
 import { EoiListRepository } from './eoi-list.repository.js';
 import { EoiListService } from './eoi-list.service.js';
@@ -39,6 +41,8 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
     SalesRepository,
     MilestoneEvidenceService,
     SalesService,
+    EoiFinanceRepository,
+    EoiFinanceService,
     EoiListRepository,
     EoiListService,
     EoiRefundRepository,
@@ -52,6 +56,13 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
     TransactionTimelineRepository,
     TransactionTimelineService,
   ],
-  exports: [SalesService, EoiListService, EoiRefundService, TransactionListService, TransactionTimelineService],
+  exports: [
+    SalesService,
+    EoiFinanceService,
+    EoiListService,
+    EoiRefundService,
+    TransactionListService,
+    TransactionTimelineService,
+  ],
 })
 export class SalesModule {}

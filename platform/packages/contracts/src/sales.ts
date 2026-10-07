@@ -49,6 +49,14 @@ export const markEoiPaidSchema = z.object({
 });
 export type MarkEoiPaidInput = z.infer<typeof markEoiPaidSchema>;
 
+export const reverseEoiPaymentSchema = z.object({
+  tenantId: z.uuid(),
+  projectId: z.uuid(),
+  eoiId: z.uuid(),
+  reversalReference: z.string().trim().min(1).max(200),
+});
+export type ReverseEoiPaymentInput = z.infer<typeof reverseEoiPaymentSchema>;
+
 export const eoiRefundStageSchema = z.enum([
   'BEFORE_RESERVATION',
   'AFTER_RESERVATION_BEFORE_CONTRACT',
