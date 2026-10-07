@@ -74,7 +74,12 @@ WITH evidence AS (
         'eventCount', (SELECT count(*) FROM finance_payment_events WHERE transaction_id='00000000-0000-0000-0000-000000013000'),
         'ledgerCount', (SELECT count(*) FROM finance_ledger_entries WHERE transaction_id='00000000-0000-0000-0000-000000013000'),
         'ledgerBalance', (SELECT coalesce(sum(signed_amount),0) FROM finance_ledger_entries WHERE transaction_id='00000000-0000-0000-0000-000000013000'),
-        'allocatedAmount', (SELECT coalesce(sum(amount),0) FROM finance_payment_allocations WHERE transaction_id='00000000-0000-0000-0000-000000013000'),
+        'allocatedAmount', (
+          SELECT coalesce(sum(a.amount),0)
+          FROM finance_payment_allocations a
+          JOIN finance_payment_events e ON e.id=a.payment_event_id
+          WHERE e.transaction_id='00000000-0000-0000-0000-000000013000'
+        ),
         'downPaid', (SELECT paid_amount FROM payment_schedule_items WHERE id='00000000-0000-0000-0000-000000015001'),
         'installmentPaid', (SELECT paid_amount FROM payment_schedule_items WHERE id='00000000-0000-0000-0000-000000015002')
       )
@@ -85,8 +90,10 @@ WITH evidence AS (
         'maxGeneration', max(generation),
         'currentStatuses', jsonb_agg(jsonb_build_object('generation',generation,'status',status,'amount',amount) ORDER BY generation),
         'eventCount', (
-          SELECT count(*) FROM finance_cheque_events fce
-          WHERE fce.root_cheque_id='00000000-0000-0000-0000-000000015003'
+          SELECT count(*)
+          FROM finance_cheque_events fce
+          JOIN transaction_cheques ec ON ec.id=fce.cheque_id
+          WHERE ec.root_cheque_id='00000000-0000-0000-0000-000000015003'
         )
       )
       FROM transaction_cheques
