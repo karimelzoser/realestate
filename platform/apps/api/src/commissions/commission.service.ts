@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   CommissionCaseSnapshot,
   CreateCommissionPlanInput,
@@ -86,9 +86,13 @@ export class CommissionService {
     actorUserId: string;
     data: UpdateCommissionCaseStatusInput;
   }): Promise<{ updated: true }> {
+    if (input.data.action === 'MARK_PAID') {
+      throw new ConflictException('Commission payment status is settlement-derived. Create and settle a payout instead.');
+    }
+
     await this.access.assert({
       userId: input.actorUserId,
-      permission: 'commission.payment.manage',
+      permission: 'commission.invoice.manage',
       context: {
         tenantId: input.data.tenantId,
         projectId: input.data.projectId,

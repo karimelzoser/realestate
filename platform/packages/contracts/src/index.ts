@@ -11,5 +11,6 @@ export * from './documents.js';
 export * from './contract-execution.js';
 export * from './finance.js';
 export * from './commissions.js';
+export * from './settlements.js';
 export * from './notifications.js';
 export * from './realtime.js';
