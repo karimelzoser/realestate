@@ -72,7 +72,7 @@ jobs:
           set -euo pipefail
           createdb preneura_backup_source
           DATABASE_URL="$SOURCE_DATABASE_URL" MIGRATION_ACTOR=backup-certification-source pnpm --filter @preneura/database migrate
-          test "$(psql "$SOURCE_DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
+          test "$(psql "$SOURCE_DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '35'
       - name: Seed persistent authoritative evidence
         run: |
           set -euo pipefail
@@ -119,8 +119,8 @@ jobs:
         run: |
           set -euo pipefail
           DATABASE_URL="$RESTORE_DATABASE_URL" MIGRATION_ACTOR=backup-certification-restored pnpm --filter @preneura/database migrate
-          test "$(psql "$RESTORE_DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '33'
-          test "$(psql "$RESTORE_DATABASE_URL" -Atqc "SELECT schema_version || ':' || migration_marker FROM platform_runtime_contract WHERE singleton_key='production'")" = '33:0033_runtime_readiness_contract'
+          test "$(psql "$RESTORE_DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '35'
+          test "$(psql "$RESTORE_DATABASE_URL" -Atqc "SELECT schema_version || ':' || migration_marker FROM platform_runtime_contract WHERE singleton_key='production'")" = '35:0035_settlement_state_authority'
       - name: Record rehearsal evidence
         run: |
           set -euo pipefail
