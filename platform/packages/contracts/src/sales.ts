@@ -20,6 +20,48 @@ export const createBuyerProfileSchema = z
   });
 export type CreateBuyerProfileInput = z.infer<typeof createBuyerProfileSchema>;
 
+export const inviteProjectBuyerSchema = z.object({
+  tenantId: z.uuid(),
+  projectId: z.uuid(),
+  displayName: z.string().trim().min(2).max(160),
+  phone: z.string().trim().min(6).max(32),
+  verificationChannel: z.enum(['WHATSAPP', 'SMS']).default('WHATSAPP'),
+  source: z.enum(['DIRECT', 'INTERNAL']).default('INTERNAL'),
+});
+export type InviteProjectBuyerInput = z.infer<typeof inviteProjectBuyerSchema>;
+
+export interface ProjectBuyerEoiSummary {
+  eoiId: string;
+  status: 'PAYMENT_PENDING' | 'PAID' | 'APPLIED' | 'REFUND_REQUESTED' | 'REFUNDED' | 'CANCELLED' | 'EXPIRED';
+  amount: string;
+  currency: string;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface ProjectBuyerSnapshot {
+  buyerProfileId: string;
+  userId: string;
+  displayName: string;
+  accountStatus: 'ACTIVE' | 'DISABLED' | 'PENDING';
+  membershipStatus: 'ACTIVE' | 'SUSPENDED' | 'INVITED';
+  source: BuyerSource;
+  contactDisplayHint: string | null;
+  contactVerified: boolean;
+  latestEoi: ProjectBuyerEoiSummary | null;
+  createdAt: string;
+}
+
+export interface InvitedProjectBuyerSnapshot {
+  userId: string;
+  buyerProfileId: string;
+  accountStatus: 'PENDING';
+  contactDisplayHint: string;
+  verificationRequired: true;
+  verificationChannel: 'WHATSAPP' | 'SMS';
+  verificationDispatched: boolean;
+}
+
 export const createEoiRefundPolicySchema = z.object({
   tenantId: z.uuid(),
   projectId: z.uuid(),
@@ -101,7 +143,7 @@ export const convertLockToReservationSchema = z.object({
   projectId: z.uuid(),
   buyerProfileId: z.uuid(),
   queueEntryId: z.uuid(),
-  lockId: z.uuid(),
+  inventoryLockId: z.uuid(),
 });
 export type ConvertLockToReservationInput = z.infer<typeof convertLockToReservationSchema>;
 
@@ -127,7 +169,7 @@ export type CompleteTransactionMilestoneInput = z.infer<typeof completeTransacti
 export interface QueueEntrySnapshot {
   queueEntryId: string;
   buyerProfileId: string;
-  buyerUserId: string;
+  eoiId: string;
   channel: 'ONSITE' | 'ONLINE' | 'BROKER';
   priorityGroup: 'STANDARD' | 'VIP' | 'RECOVERY';
   priorityScore: number;
@@ -136,111 +178,26 @@ export interface QueueEntrySnapshot {
   calledAt: string | null;
 }
 
-export interface EoiListItemSnapshot {
-  eoiId: string;
-  buyerProfileId: string;
-  buyerUserId: string;
-  buyerDisplayName: string;
-  buyerSource: BuyerSource;
-  brokerCompanyId: string | null;
-  brokerAgentUserId: string | null;
-  amount: string;
-  currency: string;
-  status: 'PAYMENT_PENDING' | 'PAID' | 'APPLIED' | 'REFUND_REQUESTED' | 'REFUNDED' | 'CANCELLED' | 'EXPIRED';
-  paymentReference: string | null;
-  paidAt: string | null;
-  appliedAt: string | null;
-  refundRequestedAt: string | null;
-  refundedAt: string | null;
-  expiresAt: string | null;
-  createdAt: string;
-}
-
-export interface EoiRefundQuote {
-  eoiId: string;
-  buyerProfileId: string;
-  stage: EoiRefundStage;
-  originalAmount: string;
-  refundPercent: string;
-  processingFee: string;
-  refundableAmount: string;
-  currency: string;
-  policyId: string;
-}
-
-export interface EoiRefundRequestSnapshot {
-  refundRequestId: string;
-  eoiId: string;
-  buyerProfileId: string;
-  buyerUserId: string;
-  buyerDisplayName: string;
-  stage: EoiRefundStage;
-  originalAmount: string;
-  refundPercent: string;
-  processingFee: string;
-  requestedAmount: string;
-  currency: string;
-  status: EoiRefundRequestStatus;
-  requestedAt: string;
-  reviewedAt: string | null;
-  paidAt: string | null;
-  decisionNote: string | null;
-  payoutReference: string | null;
-  financeEventId: string | null;
-  retainedAmount: string | null;
-}
-
 export interface ReservationResult {
   reservationId: string;
   transactionId: string;
   unitTypeId: string;
-  quotedTotal: string | null;
+  quotedTotal: string;
   currency: string;
-  reservedAt: string;
 }
 
-export interface TransactionListItemSnapshot {
-  transactionId: string;
-  reservationId: string;
-  buyerProfileId: string;
-  buyerUserId: string;
-  buyerDisplayName: string;
-  buyerSource: BuyerSource;
-  brokerCompanyId: string | null;
-  brokerCompanyName: string | null;
-  brokerAgentUserId: string | null;
-  brokerAgentDisplayName: string | null;
-  unitTypeId: string;
-  unitTypeCode: string;
-  unitTypeName: string;
-  status: 'IN_PROGRESS' | 'READY_FOR_COMPLETION' | 'COMPLETED' | 'CANCELLED';
-  quotedTotal: string | null;
-  currency: string;
-  openedAt: string;
-  completionPercent: string;
+export interface TransactionMilestoneSnapshot {
+  code: TransactionMilestoneCode;
+  label: string;
+  weightPercent: string;
+  status: 'PENDING' | 'COMPLETED' | 'WAIVED' | 'BLOCKED';
+  completedAt: string | null;
 }
 
 export interface TransactionProgressSnapshot {
   transactionId: string;
-  reservationId: string;
-  buyerProfileId: string;
   status: 'IN_PROGRESS' | 'READY_FOR_COMPLETION' | 'COMPLETED' | 'CANCELLED';
   completionPercent: string;
   commissionPrerequisitesComplete: boolean;
-  milestones: Array<{
-    code: TransactionMilestoneCode;
-    label: string;
-    weightPercent: string;
-    status: 'PENDING' | 'COMPLETED' | 'WAIVED' | 'BLOCKED';
-    completedAt: string | null;
-  }>;
-}
-
-export interface TransactionTimelineEventSnapshot {
-  eventId: string;
-  eventType: string;
-  actorUserId: string | null;
-  actorDisplayName: string | null;
-  metadata: Record<string, unknown>;
-  createdAt: string;
+  milestones: TransactionMilestoneSnapshot[];
 }
