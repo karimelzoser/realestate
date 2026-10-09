@@ -50,9 +50,8 @@ INSERT INTO pricing_versions (
   'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-  1, 'Gate 5 price', 'PUBLISHED', '2026-01-01T00:00:00+00',
-  '2026-01-01T00:00:00+00', '11111111-1111-4111-8111-111111111111',
-  '11111111-1111-4111-8111-111111111111'
+  1, 'Gate 5 price', 'DRAFT', '2026-01-01T00:00:00+00',
+  NULL, NULL, '11111111-1111-4111-8111-111111111111'
 );
 
 INSERT INTO pricing_rates (
@@ -61,6 +60,13 @@ INSERT INTO pricing_rates (
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','dddddddd-dddd-4ddd-8ddd-dddddddddddd','cccccccc-cccc-4ccc-8ccc-cccccccccccc','INDOOR',300),
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','dddddddd-dddd-4ddd-8ddd-dddddddddddd','cccccccc-cccc-4ccc-8ccc-cccccccccccc','ROOF',0),
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','dddddddd-dddd-4ddd-8ddd-dddddddddddd','cccccccc-cccc-4ccc-8ccc-cccccccccccc','GARDEN',0);
+
+UPDATE pricing_versions
+SET status = 'PUBLISHED',
+    published_at = '2026-01-01T00:00:00+00',
+    published_by = '11111111-1111-4111-8111-111111111111',
+    updated_at = '2026-01-01T00:00:00+00'
+WHERE id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 
 INSERT INTO buyer_profiles (id, tenant_id, user_id, status, source, created_by) VALUES
   ('10000000-0000-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','ACTIVE','DIRECT','11111111-1111-4111-8111-111111111111'),
@@ -109,7 +115,7 @@ INSERT INTO inventory_locks (
   locked_by_user_id, status, expires_at, created_at, updated_at
 ) VALUES
   ('10000000-0000-4000-8000-000000000041','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','cccccccc-cccc-4ccc-8ccc-cccccccccccc','10000000-0000-4000-8000-000000000031','11111111-1111-4111-8111-111111111111','11111111-1111-4111-8111-111111111111','ACTIVE','2027-01-01T00:00:00+00','2026-01-03T00:00:00+00','2026-01-03T00:00:00+00'),
-  ('20000000-0000-4000-8000-000000000042','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','cccccccc-cccc-4ccc-8ccc-cccccccccccc','20000000-0000-4000-8000-000000000032','22222222-2222-4222-8222-222222222222','22222222-2222-4222-8222-222222222222','ACTIVE','2027-01-01T00:00:00+00','2026-01-03T00:01:00+00','2026-01-03T00:01:00+00');
+  ('20000000-0000-4000-8000-000000000042','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','cccccccc-cccc-4ccc-8ccc-cccccccccccc','20000000-0000-4000-8000-000000000032','22222222-2222-4222-8222-222222222222','22222222-2222-4222-8222-222222222222','ACTIVE','2027-01-01T00:01:00+00','2026-01-03T00:01:00+00','2026-01-03T00:01:00+00');
 
 INSERT INTO reservations (
   id, tenant_id, project_id, buyer_profile_id, queue_entry_id, inventory_lock_id,
