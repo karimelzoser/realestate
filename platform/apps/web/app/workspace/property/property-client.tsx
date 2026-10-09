@@ -1,7 +1,11 @@
 'use client';
 
 import { roleHasPermission, type WorkspaceContextSnapshot } from '@preneura/contracts/access';
-import type { BuyerPropertyPortfolioSnapshot, BuyerPropertySnapshot } from '@preneura/contracts/property';
+import type {
+  BuyerPropertyInstallmentSnapshot,
+  BuyerPropertyPortfolioSnapshot,
+  BuyerPropertySnapshot,
+} from '@preneura/contracts/property';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError, apiFetch, eventStreamUrl } from '../../lib/api';
 import styles from './property.module.css';
@@ -97,13 +101,14 @@ export default function PropertyClient() {
         refresh();
       }
     };
+    const onResync = (): void => refresh();
     source.onopen = () => setLiveState('live');
     source.onerror = () => setLiveState(source.readyState === EventSource.CLOSED ? 'offline' : 'reconnecting');
     source.addEventListener('domain_signal', onSignal);
-    source.addEventListener('resync_required', refresh);
+    source.addEventListener('resync_required', onResync);
     return () => {
       source.removeEventListener('domain_signal', onSignal);
-      source.removeEventListener('resync_required', refresh);
+      source.removeEventListener('resync_required', onResync);
       source.close();
     };
   }, [selectedProject, loadPortfolio]);
@@ -143,13 +148,28 @@ export default function PropertyClient() {
       ) : null}
 
       <section className={styles.propertyGrid}>
-        {portfolio?.properties.map((property) => <PropertyCard key={property.transactionId} property={property} />)}
+        {portfolio?.properties.map((property) => (
+          <PropertyCard
+            key={property.transactionId}
+            property={property}
+            tenantId={portfolio.tenantId}
+            projectId={portfolio.projectId}
+          />
+        ))}
       </section>
     </main>
   );
 }
 
-function PropertyCard({ property }: { property: BuyerPropertySnapshot }) {
+function PropertyCard({
+  property,
+  tenantId,
+  projectId,
+}: {
+  property: BuyerPropertySnapshot;
+  tenantId: string;
+  projectId: string;
+}) {
   const finance = property.finance;
   const nextDue = finance?.nextDueAt ? new Date(finance.nextDueAt) : null;
   return (
@@ -235,7 +255,7 @@ function PropertyCard({ property }: { property: BuyerPropertySnapshot }) {
 
       <footer className={styles.cardFooter}>
         <span>Transaction {shortId(property.transactionId)}</span>
-        <a href={`/workspace/transactions/${property.transactionId}?tenantId=${property.projectId ? '' : ''}`}>View transaction</a>
+        <a href={`/workspace/transactions/${property.transactionId}?tenantId=${tenantId}&projectId=${projectId}`}>View transaction</a>
       </footer>
     </article>
   );
@@ -261,7 +281,7 @@ function shortId(value: string): string {
   return value.slice(0, 8).toUpperCase();
 }
 
-function labelItemType(value: BuyerPropertySnapshot['finance'] extends infer _T ? 'DOWN_PAYMENT' | 'INSTALLMENT' | 'FEE' : never): string {
+function labelItemType(value: BuyerPropertyInstallmentSnapshot['itemType']): string {
   return value === 'DOWN_PAYMENT' ? 'Down payment' : value === 'INSTALLMENT' ? 'Installment' : 'Fee';
 }
 
