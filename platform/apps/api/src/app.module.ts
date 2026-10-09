@@ -12,6 +12,7 @@ import { HealthController } from './health/health.controller.js';
 import { NotificationModule } from './notifications/notification.module.js';
 import { PlatformAdminModule } from './platform-admin/platform-admin.module.js';
 import { ProjectCatalogModule } from './project-catalog/project-catalog.module.js';
+import { PropertyModule } from './property/property.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
 import { SalesModule } from './sales/sales.module.js';
 import { SettlementModule } from './settlements/settlement.module.js';
@@ -33,6 +34,7 @@ import { StorageModule } from './storage/storage.module.js';
     DocumentModule,
     FinanceModule,
     SettlementModule,
+    PropertyModule,
     RealtimeModule,
     NotificationModule,
   ],
