@@ -10,6 +10,7 @@ export * from './sales.js';
 export * from './documents.js';
 export * from './contract-execution.js';
 export * from './finance.js';
+export * from './property.js';
 export * from './commissions.js';
 export * from './settlements.js';
 export * from './notifications.js';
