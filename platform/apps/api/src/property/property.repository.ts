@@ -25,6 +25,20 @@ interface BasePropertyRow {
   completed_at: Date | null;
 }
 
+type InstallmentRow = {
+  id: string;
+  sequence_number: number;
+  item_type: BuyerPropertyInstallmentSnapshot['itemType'];
+  amount: string | number;
+  paid_amount: string | number;
+  remaining_amount: string | number;
+  has_paid: boolean;
+  has_remaining: boolean;
+  due_at: Date;
+  status: string;
+  paid_at: Date | null;
+};
+
 @Injectable()
 export class PropertyRepository {
   constructor(@Inject(DATABASE) private readonly db: Kysely<Database>) {}
@@ -156,17 +170,11 @@ export class PropertyRepository {
     const schedule = scheduleResult.rows[0];
     if (!schedule) return null;
 
-    const itemResult = await sql<{
-      id: string;
-      sequence_number: number;
-      item_type: BuyerPropertyInstallmentSnapshot['itemType'];
-      amount: string | number;
-      paid_amount: string | number;
-      due_at: Date;
-      status: string;
-      paid_at: Date | null;
-    }>`
+    const itemResult = await sql<InstallmentRow>`
       SELECT id, sequence_number, item_type, amount, paid_amount,
+             GREATEST(amount - paid_amount, 0) AS remaining_amount,
+             (paid_amount > 0) AS has_paid,
+             (amount > paid_amount) AS has_remaining,
              due_at, status, paid_at
       FROM payment_schedule_items
       WHERE payment_schedule_id = ${schedule.id}::uuid
@@ -202,7 +210,7 @@ export class PropertyRepository {
     const summary = summaryResult.rows[0]!;
 
     const nextDue = installments
-      .filter((item) => !['PAID', 'WAIVED', 'CANCELLED'].includes(item.status) && Number(item.remainingAmount) > 0)
+      .filter((item) => !['PAID', 'WAIVED', 'CANCELLED'].includes(item.status) && item.remainingAmount !== '0' && item.remainingAmount !== '0.00')
       .sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0] ?? null;
 
     return {
@@ -220,30 +228,15 @@ export class PropertyRepository {
     };
   }
 
-  private toInstallment(
-    row: {
-      id: string;
-      sequence_number: number;
-      item_type: BuyerPropertyInstallmentSnapshot['itemType'];
-      amount: string | number;
-      paid_amount: string | number;
-      due_at: Date;
-      status: string;
-      paid_at: Date | null;
-    },
-    now: Date,
-  ): BuyerPropertyInstallmentSnapshot {
-    const amount = Number(row.amount);
-    const paid = Number(row.paid_amount);
-    const remaining = Math.max(0, amount - paid);
+  private toInstallment(row: InstallmentRow, now: Date): BuyerPropertyInstallmentSnapshot {
     let status: BuyerPropertyInstallmentSnapshot['status'];
     if (row.status === 'WAIVED' || row.status === 'CANCELLED' || row.status === 'PAID') {
       status = row.status;
-    } else if (remaining <= 0) {
+    } else if (!row.has_remaining) {
       status = 'PAID';
     } else if (row.due_at.getTime() < now.getTime()) {
       status = 'OVERDUE';
-    } else if (paid > 0) {
+    } else if (row.has_paid) {
       status = 'PARTIALLY_PAID';
     } else if (row.due_at.getTime() <= now.getTime()) {
       status = 'DUE';
@@ -256,7 +249,7 @@ export class PropertyRepository {
       itemType: row.item_type,
       amount: String(row.amount),
       paidAmount: String(row.paid_amount),
-      remainingAmount: remaining.toFixed(2),
+      remainingAmount: String(row.remaining_amount),
       dueAt: row.due_at.toISOString(),
       status,
       paidAt: row.paid_at?.toISOString() ?? null,
