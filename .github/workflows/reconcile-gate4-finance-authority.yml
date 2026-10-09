@@ -1,0 +1,14 @@
+name: Reconcile Gate 4 Finance Authority (disabled)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  disabled:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Source reconciliation completed; this workflow is intentionally disabled.'

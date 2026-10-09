@@ -31,57 +31,91 @@ export class EoiRefundRepository {
     projectId: string;
     buyerUserId?: string | null;
   }): Promise<EoiRefundRequestSnapshot[]> {
-    let query = this.db
-      .selectFrom('eoi_refund_requests as r')
-      .innerJoin('buyer_profiles as b', (join) =>
-        join.onRef('b.id', '=', 'r.buyer_profile_id').onRef('b.tenant_id', '=', 'r.tenant_id'),
-      )
-      .innerJoin('users as u', 'u.id', 'b.user_id')
-      .select([
-        'r.id',
-        'r.eoi_id',
-        'r.buyer_profile_id',
-        'b.user_id as buyer_user_id',
-        'u.display_name as buyer_display_name',
-        'r.stage',
-        'r.original_eoi_amount',
-        'r.refund_percent',
-        'r.processing_fee',
-        'r.requested_amount',
-        'r.currency',
-        'r.status',
-        'r.requested_at',
-        'r.reviewed_at',
-        'r.paid_at',
-        'r.decision_note',
-      ])
-      .where('r.tenant_id', '=', input.tenantId)
-      .where('r.project_id', '=', input.projectId);
+    const buyerClause = input.buyerUserId
+      ? sql`AND b.user_id = ${input.buyerUserId}::uuid`
+      : sql``;
 
-    if (input.buyerUserId) query = query.where('b.user_id', '=', input.buyerUserId);
+    const result = await sql<{
+      id: string;
+      eoi_id: string;
+      buyer_profile_id: string;
+      buyer_user_id: string;
+      buyer_display_name: string;
+      stage: EoiRefundStage;
+      original_eoi_amount: string;
+      refund_percent: string;
+      processing_fee: string;
+      requested_amount: string;
+      currency: string;
+      status: EoiRefundRequestSnapshot['status'];
+      requested_at: Date;
+      reviewed_at: Date | null;
+      paid_at: Date | null;
+      decision_note: string | null;
+      payout_reference: string | null;
+      finance_event_id: string | null;
+      retained_amount: string | null;
+    }>`
+      SELECT
+        r.id,
+        r.eoi_id,
+        r.buyer_profile_id,
+        b.user_id AS buyer_user_id,
+        u.display_name AS buyer_display_name,
+        r.stage,
+        r.original_eoi_amount::text,
+        r.refund_percent::text,
+        r.processing_fee::text,
+        r.requested_amount::text,
+        r.currency,
+        r.status,
+        r.requested_at,
+        r.reviewed_at,
+        r.paid_at,
+        r.decision_note,
+        settlement.provider_reference AS payout_reference,
+        payout.id AS finance_event_id,
+        retained.amount::text AS retained_amount
+      FROM eoi_refund_requests r
+      JOIN buyer_profiles b
+        ON b.id = r.buyer_profile_id
+       AND b.tenant_id = r.tenant_id
+      JOIN users u ON u.id = b.user_id
+      LEFT JOIN settlement_disbursements settlement
+        ON settlement.eoi_refund_request_id = r.id
+       AND settlement.status = 'SETTLED'
+      LEFT JOIN eoi_finance_events payout
+        ON payout.refund_request_id = r.id
+       AND payout.event_type = 'REFUND_ISSUED'
+      LEFT JOIN eoi_finance_events retained
+        ON retained.refund_request_id = r.id
+       AND retained.event_type = 'RETAINED_AMOUNT_RECOGNIZED'
+      WHERE r.tenant_id = ${input.tenantId}::uuid
+        AND r.project_id = ${input.projectId}::uuid
+        ${buyerClause}
+      ORDER BY r.requested_at DESC, r.id DESC
+    `.execute(this.db);
 
-    const rows = await query
-      .orderBy('r.requested_at', 'desc')
-      .orderBy('r.id', 'desc')
-      .execute();
-
-    return rows.map((row) => ({
+    return result.rows.map((row) => ({
       refundRequestId: row.id,
       eoiId: row.eoi_id,
       buyerProfileId: row.buyer_profile_id,
       buyerUserId: row.buyer_user_id,
       buyerDisplayName: row.buyer_display_name,
       stage: row.stage,
-      originalAmount: String(row.original_eoi_amount),
-      refundPercent: String(row.refund_percent),
-      processingFee: String(row.processing_fee),
-      requestedAmount: String(row.requested_amount),
+      originalAmount: row.original_eoi_amount,
+      refundPercent: row.refund_percent,
+      processingFee: row.processing_fee,
+      requestedAmount: row.requested_amount,
       currency: row.currency,
       status: row.status,
-      requestedAt: (row.requested_at as Date).toISOString(),
-      reviewedAt: row.reviewed_at ? (row.reviewed_at as Date).toISOString() : null,
-      paidAt: row.paid_at ? (row.paid_at as Date).toISOString() : null,
+      requestedAt: row.requested_at.toISOString(),
+      reviewedAt: row.reviewed_at?.toISOString() ?? null,
+      paidAt: row.paid_at?.toISOString() ?? null,
       decisionNote: row.decision_note,
+      payoutReference: row.payout_reference,
+      financeEventId: row.finance_event_id,
+      retainedAmount: row.retained_amount,
     }));
   }
 

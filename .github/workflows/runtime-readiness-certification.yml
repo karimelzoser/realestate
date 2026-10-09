@@ -163,6 +163,7 @@ jobs:
             sleep 1
           done
           grep -q '"status":"ready"' /tmp/api-valid-ready.json
+          grep -q '"databaseSchemaVersion":39' /tmp/api-valid-ready.json
           kill "$API_PID"
           wait "$API_PID" || true
           trap - EXIT
@@ -185,6 +186,7 @@ jobs:
             sleep 1
           done
           grep -q '"event":"worker.ready"' /tmp/worker-valid-config.log
+          grep -q '"databaseSchemaVersion":39' /tmp/worker-valid-config.log
           kill "$WORKER_PID"
           wait "$WORKER_PID" || true
           trap - EXIT
@@ -199,6 +201,9 @@ jobs:
         run: |
           set -Eeuo pipefail
           export PGPASSWORD
+          EXPECTED_MIGRATION_COUNT="$(find packages/database/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]_*.sql' | wc -l | tr -d ' ')"
+          test "$EXPECTED_MIGRATION_COUNT" -gt 0
+
           FRESH_DB="preneura_migrator_fresh_${GITHUB_RUN_ID}"
           CONCURRENT_DB="preneura_migrator_concurrent_${GITHUB_RUN_ID}"
           createdb -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$FRESH_DB"
@@ -209,15 +214,15 @@ jobs:
           CURRENT_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_current"
 
           DATABASE_URL="$FRESH_URL" MIGRATION_ACTOR=certification-fresh pnpm --filter @preneura/database migrate
-          test "$(psql "$FRESH_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '35'
-          test "$(psql "$FRESH_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'APPLIED'")" = '35'
+          test "$(psql "$FRESH_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = "$EXPECTED_MIGRATION_COUNT"
+          test "$(psql "$FRESH_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'APPLIED'")" = "$EXPECTED_MIGRATION_COUNT"
 
           DATABASE_URL="$FRESH_URL" MIGRATION_ACTOR=certification-rerun pnpm --filter @preneura/database migrate
-          test "$(psql "$FRESH_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '35'
+          test "$(psql "$FRESH_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = "$EXPECTED_MIGRATION_COUNT"
 
           DATABASE_URL="$CURRENT_URL" MIGRATION_ADOPT_EXISTING=true MIGRATION_ACTOR=certification-adopt pnpm --filter @preneura/database migrate
-          test "$(psql "$CURRENT_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '35'
-          test "$(psql "$CURRENT_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'ADOPTED'")" = '35'
+          test "$(psql "$CURRENT_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = "$EXPECTED_MIGRATION_COUNT"
+          test "$(psql "$CURRENT_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'ADOPTED'")" = "$EXPECTED_MIGRATION_COUNT"
 
           rm -rf /tmp/preneura-migrations-drift
           cp -R packages/database/migrations /tmp/preneura-migrations-drift
@@ -248,5 +253,5 @@ jobs:
           SECOND_PID=$!
           wait "$FIRST_PID" || { cat /tmp/preneura-migrator-a.log; exit 1; }
           wait "$SECOND_PID" || { cat /tmp/preneura-migrator-b.log; exit 1; }
-          test "$(psql "$CONCURRENT_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '35'
-          test "$(psql "$CONCURRENT_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'APPLIED'")" = '35'
+          test "$(psql "$CONCURRENT_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = "$EXPECTED_MIGRATION_COUNT"
+          test "$(psql "$CONCURRENT_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'APPLIED'")" = "$EXPECTED_MIGRATION_COUNT"

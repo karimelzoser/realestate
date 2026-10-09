@@ -56,19 +56,34 @@ BEGIN
 
   INSERT INTO buyer_eois (
     tenant_id, project_id, buyer_profile_id, refund_policy_id, amount, currency,
-    status, payment_reference, paid_at, refund_requested_at, created_by
+    status, created_by
   ) VALUES (
-    v_tenant, v_project, v_buyer, v_policy, 100, 'EGP', 'REFUND_REQUESTED',
-    'SET-CMD-EOI-1', '2026-01-02T00:00:00+00', '2026-01-03T00:00:00+00', v_user
+    v_tenant, v_project, v_buyer, v_policy, 100, 'EGP', 'PAYMENT_PENDING', v_user
   ) RETURNING id INTO v_eoi_1;
 
   INSERT INTO buyer_eois (
     tenant_id, project_id, buyer_profile_id, refund_policy_id, amount, currency,
-    status, payment_reference, paid_at, refund_requested_at, created_by
+    status, created_by
   ) VALUES (
-    v_tenant, v_project, v_buyer_2, v_policy, 100, 'EGP', 'REFUND_REQUESTED',
-    'SET-CMD-EOI-2', '2026-01-02T00:00:00+00', '2026-01-03T00:00:00+00', v_user
+    v_tenant, v_project, v_buyer_2, v_policy, 100, 'EGP', 'PAYMENT_PENDING', v_user
   ) RETURNING id INTO v_eoi_2;
+
+  -- Settlement fixtures must enter refund processing through immutable EOI
+  -- receipt authority. Fabricating payment_reference/paid_at is no longer valid.
+  PERFORM preneura_post_eoi_payment(
+    v_tenant, v_project, v_eoi_1, 'SET-CMD-EOI-1', v_user,
+    '2026-01-02T00:00:00+00', 'MANUAL', NULL, NULL
+  );
+  PERFORM preneura_post_eoi_payment(
+    v_tenant, v_project, v_eoi_2, 'SET-CMD-EOI-2', v_user,
+    '2026-01-02T00:00:00+00', 'MANUAL', NULL, NULL
+  );
+
+  UPDATE buyer_eois
+  SET status = 'REFUND_REQUESTED',
+      refund_requested_at = '2026-01-03T00:00:00+00',
+      updated_at = '2026-01-03T00:00:00+00'
+  WHERE id IN (v_eoi_1, v_eoi_2);
 
   INSERT INTO eoi_refund_requests (
     tenant_id, project_id, eoi_id, buyer_profile_id, refund_policy_id,
@@ -157,8 +172,9 @@ BEGIN
     'BANK-CMD-001', '2026-01-04T02:00:00+00', '{}'::jsonb
   );
 
-  IF (SELECT status FROM eoi_refund_requests WHERE id = v_refund_1) <> 'PAID' THEN
-    RAISE EXCEPTION 'settled disbursement did not project refund to PAID';
+  IF (SELECT status FROM eoi_refund_requests WHERE id = v_refund_1) <> 'PAID'
+     OR (SELECT status FROM buyer_eois WHERE id = v_eoi_1) <> 'REFUNDED' THEN
+    RAISE EXCEPTION 'settled disbursement did not project refund obligation';
   END IF;
 
   -- A paid obligation cannot be reopened while the settlement remains SETTLED.
@@ -200,11 +216,11 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM platform_runtime_contract
     WHERE singleton_key = 'production'
-      AND schema_version = 36
-      AND minimum_runtime_version = 36
-      AND migration_marker = '0036_settlement_command_authority'
+      AND schema_version = 39
+      AND minimum_runtime_version = 39
+      AND migration_marker = '0039_eoi_projection_authority_one_shot'
   ) THEN
-    RAISE EXCEPTION 'runtime contract is not settlement command authority schema 36';
+    RAISE EXCEPTION 'runtime contract is not integrated Gate 4 schema 39';
   END IF;
 END;
 $$;

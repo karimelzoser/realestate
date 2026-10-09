@@ -81,6 +81,7 @@ export const reviewEoiRefundSchema = z.object({
 });
 export type ReviewEoiRefundInput = z.infer<typeof reviewEoiRefundSchema>;
 
+
 export const queueChannelSchema = z.enum(['ONSITE', 'ONLINE', 'BROKER']);
 export const queuePriorityGroupSchema = z.enum(['STANDARD', 'VIP', 'RECOVERY']);
 
@@ -184,6 +185,9 @@ export interface EoiRefundRequestSnapshot {
   reviewedAt: string | null;
   paidAt: string | null;
   decisionNote: string | null;
+  payoutReference: string | null;
+  financeEventId: string | null;
+  retainedAmount: string | null;
 }
 
 export interface ReservationResult {
