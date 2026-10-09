@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AccessModule } from '../access/access.module.js';
+import { AccountVerificationDelivery } from '../accounts/account-verification-delivery.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { EoiFinanceRepository } from './eoi-finance.repository.js';
 import { EoiFinanceService } from './eoi-finance.service.js';
@@ -13,6 +14,11 @@ import { MilestoneEvidenceService } from './milestone-evidence.service.js';
 import { QueueDispatchController } from './queue-dispatch.controller.js';
 import { QueueDispatchRepository } from './queue-dispatch.repository.js';
 import { QueueDispatchService } from './queue-dispatch.service.js';
+import { SalesBuyerController } from './sales-buyer.controller.js';
+import { SalesBuyerListRepository } from './sales-buyer-list.repository.js';
+import { SalesBuyerListService } from './sales-buyer-list.service.js';
+import { SalesBuyerOnboardingRepository } from './sales-buyer-onboarding.repository.js';
+import { SalesBuyerOnboardingService } from './sales-buyer-onboarding.service.js';
 import { SalesController } from './sales.controller.js';
 import { SalesRepository } from './sales.repository.js';
 import { SalesService } from './sales.service.js';
@@ -30,6 +36,7 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
   imports: [AuthModule, AccessModule],
   controllers: [
     SalesController,
+    SalesBuyerController,
     EoiListController,
     EoiRefundController,
     QueueDispatchController,
@@ -41,6 +48,11 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
     SalesRepository,
     MilestoneEvidenceService,
     SalesService,
+    SalesBuyerListRepository,
+    SalesBuyerListService,
+    SalesBuyerOnboardingRepository,
+    SalesBuyerOnboardingService,
+    AccountVerificationDelivery,
     EoiFinanceRepository,
     EoiFinanceService,
     EoiListRepository,
