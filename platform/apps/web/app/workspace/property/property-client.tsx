@@ -7,12 +7,11 @@ import type {
   BuyerPropertySnapshot,
 } from '@preneura/contracts/property';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ApiError, apiFetch, eventStreamUrl } from '../../lib/api';
+import { ApiError, apiFetch } from '../../lib/api';
 import styles from './property.module.css';
 
 const projectStorageKey = 'preneura:selected-project';
-
-type LiveState = 'connecting' | 'live' | 'reconnecting' | 'offline';
+const AUTO_REFRESH_MS = 30_000;
 
 export default function PropertyClient() {
   const [workspace, setWorkspace] = useState<WorkspaceContextSnapshot | null>(null);
@@ -20,7 +19,6 @@ export default function PropertyClient() {
   const [portfolio, setPortfolio] = useState<BuyerPropertyPortfolioSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [liveState, setLiveState] = useState<LiveState>('connecting');
 
   const eligibleProjects = useMemo(() => workspace?.projects.filter((project) =>
     project.roles.some((role) => roleHasPermission(role, 'property.read.self')),
@@ -73,43 +71,22 @@ export default function PropertyClient() {
     window.localStorage.setItem(projectStorageKey, selectedProject.projectId);
     setLoading(true);
     setError('');
-    void loadPortfolio(selectedProject.tenantId, selectedProject.projectId)
-      .catch((reason: unknown) => {
-        if (cancelled) return;
-        setError(reason instanceof Error ? reason.message : 'Unable to load property information.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [selectedProject, loadPortfolio]);
-
-  useEffect(() => {
-    if (!selectedProject) return;
-    const path = `/v1/tenants/${selectedProject.tenantId}/projects/${selectedProject.projectId}/events?after=0`;
-    const source = new EventSource(eventStreamUrl(path), { withCredentials: true });
-    setLiveState('connecting');
 
     const refresh = (): void => {
-      void loadPortfolio(selectedProject.tenantId, selectedProject.projectId).catch(() => undefined);
+      void loadPortfolio(selectedProject.tenantId, selectedProject.projectId)
+        .catch((reason: unknown) => {
+          if (!cancelled) setError(reason instanceof Error ? reason.message : 'Unable to load property information.');
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
     };
-    const onSignal = (event: Event): void => {
-      try {
-        const signal = JSON.parse((event as MessageEvent<string>).data) as { topic?: string };
-        if (['TRANSACTION', 'DOMAIN'].includes(signal.topic ?? '')) refresh();
-      } catch {
-        refresh();
-      }
-    };
-    const onResync = (): void => refresh();
-    source.onopen = () => setLiveState('live');
-    source.onerror = () => setLiveState(source.readyState === EventSource.CLOSED ? 'offline' : 'reconnecting');
-    source.addEventListener('domain_signal', onSignal);
-    source.addEventListener('resync_required', onResync);
+
+    refresh();
+    const timer = window.setInterval(refresh, AUTO_REFRESH_MS);
     return () => {
-      source.removeEventListener('domain_signal', onSignal);
-      source.removeEventListener('resync_required', onResync);
-      source.close();
+      cancelled = true;
+      window.clearInterval(timer);
     };
   }, [selectedProject, loadPortfolio]);
 
@@ -123,7 +100,7 @@ export default function PropertyClient() {
           <p className={styles.subtitle}>Your purchase, executed contract and installment position from PRENEURA’s authoritative records.</p>
         </div>
         <div className={styles.headerActions}>
-          <span className={styles.live} data-state={liveState}>{liveState === 'live' ? 'Live' : liveState}</span>
+          <span className={styles.live}>Auto updates</span>
           {eligibleProjects.length > 1 ? (
             <label className={styles.projectPicker}>
               <span>Project</span>
