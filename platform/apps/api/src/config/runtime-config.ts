@@ -148,16 +148,44 @@ function requireAbsoluteUrl(env: NodeJS.ProcessEnv, name: string, failures: stri
 function requireHttpsOrigins(env: NodeJS.ProcessEnv, name: string, failures: string[]): void {
   const value = requireNonPlaceholder(env, name, failures);
   if (!value) return;
-  for (const entry of value.split(',').map((item) => item.trim()).filter(Boolean)) {
+
+  const entries = value.split(',').map((item) => item.trim()).filter(Boolean);
+  if (entries.length === 0) {
+    failures.push(`${name} must contain at least one HTTPS origin.`);
+    return;
+  }
+
+  for (const entry of entries) {
     try {
       const parsed = new URL(entry);
       if (parsed.protocol !== 'https:' || parsed.pathname !== '/' || parsed.search || parsed.hash) {
         failures.push(`${name} entries must be HTTPS origins without path/query/fragment.`);
       }
+      if (parsed.username || parsed.password) {
+        failures.push(`${name} entries must not contain embedded credentials.`);
+      }
+      if (isLoopbackHostname(parsed.hostname)) {
+        failures.push(`${name} must not target localhost or a loopback address in production.`);
+      }
     } catch {
       failures.push(`${name} contains an invalid origin.`);
     }
   }
+}
+
+function isLoopbackHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (normalized === 'localhost' || normalized.endsWith('.localhost')) return true;
+  if (normalized === '::1' || normalized === '0:0:0:0:0:0:0:1') return true;
+  if (normalized === '0.0.0.0') return true;
+
+  const ipv4 = normalized.split('.');
+  if (ipv4.length === 4 && ipv4.every((part) => /^\d{1,3}$/.test(part))) {
+    const octets = ipv4.map(Number);
+    if (octets.every((part) => part >= 0 && part <= 255) && octets[0] === 127) return true;
+  }
+
+  return false;
 }
 
 function isPlaceholder(value: string): boolean {
