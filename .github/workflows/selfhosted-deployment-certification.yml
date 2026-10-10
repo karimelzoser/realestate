@@ -7,6 +7,8 @@ on:
       - "platform/deploy/**"
       - "platform/docs/selfhosted-deployment-bundle.md"
       - "platform/docs/deployment-provenance.md"
+      - "platform/scripts/collect-gate7-host-evidence.mjs"
+      - "platform/ops/selfhosted-gate7-staging.json"
       - "platform/apps/**"
       - "platform/packages/database/**"
       - "platform/packages/observability/**"
@@ -21,6 +23,8 @@ on:
       - "platform/deploy/**"
       - "platform/docs/selfhosted-deployment-bundle.md"
       - "platform/docs/deployment-provenance.md"
+      - "platform/scripts/collect-gate7-host-evidence.mjs"
+      - "platform/ops/selfhosted-gate7-staging.json"
       - "platform/apps/**"
       - "platform/packages/database/**"
       - "platform/packages/observability/**"
@@ -108,7 +112,7 @@ jobs:
             [[ "$source_repo" == "https://github.com/karimelzoser/realestate" ]] || fail "$service source repository label is unexpected: '$source_repo'"
 
             case "$service" in
-              api|web|notification-gateway)
+              api|worker|web|notification-gateway|migrate)
                 port_bindings="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$container_id")"
                 [[ "$port_bindings" == "null" || "$port_bindings" == "{}" ]] || fail "$service has host port bindings: $port_bindings"
                 ;;
@@ -131,6 +135,31 @@ jobs:
           echo "Certified PRENEURA source SHA: $PRENEURA_SOURCE_SHA"
           echo "Certified application runtime SHA: $PRENEURA_APPLICATION_RUNTIME_SHA"
           echo 'Self-hosted deployment certification passed.'
+
+      - name: Certify sanitized Gate 7 host evidence collector
+        env:
+          GATE7_COLLECTOR_ALLOW_SHA_OVERRIDE: "true"
+          GATE7_EXPECTED_DEPLOYMENT_SHA: ${{ github.sha }}
+          GATE7_COMPOSE_ENV_FILE: deploy/.env.certification
+          GATE7_COMPOSE_FILE: deploy/docker-compose.production.yml
+          GATE7_LOCAL_EDGE_URL: http://127.0.0.1:18080
+          GATE7_HOST_EVIDENCE_PATH: /tmp/gate7-host-evidence.json
+          GATE7_MIN_FREE_DISK_GB: "1"
+          GATE7_MIN_FREE_MEMORY_MB: "256"
+          GATE7_MIN_CPU_COUNT: "1"
+        run: |
+          set -euo pipefail
+          node ../scripts/collect-gate7-host-evidence.mjs
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const report = JSON.parse(readFileSync('/tmp/gate7-host-evidence.json', 'utf8'));
+          if (report.decision !== 'PASS') throw new Error(`collector decision was ${report.decision}`);
+          if (report.release.expectedDeploymentSha !== process.env.GITHUB_SHA) throw new Error('collector did not bind to workflow SHA');
+          if (report.release.ciOverride !== true) throw new Error('collector CI override was not explicitly recorded');
+          if (!/^[0-9a-f]{64}$/.test(report.evidenceDigestSha256)) throw new Error('collector evidence digest is invalid');
+          if (report.failures.length !== 0) throw new Error('collector reported failures');
+          console.log(`Certified sanitized host evidence digest: ${report.evidenceDigestSha256}`);
+          NODE
 
       - name: Dump deployment logs on failure
         if: failure()
