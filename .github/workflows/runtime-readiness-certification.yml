@@ -55,6 +55,9 @@ permissions:
 jobs:
   runtime-readiness:
     runs-on: ubuntu-latest
+    env:
+      OTEL_EXPORTER_OTLP_ENDPOINT: https://otel.preneura.invalid
+      PRENEURA_SERVICE_NAME: runtime-readiness-certification
     services:
       postgres:
         image: postgres:18
