@@ -1,35 +1,39 @@
 # PRENEURA production deployment runbook
 
-This runbook is the operational contract for deploying the production platform. It assumes the release has already passed the production foundation, pricing, document/contract, finance, reproducibility, and runtime-readiness gates.
+This runbook is the operational contract for deploying the production platform on self-hosted Linux infrastructure or any generic container host. It assumes the release has already passed the production foundation, pricing, document/contract, finance, reproducibility, and runtime-readiness gates.
 
 ## Service topology
 
-Deploy the production workspace as independent services sharing the same certified PostgreSQL schema:
+Deploy the production workspace as independent processes or containers sharing the same certified PostgreSQL schema:
 
-1. migration/release job;
+1. one-shot migration/release process;
 2. API;
 3. background worker;
 4. notification gateway;
-5. web application.
+5. web application;
+6. PostgreSQL;
+7. Redis/object storage/Keycloak and other configured infrastructure dependencies.
 
 API/worker/gateway application processes never auto-run schema migrations.
+
+A recommended self-hosted edge is Nginx or HAProxy terminating TLS and routing public traffic to the web/API/gateway processes. Worker and migration processes do not require public exposure.
 
 ## Required release order
 
 1. Build one immutable release from the committed `platform/pnpm-lock.yaml` with Node 24 / pnpm 12.9.1.
-2. Run the one-shot migration job:
+2. Run the one-shot migration process:
 
    ```bash
    MIGRATION_ACTOR=<release-id> pnpm --filter @preneura/database migrate
    ```
 
-3. Stop the rollout if the migration job fails.
-4. Roll API instances.
+3. Stop the rollout if the migration process fails.
+4. Restart or roll API instances.
 5. Admit API traffic only after `GET /v1/health/ready` returns HTTP 200.
-6. Roll notification-gateway instances. Their package `start` command runs the production configuration/database preflight before opening the HTTP listener.
-7. Roll worker instances. A worker exits non-zero before any processing loop when configuration or schema compatibility is invalid.
-8. Roll the web service and check `GET /api/health`.
-9. Verify provider endpoints and dashboards before declaring the deployment complete.
+6. Restart notification-gateway instances. Their package `start` command runs the production configuration/database preflight before opening the HTTP listener.
+7. Restart worker instances. A worker exits non-zero before any processing loop when configuration or schema compatibility is invalid.
+8. Restart the web process and check `GET /api/health`.
+9. Verify provider endpoints, dashboards, realtime events, notification delivery and transaction flows before declaring the deployment complete.
 
 ## Health contracts
 
@@ -37,13 +41,13 @@ API/worker/gateway application processes never auto-run schema migrations.
 
 - `/v1/health` — process liveness only.
 - `/v1/health/live` — process liveness only.
-- `/v1/health/ready` — PostgreSQL connectivity + runtime/schema compatibility; use this as the API load-balancer/Railway health check.
+- `/v1/health/ready` — PostgreSQL connectivity + runtime/schema compatibility; use this as the reverse-proxy/orchestrator readiness check.
 
 A stale/incompatible schema returns 503 while liveness remains 200.
 
 ### Worker
 
-The worker has no public HTTP listener. Startup is the readiness gate. It validates production configuration and the runtime/schema contract before starting outbox, notification, reminder, or commission loops. Configure the platform to restart on non-zero exit.
+The worker has no public HTTP listener. Startup is the readiness gate. It validates production configuration and the runtime/schema contract before starting outbox, notification, reminder, or commission loops. Use systemd, Docker restart policy, or your process supervisor to restart on non-zero exit.
 
 ### Notification gateway
 
@@ -57,7 +61,7 @@ Use the package `start` command, not `node dist/main.js` directly. `start` first
 
 ## Production configuration rules
 
-Production startup rejects placeholder or incomplete configuration. In particular, long strings such as `replace-with-...` are treated as placeholders and cannot satisfy secret-length validation.
+Production startup rejects placeholder or incomplete configuration. Long placeholder strings such as `replace-with-...` are treated as invalid and cannot satisfy secret validation.
 
 The API requires production authentication/session secrets, OIDC, storage/scanner configuration, notification-gateway integration, and the finance-provider ingress token.
 
@@ -65,7 +69,68 @@ The worker requires the database URL, notification gateway URL/token, and bounde
 
 The notification gateway requires the database URL, contact encryption key, internal gateway token, Meta WhatsApp credentials, and a valid WhatsApp template-binding map. SMS/email provider pairs are validated when configured.
 
-Secrets belong in the deployment secret store; never copy `.env.example` placeholder values into production.
+Secrets belong in protected environment files or a server-side secret manager readable only by the required service account. Never copy `.env.example` placeholder values into production.
+
+## Self-hosted process layout
+
+A single Linux host may run the first production deployment, provided PostgreSQL/object storage/backups have adequate isolation and capacity. Keep the services logically separate even on one machine.
+
+Suggested processes:
+
+```text
+preneura-web
+preneura-api
+preneura-worker
+preneura-notification-gateway
+keycloak
+postgresql
+redis
+object-storage
+nginx
+```
+
+The application processes should run as non-root users with separate writable directories only where required.
+
+### Build
+
+From `platform/`:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm --filter @preneura/web build
+pnpm --filter @preneura/api build
+pnpm --filter @preneura/worker build
+pnpm --filter @preneura/notification-gateway build
+```
+
+### Start commands
+
+```bash
+pnpm --filter @preneura/web start
+pnpm --filter @preneura/api start
+pnpm --filter @preneura/worker start
+pnpm --filter @preneura/notification-gateway start
+```
+
+Run the migration process separately before restarting application processes:
+
+```bash
+MIGRATION_ACTOR=<release-id> pnpm --filter @preneura/database migrate
+```
+
+## Reverse proxy
+
+Terminate HTTPS at Nginx/HAProxy and route only the public surfaces:
+
+```text
+https://app.example.com      -> web
+https://api.example.com      -> API
+https://gateway.example.com  -> notification gateway only when provider callbacks require it
+```
+
+Do not publicly expose PostgreSQL, Redis, worker ports, object-storage administration ports, or internal Keycloak administration endpoints.
+
+Preserve forwarded protocol/IP headers from the trusted proxy only. Enforce TLS, request/body limits and timeouts appropriate to uploads and SSE.
 
 ## Schema compatibility and rolling releases
 
@@ -92,6 +157,18 @@ The production migration runner:
 
 For databases created before the migration ledger existed, `MIGRATION_ADOPT_EXISTING=true` is allowed only as a one-time baseline and only when the runtime contract proves the database is already at the exact current schema. Remove that flag immediately after adoption.
 
+## Backup and recovery
+
+Before each database-affecting production release:
+
+1. verify the last PostgreSQL backup completed successfully;
+2. verify point-in-time recovery/WAL retention when enabled;
+3. take or verify an object-storage backup/versioning checkpoint for business documents;
+4. record the application release SHA and migration ledger state;
+5. periodically perform a restore drill into an isolated database rather than assuming backups are usable.
+
+A backup that has never been restored in a test is not considered release evidence.
+
 ## Failure handling
 
 ### Migration failure
@@ -114,7 +191,7 @@ Do not bypass `preflight`. Correct the database/schema or provider/secret config
 
 1. Stop rollout of the new application revision.
 2. Confirm the previous runtime version remains compatible with the database `minimum_runtime_version`.
-3. Roll API/worker/gateway/web services back to the previous immutable build.
+3. Restart API/worker/gateway/web using the previous immutable build.
 4. Do not run down-migrations.
 5. Verify API readiness, worker startup, notification-gateway preflight, and web liveness.
 6. Create a forward migration/code fix for the failed release.
