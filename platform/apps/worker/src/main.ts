@@ -108,7 +108,7 @@ void main().catch(async (error) => {
     err: error instanceof Error ? error : new Error(String(error)),
   });
   await db.destroy().catch(() => undefined);
-  process.exitCode = 1;
+  process.exit(1);
 });
 
 function sleep(ms: number): Promise<void> {
