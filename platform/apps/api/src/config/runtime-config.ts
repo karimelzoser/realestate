@@ -154,10 +154,18 @@ function requireHttpsOrigins(env: NodeJS.ProcessEnv, name: string, failures: str
       if (parsed.protocol !== 'https:' || parsed.pathname !== '/' || parsed.search || parsed.hash) {
         failures.push(`${name} entries must be HTTPS origins without path/query/fragment.`);
       }
+      if (isLocalHostname(parsed.hostname)) {
+        failures.push(`${name} entries must not target localhost/loopback in production.`);
+      }
     } catch {
       failures.push(`${name} contains an invalid origin.`);
     }
   }
+}
+
+function isLocalHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1' || normalized === '[::1]';
 }
 
 function isPlaceholder(value: string): boolean {
