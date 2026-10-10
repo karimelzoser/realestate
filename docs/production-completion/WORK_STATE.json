@@ -4,35 +4,37 @@
   "stage": "IMPLEMENTATION_STARTED",
   "planningBranch": "plan/egypt-platform-completion",
   "integrationBranch": "completion/egypt-full-platform",
-  "taskBranch": null,
-  "observedHeadBeforeCheckpoint": "446cfe4803bedc9868ee28799ff4b376277c0d91",
+  "taskBranch": "task/e01-tenant-lifecycle",
+  "observedHeadBeforeCheckpoint": "23cba476f37b9b53d461e30503f9fdfef2198282",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
+  "taskImplementationHead": "9281d02040293778675b38a71c43f698aa2aad22",
   "activeTaskId": "E01.1",
-  "activeTaskStatus": "IN_PROGRESS",
-  "completedCheckpoint": "E00.1/E00.2 repository authority and resumable execution controls established on canonical integration branch",
-  "nextAction": "Create focused E01.1 branch from the canonical checkpoint; inspect central access lifecycle checks and negative tests; reproduce suspended-tenant direct-request authorization gap",
+  "activeTaskStatus": "IMPLEMENTED",
+  "completedCheckpoint": "E00 integrated; E01.1 lifecycle policy and emitted-stack regression implemented on focused task branch; validation pending",
+  "nextAction": "Open a draft PR from task/e01-tenant-lifecycle to completion/egypt-full-platform; run full-stack acceptance and production foundation; diagnose any lifecycle/type/runtime failures before marking TESTED",
   "changedFiles": [
-    "docs/production-completion/TASKS.json",
-    "docs/production-completion/TASKS.md",
-    "docs/production-completion/PROGRESS.md",
-    "docs/production-completion/WORK_STATE.json",
-    "docs/production-completion/CONTINUE.md",
-    "docs/production-completion/SERVICE_READINESS.md"
+    "platform/apps/api/src/access/access-lifecycle.service.ts",
+    "platform/apps/api/src/access/access.service.ts",
+    "platform/apps/api/src/access/access.module.ts",
+    "platform/packages/database/tests/full_stack_acceptance.mjs"
   ],
   "commandsAndResults": [
-    {"action":"verify planning branch","result":"plan/egypt-platform-completion = 446cfe4803bedc9868ee28799ff4b376277c0d91; parent c2746523eb434898cbb4c46cf5df452d122ba78f"},
-    {"action":"verify PR #81 candidate","result":"head remains c2746523eb434898cbb4c46cf5df452d122ba78f"},
-    {"action":"verify main/demo","result":"main remains 1a6e61c891e040221f09c773e6de589928a9a0b7"},
-    {"action":"create integration branch","result":"completion/egypt-full-platform created from planning head"}
+    {"action":"verify planning/candidate/demo authority","result":"planning 446cfe4 parent c2746523; main 1a6e61c"},
+    {"action":"create integration branch","result":"completion/egypt-full-platform created and control ledger persisted"},
+    {"action":"inspect access path","result":"workspace filters tenant lifecycle but listActiveAssignments/access decisions did not enforce tenant membership, tenant status or project lifecycle"},
+    {"action":"implement E01.1 first increment","result":"central lifecycle service now participates in AccessService decisions; full-stack regression mutates tenant/membership/project lifecycle using an existing session"}
   ],
   "evidencePaths": [
-    "docs/production-completion/PLAN.md",
-    "docs/production-completion/TASKS.json",
+    "platform/apps/api/src/access/access-lifecycle.service.ts",
+    "platform/apps/api/src/access/access.service.ts",
+    "platform/packages/database/tests/full_stack_acceptance.mjs",
     "docs/production-completion/PROGRESS.md"
   ],
   "remainingTests": [
-    "E01.1 reproduction and task-specific API/database negative tests"
+    "Full Stack Acceptance Certification on task implementation SHA",
+    "Production Platform Foundation/typecheck/build on task implementation SHA",
+    "Review project DRAFT/PAUSED/CLOSED policy against affected existing role tests"
   ],
   "externalBlockerIds": [
     "DEPLOYMENT_DEFERRED",
