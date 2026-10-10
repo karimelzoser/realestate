@@ -4,26 +4,10 @@ import process from 'node:process';
 const EXPECTED_SCHEMA_VERSION = 33;
 const EXPECTED_MIGRATION_MARKER = '0033_runtime_readiness_contract';
 const PLACEHOLDER = /(REPLACE_ME|\bTODO\b|\bTBC\b|\bUNKNOWN\b|\bN\/A\b|\bNONE\b)/i;
-const REQUIRED_STRINGS = [
-  'changeId',
-  'migrationRehearsalId',
-  'migrationPlanId',
-  'rollbackPlanId',
-  'backupEvidenceId',
-  'restoreRehearsalId',
-  'databasePitrEvidenceId',
-  'objectStorageRecoveryEvidenceId',
-  'securityReviewId',
-  'monitoringDashboardUrl',
-  'alertDeploymentId',
-  'providerVerificationId',
-  'oncallPrimary',
-  'oncallSecondary',
-  'customerSignoffId',
-  'runbookVersion',
-  'releaseManager',
-  'attestedAt',
-];
+const schema = JSON.parse(fs.readFileSync(new URL('../ops/release-evidence.schema.json', import.meta.url), 'utf8'));
+const allowedEvidenceFields = new Set(Object.keys(schema.properties ?? {}));
+const requiredEvidenceFields = Array.isArray(schema.required) ? schema.required : [];
+const REQUIRED_STRINGS = requiredEvidenceFields.filter((field) => !['version', 'environment', 'releaseSha'].includes(field));
 
 function fail(reason, details = {}) {
   console.error(JSON.stringify({ decision: 'NO_GO', reason, ...details }));
@@ -39,6 +23,14 @@ function assertValue(record, key) {
 
 function validateEvidence(record) {
   if (!record || typeof record !== 'object' || Array.isArray(record)) fail('INVALID_EVIDENCE_DOCUMENT');
+
+  for (const key of Object.keys(record)) {
+    if (!allowedEvidenceFields.has(key)) fail('UNEXPECTED_EVIDENCE_FIELD', { field: key });
+  }
+  for (const key of requiredEvidenceFields) {
+    if (!(key in record)) fail('MISSING_EVIDENCE', { field: key });
+  }
+
   if (record.version !== 1) fail('UNSUPPORTED_EVIDENCE_VERSION', { expected: 1 });
   if (record.environment !== 'production') fail('INVALID_ENVIRONMENT', { expected: 'production' });
   if (typeof record.releaseSha !== 'string' || !/^[0-9a-f]{40}$/.test(record.releaseSha)) fail('INVALID_RELEASE_SHA');
