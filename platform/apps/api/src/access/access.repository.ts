@@ -51,7 +51,7 @@ export abstract class AccessRepository {
 
 @Injectable()
 export class PostgresAccessRepository extends AccessRepository {
-  readonly lifecycle: AccessLifecycleService;
+  override readonly lifecycle: AccessLifecycleService;
 
   constructor(@Inject(DATABASE) private readonly db: Kysely<Database>) {
     super();
