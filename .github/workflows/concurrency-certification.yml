@@ -6,11 +6,14 @@ on:
       - "platform/apps/api/src/catalog/**"
       - "platform/apps/api/src/sales/queue-dispatch.repository.ts"
       - "platform/apps/worker/src/notifications.ts"
+      - "platform/apps/worker/src/notification-delivery.ts"
       - "platform/apps/worker/scripts/concurrency-certification.mjs"
+      - "platform/apps/worker/scripts/resilience-certification.mjs"
       - "platform/packages/database/migrations/**"
       - "platform/packages/database/tests/concurrency_certification.mjs"
       - "platform/packages/database/tests/backup_restore_seed.sql"
       - "platform/docs/concurrency-certification.md"
+      - "platform/docs/gate6-performance-resilience.md"
       - "platform/pnpm-lock.yaml"
       - ".github/workflows/concurrency-certification.yml"
   push:
@@ -21,11 +24,14 @@ on:
       - "platform/apps/api/src/catalog/**"
       - "platform/apps/api/src/sales/queue-dispatch.repository.ts"
       - "platform/apps/worker/src/notifications.ts"
+      - "platform/apps/worker/src/notification-delivery.ts"
       - "platform/apps/worker/scripts/concurrency-certification.mjs"
+      - "platform/apps/worker/scripts/resilience-certification.mjs"
       - "platform/packages/database/migrations/**"
       - "platform/packages/database/tests/concurrency_certification.mjs"
       - "platform/packages/database/tests/backup_restore_seed.sql"
       - "platform/docs/concurrency-certification.md"
+      - "platform/docs/gate6-performance-resilience.md"
       - "platform/pnpm-lock.yaml"
       - ".github/workflows/concurrency-certification.yml"
 
@@ -55,6 +61,9 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_concurrency
       PGPASSWORD: postgres
+      GATE6_DB_BATCH_BUDGET_MS: "45000"
+      GATE6_WORKER_BATCH_BUDGET_MS: "30000"
+      GATE6_RESILIENCE_BUDGET_MS: "15000"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -75,7 +84,15 @@ jobs:
         run: |
           set -euo pipefail
           MIGRATION_ACTOR=concurrency-certification pnpm --filter @preneura/database migrate
-          test "$(psql "$DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '35'
+          expected_count="$(find packages/database/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]_*.sql' | wc -l | tr -d ' ')"
+          actual_count="$(psql "$DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')"
+          test "$actual_count" = "$expected_count"
+          latest_file="$(find packages/database/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]_*.sql' -printf '%f\n' | sort | tail -1)"
+          latest_version="$(printf '%s' "$latest_file" | cut -c1-4 | sed 's/^0*//')"
+          latest_ledger_file="$(psql "$DATABASE_URL" -Atqc 'SELECT filename FROM platform_schema_migrations ORDER BY version DESC LIMIT 1')"
+          latest_ledger_version="$(psql "$DATABASE_URL" -Atqc 'SELECT version FROM platform_schema_migrations ORDER BY version DESC LIMIT 1')"
+          test "$latest_ledger_file" = "$latest_file"
+          test "$latest_ledger_version" = "$latest_version"
       - name: Seed certified commercial/legal/finance baseline
         run: |
           set -euo pipefail
@@ -86,11 +103,57 @@ jobs:
         run: |
           set -euo pipefail
           node packages/database/tests/concurrency_certification.mjs | tee /tmp/database-concurrency.json
+      - name: Enforce database contention time guardrails
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const budget = Number(process.env.GATE6_DB_BATCH_BUDGET_MS);
+          const result = JSON.parse(await readFile('/tmp/database-concurrency.json', 'utf8'));
+          if (result.status !== 'passed') throw new Error('Database contention certification did not pass.');
+          for (const [name, batch] of Object.entries(result)) {
+            if (name === 'status' || !batch || typeof batch !== 'object' || !('elapsedMs' in batch)) continue;
+            if (Number(batch.elapsedMs) > budget) {
+              throw new Error(`${name} took ${batch.elapsedMs}ms, above Gate 6 CI guardrail ${budget}ms`);
+            }
+          }
+          console.log(JSON.stringify({ status: 'passed', budgetMs: budget }, null, 2));
+          NODE
       - name: Build and run compiled worker contention certification
         run: |
           set -euo pipefail
           pnpm --filter @preneura/worker build
           node apps/worker/scripts/concurrency-certification.mjs | tee /tmp/worker-concurrency.json
+      - name: Enforce worker contention time guardrail
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const budget = Number(process.env.GATE6_WORKER_BATCH_BUDGET_MS);
+          const result = JSON.parse(await readFile('/tmp/worker-concurrency.json', 'utf8'));
+          if (result.status !== 'passed') throw new Error('Worker contention certification did not pass.');
+          if (Number(result.elapsedMs) > budget) {
+            throw new Error(`Worker delivery batch took ${result.elapsedMs}ms, above Gate 6 CI guardrail ${budget}ms`);
+          }
+          console.log(JSON.stringify({ status: 'passed', budgetMs: budget }, null, 2));
+          NODE
+      - name: Run compiled worker resilience certification
+        run: |
+          set -euo pipefail
+          node apps/worker/scripts/resilience-certification.mjs | tee /tmp/worker-resilience.json
+      - name: Enforce resilience recovery time guardrail
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const budget = Number(process.env.GATE6_RESILIENCE_BUDGET_MS);
+          const result = JSON.parse(await readFile('/tmp/worker-resilience.json', 'utf8'));
+          if (result.status !== 'passed') throw new Error('Worker resilience certification did not pass.');
+          if (Number(result.elapsedMs) > budget) {
+            throw new Error(`Worker resilience drill took ${result.elapsedMs}ms, above Gate 6 CI guardrail ${budget}ms`);
+          }
+          console.log(JSON.stringify({ status: 'passed', budgetMs: budget }, null, 2));
+          NODE
       - name: Final invariant reconciliation
         run: |
           set -euo pipefail
