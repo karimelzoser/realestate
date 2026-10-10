@@ -12,6 +12,8 @@ const repositoryRoot = resolve(platformRoot, '..');
 const manifest = JSON.parse(readFileSync(resolve(platformRoot, 'ops/selfhosted-gate7-staging.json'), 'utf8'));
 
 const APP_SERVICES = ['api', 'worker', 'notification-gateway', 'web', 'migrate'];
+const LONG_RUNNING_APP_SERVICES = ['api', 'worker', 'notification-gateway', 'web'];
+const HEALTHCHECK_APP_SERVICES = ['api', 'notification-gateway', 'web'];
 const ALL_SERVICES = [...APP_SERVICES, 'edge'];
 const EXPECTED_REPOSITORY = 'https://github.com/karimelzoser/realestate';
 const EXPECTED_SCHEMA = String(manifest.release?.runtimeSchemaVersion ?? '');
@@ -143,6 +145,17 @@ function safeOsRelease() {
   }
 }
 
+function availableMemoryBytes() {
+  try {
+    const meminfo = readFileSync('/proc/meminfo', 'utf8');
+    const match = /^MemAvailable:\s+(\d+)\s+kB$/m.exec(meminfo);
+    if (match) return Number(match[1]) * 1024;
+  } catch {
+    // Portable fallback below.
+  }
+  return freemem();
+}
+
 function diskSnapshot(path) {
   const stats = statfsSync(path);
   const blockSize = Number(stats.bsize || stats.frsize || 4096);
@@ -254,9 +267,34 @@ function containerEvidence(service) {
       'application containers must not be privileged',
     );
     assertCondition(
+      `service.${service}.security.noNewPrivileges`,
+      evidence.security.securityOptions?.some((value) => String(value).startsWith('no-new-privileges')),
+      `expected no-new-privileges, found ${JSON.stringify(evidence.security.securityOptions)}`,
+    );
+    assertCondition(
+      `service.${service}.security.capDrop`,
+      evidence.security.capDrop?.includes('ALL'),
+      `expected cap_drop ALL, found ${JSON.stringify(evidence.security.capDrop)}`,
+    );
+    assertCondition(
       `service.${service}.network.private`,
       evidence.network.portBindings === null || Object.keys(evidence.network.portBindings).length === 0,
       `private service has host port bindings: ${JSON.stringify(evidence.network.portBindings)}`,
+    );
+  }
+
+  if (LONG_RUNNING_APP_SERVICES.includes(service)) {
+    assertCondition(
+      `service.${service}.running`,
+      evidence.state.running && evidence.state.status === 'running',
+      `status=${evidence.state.status} running=${evidence.state.running}`,
+    );
+  }
+  if (HEALTHCHECK_APP_SERVICES.includes(service)) {
+    assertCondition(
+      `service.${service}.healthy`,
+      evidence.state.health === 'healthy',
+      `health=${evidence.state.health}`,
     );
   }
 
@@ -302,6 +340,7 @@ async function probeLocal(path, kind) {
 
 const collectedAt = new Date().toISOString();
 const disk = diskSnapshot(repositoryRoot);
+const availableMemory = availableMemoryBytes();
 const host = {
   hostname: hostname(),
   os: safeOsRelease(),
@@ -310,7 +349,7 @@ const host = {
   cpuCount: cpus().length,
   memory: {
     totalBytes: totalmem(),
-    freeBytes: freemem(),
+    availableBytes: availableMemory,
   },
   disk,
   docker: {
@@ -327,8 +366,8 @@ assertCondition(
 );
 assertCondition(
   'host.memory.minimum',
-  host.memory.freeBytes >= minimumFreeMemoryMb * 1024 * 1024,
-  `requires >= ${minimumFreeMemoryMb} MiB free, found ${Math.round(host.memory.freeBytes / 1024 / 1024)} MiB`,
+  host.memory.availableBytes >= minimumFreeMemoryMb * 1024 * 1024,
+  `requires >= ${minimumFreeMemoryMb} MiB available, found ${Math.round(host.memory.availableBytes / 1024 / 1024)} MiB`,
 );
 assertCondition(
   'host.disk.minimum',
@@ -350,10 +389,31 @@ assertCondition(
 
 const edge = services.edge;
 const edgeBindings = edge?.network?.portBindings ?? null;
+const edgeBindingKeys = edgeBindings ? Object.keys(edgeBindings).sort() : [];
 assertCondition(
   'edge.public.8080',
-  Boolean(edgeBindings && Object.prototype.hasOwnProperty.call(edgeBindings, '8080/tcp')),
-  `edge 8080/tcp is not host-published: ${JSON.stringify(edgeBindings)}`,
+  edgeBindingKeys.length === 1 && edgeBindingKeys[0] === '8080/tcp',
+  `expected only 8080/tcp host publication, found ${JSON.stringify(edgeBindings)}`,
+);
+assertCondition(
+  'edge.running',
+  Boolean(edge?.state?.running && edge?.state?.status === 'running'),
+  edge ? `status=${edge.state.status} running=${edge.state.running}` : 'edge container unavailable',
+);
+assertCondition(
+  'edge.healthy',
+  edge?.state?.health === 'healthy',
+  edge ? `health=${edge.state.health}` : 'edge container unavailable',
+);
+assertCondition(
+  'edge.security.privileged',
+  edge?.security?.privileged === false,
+  'edge must not be privileged',
+);
+assertCondition(
+  'edge.security.noNewPrivileges',
+  edge?.security?.securityOptions?.some((value) => String(value).startsWith('no-new-privileges')),
+  `edge security options=${JSON.stringify(edge?.security?.securityOptions ?? null)}`,
 );
 assertCondition(
   'edge.onlyPublicService',
