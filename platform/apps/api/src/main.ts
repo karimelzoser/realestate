@@ -1,8 +1,13 @@
 import 'reflect-metadata';
-import { randomUUID } from 'node:crypto';
 import cookie from '@fastify/cookie';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import {
+  annotateActiveSpan,
+  createLogger,
+  recordHttpRequest,
+  resolveCorrelationId,
+} from '@preneura/observability';
 import { AppModule } from './app.module.js';
 import { validateApiRuntimeConfig } from './config/runtime-config.js';
 import {
@@ -14,15 +19,47 @@ import {
 async function bootstrap(): Promise<void> {
   validateApiRuntimeConfig();
 
+  const logger = createLogger('preneura-api');
+  const requestStartedAt = new WeakMap<object, number>();
   const adapter = new FastifyAdapter({
-    logger: process.env.NODE_ENV !== 'test',
+    loggerInstance: logger,
+    disableRequestLogging: true,
     trustProxy: resolveTrustProxy(),
     bodyLimit: resolveApiBodyLimit(),
     requestIdHeader: false,
-    genReqId: () => randomUUID(),
+    genReqId: (request) => resolveCorrelationId(request.headers['x-request-id']),
+  });
+  const fastify = adapter.getInstance();
+
+  fastify.addHook('onRequest', (request, reply, done) => {
+    requestStartedAt.set(request, performance.now());
+    reply.header('x-request-id', request.id);
+    annotateActiveSpan({ 'preneura.request.id': request.id });
+    done();
   });
 
-  registerHttpSecurity(adapter.getInstance());
+  fastify.addHook('onResponse', (request, reply, done) => {
+    const startedAt = requestStartedAt.get(request) ?? performance.now();
+    const durationMs = Math.max(0, performance.now() - startedAt);
+    const route = request.routeOptions.url || 'unmatched';
+    recordHttpRequest({
+      method: request.method,
+      route,
+      statusCode: reply.statusCode,
+      durationMs,
+    });
+    logger.info({
+      event: 'http.request.completed',
+      requestId: request.id,
+      method: request.method,
+      route,
+      statusCode: reply.statusCode,
+      durationMs: Math.round(durationMs),
+    });
+    done();
+  });
+
+  registerHttpSecurity(fastify);
 
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter);
   const cookieSigningSecret = process.env.COOKIE_SIGNING_SECRET;
@@ -41,6 +78,7 @@ async function bootstrap(): Promise<void> {
     throw new Error('PORT must be a valid TCP port.');
   }
   await app.listen({ port, host: '0.0.0.0' });
+  logger.info({ event: 'api.started', port });
 }
 
 void bootstrap();
