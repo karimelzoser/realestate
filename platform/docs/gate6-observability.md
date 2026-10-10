@@ -1,0 +1,154 @@
+# Gate 6 Observability and Alerting Contract
+
+## Purpose
+
+This contract certifies that PRENEURA production processes emit actionable, privacy-safe operational evidence before Gate 7 deployment. Observability does not grant business authority and must never become a side channel for tenant, buyer, broker or financial data.
+
+The production telemetry boundary is OpenTelemetry/OTLP for traces and metrics plus structured JSON application logs. API, worker and notification-gateway start commands preload `@preneura/observability/register` before application code so HTTP/database/provider instrumentation is initialized early.
+
+## Production telemetry configuration
+
+Production processes fail closed when telemetry is disabled or no OTLP endpoint is configured.
+
+Required production configuration:
+
+- `OTEL_EXPORTER_OTLP_ENDPOINT`
+- `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` unless the collector contract explicitly differs
+- collector credentials through `OTEL_EXPORTER_OTLP_HEADERS` or the deployment secrets manager
+- `OTEL_SDK_DISABLED=false`
+- `LOG_LEVEL=info` unless an incident runbook requires a temporary override
+
+The OTLP endpoint must not contain embedded credentials. HTTPS is the production default. An intentionally private HTTP collector requires the explicit `OTEL_EXPORTER_OTLP_INSECURE=true` acknowledgement.
+
+## Correlation IDs
+
+The API accepts an incoming `x-request-id` only when it contains 1-128 characters from the bounded set `A-Z a-z 0-9 . _ : -`. Any missing or invalid value is replaced with a server-generated UUID.
+
+The authoritative request ID is:
+
+- assigned before application routing;
+- echoed in the `x-request-id` response header;
+- attached to the active trace when available;
+- included in the structured request-completion log.
+
+Raw request bodies, query strings, cookies, authorization headers and user contact values are not logged by the request-completion signal.
+
+## Structured logging and PII policy
+
+`@preneura/observability` creates Pino JSON loggers with central redaction for security/contact fields including authorization, cookies, passwords, secrets, tokens, OTP values, National IDs, phones, emails, destinations and contact values.
+
+Operational error logs use bounded error **types** instead of arbitrary exception messages when an error may cross provider/customer boundaries. OTel runtime spans similarly record a bounded error type and generic error status rather than exporting arbitrary exception messages.
+
+The following must never be deliberately added as log/metric labels:
+
+- buyer name, phone, email or National ID;
+- document/contract contents or signature material;
+- cheque numbers or payment instrument data;
+- OTPs, session cookies, bearer/API/provider tokens;
+- arbitrary tenant/project/user IDs as metric labels;
+- raw URLs containing query strings;
+- AI prompts or provider responses.
+
+Tenant/project identifiers may appear in tightly controlled audit records where business evidence requires them, but not as unbounded observability metric labels.
+
+## PRENEURA-owned metrics
+
+Automatic OTel instrumentation supplies protocol/database spans. PRENEURA also emits a small, stable metric vocabulary for operational decisions.
+
+### API
+
+- `preneura.api.http.requests`
+  - labels: HTTP method, route template, status-code class only
+- `preneura.api.http.duration`
+  - same bounded labels, milliseconds
+- `preneura.api.readiness.failures`
+  - label: bounded readiness failure code
+
+The route label is the Fastify route template, never the raw URL/path with identifiers or query values.
+
+### Worker
+
+- `preneura.worker.loop.runs`
+- `preneura.worker.loop.duration`
+- `preneura.worker.loop.processed`
+- `preneura.worker.loop.failures`
+
+The only custom label is the bounded loop name (`outbox`, `notifications`, `milestone_reminders`, `installment_reminders`, `commission_due`).
+
+Successful empty loop executions still increment `loop.runs`; this is important because a healthy idle worker must be distinguishable from a dead worker.
+
+### Notification gateway
+
+The gateway is preloaded with OTel auto-instrumentation, so inbound HTTP and outbound provider HTTP calls participate in the same trace/export boundary. Its existing application logs contain request kind/channel/provider outcome but must not contain destination/contact values.
+
+## Health semantics
+
+`GET /v1/health/live` means only that the API process is alive.
+
+`GET /v1/health/ready` verifies PostgreSQL connectivity and the runtime schema contract. A failed readiness probe emits `preneura.api.readiness.failures` and returns `503`.
+
+Worker startup already fails before polling loops when database/schema readiness is not satisfied. A running worker emits loop metrics on every polling cycle, including successful zero-work cycles.
+
+## Required dashboards
+
+Gate 7 must connect the OTLP stream to an approved backend (for example an OTel Collector feeding Grafana/Tempo/Prometheus-compatible storage or the chosen managed equivalent) and provide at minimum:
+
+1. **API service health** — request rate, 4xx/5xx, p50/p95/p99 duration, readiness failures.
+2. **Worker health** — run/failure rate and duration by bounded loop name.
+3. **Notification delivery** — gateway/provider HTTP failures and latency, plus the existing durable notification job/attempt operational views.
+4. **Database/provider dependencies** — database spans/errors and outbound provider HTTP failures/latency.
+5. **Release dashboard** — deployment version/service/environment plus error/latency comparison before and after deployment.
+
+## Alert policy
+
+These are production defaults. Gate 7 staging must calibrate traffic-sensitive thresholds and document any approved changes before launch.
+
+### Page immediately / high severity
+
+- API readiness continuously failing for **2 minutes**.
+- API 5xx ratio >= **5% for 5 minutes** with at least 20 requests in the window.
+- No worker-loop run samples for **2x the configured loop interval + 60 seconds** on a service instance expected to be active.
+- Worker loop failures on the same loop for **3 consecutive runs**.
+- Notification/provider endpoint failure ratio >= **20% for 5 minutes** with at least 10 attempts.
+- Database connectivity/readiness failures on multiple API instances or API + worker simultaneously.
+
+### Warning / investigate during business hours
+
+- API p95 duration > **1 second for 10 minutes** for normal application routes (large export/upload-provider operations should be separately classified).
+- Worker loop duration exceeds its polling interval repeatedly.
+- Sustained notification retry/terminal-failure growth.
+- Repeated OTLP export failures or loss of telemetry from one production service while the service remains reachable.
+
+### Gate 7 calibration required
+
+The following cannot be honestly fixed from CI alone and must be measured in staging with production-like traffic:
+
+- exact p95/p99 SLOs by route family;
+- outbox/notification backlog paging thresholds by expected sales volume;
+- provider-specific latency thresholds;
+- autoscaling CPU/memory thresholds;
+- collector/backend retention and cardinality budgets.
+
+## Incident correlation workflow
+
+1. Begin with alert timestamp, service and environment.
+2. Locate the affected trace/request using `traceId` or the client-visible `x-request-id`.
+3. Correlate API/provider spans with structured logs using trace/span/request IDs.
+4. Use business audit/ledger/event stores for transaction truth; observability logs are not business authority.
+5. Never paste raw PII/secrets into incident labels or chat channels.
+6. Record remediation and threshold changes in the incident/postmortem record.
+
+## Certification boundary
+
+`Gate 6 Observability Certification` proves in CI that:
+
+- the observability package builds under the frozen workspace lock;
+- production telemetry cannot be silently disabled or started without an OTLP endpoint;
+- unsafe local/credential-embedded production OTLP endpoints are rejected;
+- structured logger redaction removes representative token/OTP/phone/email/National-ID values;
+- correlation IDs accept only the bounded format and regenerate invalid input;
+- API, worker and notification-gateway production start commands preload the observability register;
+- API/worker source is wired to PRENEURA-owned request/readiness/loop telemetry functions;
+- production applications still typecheck/build.
+
+Gate 6 certification does **not** claim that a production collector, dashboard or paging destination exists. Creating and exercising those deployed resources belongs to Gate 7 environment go-live.
