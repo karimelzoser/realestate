@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "release": {
+    "gitSha": "REQUIRED",
+    "approvedAt": "REQUIRED_ISO8601",
+    "approver": "REQUIRED"
+  },
+  "environment": {
+    "provider": "railway",
+    "project": "REQUIRED",
+    "environment": "REQUIRED",
+    "primaryRegion": "REQUIRED",
+    "production": true
+  },
+  "services": {
+    "web": { "deploymentId": "REQUIRED", "replicas": 0, "publicHttps": false, "healthy": false },
+    "api": { "deploymentId": "REQUIRED", "replicas": 0, "publicHttps": false, "ready": false },
+    "worker": { "deploymentId": "REQUIRED", "replicas": 0, "public": false, "healthy": false },
+    "notificationGateway": { "deploymentId": "REQUIRED", "replicas": 0, "public": false, "healthy": false },
+    "keycloak": { "deploymentId": "REQUIRED", "replicas": 0, "publicHttps": false, "healthy": false }
+  },
+  "database": {
+    "majorVersion": 18,
+    "publicTcp": false,
+    "encrypted": false,
+    "automatedBackups": false,
+    "pitrEnabled": false,
+    "restoreRehearsal": {
+      "performedAt": "REQUIRED_ISO8601",
+      "rpoMinutes": null,
+      "rtoMinutes": null,
+      "passed": false
+    }
+  },
+  "objectStorage": {
+    "private": false,
+    "versioning": false,
+    "serverSideEncryption": false,
+    "restoreHashRehearsalPassed": false
+  },
+  "edge": {
+    "tlsValid": false,
+    "hsts": false,
+    "corsExactOrigin": false,
+    "wafRateLimitsConfigured": false,
+    "sseConnectionPolicyConfigured": false,
+    "providerIngressRestricted": false
+  },
+  "observability": {
+    "centralLogs": false,
+    "deploymentFailureAlerts": false,
+    "tracing": false,
+    "databaseDependencySpans": false,
+    "providerDependencySpans": false
+  },
+  "performance": {
+    "window": "REQUIRED",
+    "trafficProfile": "REQUIRED",
+    "apiP95Ms": null,
+    "apiP99Ms": null,
+    "http5xxRate": null,
+    "sseConcurrentConnections": null,
+    "databasePeakCpuPercent": null,
+    "databasePeakMemoryPercent": null,
+    "passed": false
+  },
+  "providers": {
+    "googleOidc": false,
+    "whatsapp": false,
+    "sms": "NOT_REQUIRED_OR_BOOLEAN",
+    "email": "NOT_REQUIRED_OR_BOOLEAN",
+    "documentScanner": false,
+    "financeIngress": false,
+    "settlementIngress": false
+  },
+  "security": {
+    "secretValuesAbsentFromRepo": true,
+    "publicDatabaseEndpointAbsent": false,
+    "publicGatewayEndpointAbsent": false,
+    "penetrationTest": {
+      "completedAt": "REQUIRED_ISO8601",
+      "criticalOpen": 0,
+      "highOpen": 0,
+      "reportReference": "REQUIRED"
+    }
+  },
+  "rollback": {
+    "previousReleaseIdentified": false,
+    "runtimeSchemaCompatible": false,
+    "forwardRepairPlanReviewed": false,
+    "trafficRollbackProcedureRehearsed": false
+  },
+  "decision": {
+    "status": "BLOCKED",
+    "blockers": ["Populate all REQUIRED evidence before go-live."],
+    "notes": []
+  }
+}
