@@ -26,22 +26,31 @@ function requireLacks(role, permissions) {
 
 requireHas('BROKER_AGENT', ['commission.status.read','broker.buyers.read','inventory.read','transaction.read']);
 requireLacks('BROKER_AGENT', ['commission.amount.read','commission.rate.read','commission.payment.manage','commission.plan.manage','payment.verify','pricing.publish']);
+
 requireHas('BROKER_FINANCE', ['commission.status.read','commission.amount.read','commission.rate.read','commission.payment.manage','payment.read']);
 requireLacks('BROKER_FINANCE', ['unit.lock','pricing.publish','contract.execute']);
+
 requireHas('BROKER_MANAGER', ['broker.users.manage','broker.performance.read','commission.status.read','commission.amount.read','commission.rate.read']);
 requireLacks('BROKER_MANAGER', ['payment.verify','contract.execute','pricing.publish']);
+
 requireHas('TRANSACTION_OPERATOR', ['transaction.manage','payment.read','payment.verify','payment.schedule.manage','documents.upload','documents.verify','contract.generate','contract.execute','commission.status.read']);
 requireLacks('TRANSACTION_OPERATOR', ['commission.amount.read','commission.rate.read','commission.payment.manage','commission.plan.manage','pricing.publish']);
+
 requireHas('ALLOCATOR', ['allocation.assist','unit.lock','inventory.read','transaction.read']);
 requireLacks('ALLOCATOR', ['payment.verify','documents.verify','commission.amount.read']);
+
 requireHas('QUEUE_RECEPTIONIST', ['queue.read','queue.checkin','queue.manage']);
 requireLacks('QUEUE_RECEPTIONIST', ['unit.lock','payment.verify','contract.execute']);
+
 requireHas('SALES', ['buyers.manage','eoi.manage','queue.read','inventory.read','transaction.read']);
 requireLacks('SALES', ['payment.verify','unit.lock','commission.amount.read']);
+
 requireHas('BUYER', ['buyers.read.self','eoi.read.self','transaction.read.self','documents.read.self','documents.upload.self','contract.read.self','contract.sign.self','installment.read.self','refund.request','ai.buyer.use']);
 requireLacks('BUYER', ['buyers.read','transaction.read','payment.verify','unit.lock','pricing.publish','ai.manager.use','ai.settings.manage']);
+
 requireHas('MANAGER', ['ai.manager.use','ai.settings.manage','notifications.manage','refund.approve','commission.status.read','commission.amount.read','commission.rate.read']);
 requireHas('OPERATIONS_DIRECTOR', ['tenant.users.manage','project.import.manage','pricing.publish','commission.payment.manage','refund.approve','notifications.manage','ai.manager.use','ai.settings.manage']);
+
 requireHas('PRENEURA_SUPER_ADMIN', ['platform.tenants.read','platform.tenants.manage','platform.support.access']);
 requireLacks('PRENEURA_SUPER_ADMIN', ['transaction.manage','payment.verify','unit.lock','pricing.publish','commission.payment.manage']);
 
