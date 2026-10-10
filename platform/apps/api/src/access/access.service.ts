@@ -4,6 +4,7 @@ import {
   type PermissionCode,
   type WorkspaceContextSnapshot,
 } from '@preneura/contracts/access';
+import { AccessLifecycleService } from './access-lifecycle.service.js';
 import { AccessRepository, type RoleAssignment } from './access.repository.js';
 
 export interface AccessContext {
@@ -47,7 +48,18 @@ const SUPPORT_READ_PERMISSIONS = new Set<PermissionCode>([
 
 @Injectable()
 export class AccessService {
-  constructor(private readonly repository: AccessRepository) {}
+  private readonly lifecycle: AccessLifecycleService;
+
+  constructor(
+    private readonly repository: AccessRepository,
+    lifecycle?: AccessLifecycleService,
+  ) {
+    const policy = lifecycle ?? repository.lifecycle;
+    if (!policy) {
+      throw new Error('Access lifecycle policy is required.');
+    }
+    this.lifecycle = policy;
+  }
 
   async matchingAssignments(input: {
     userId: string;
@@ -66,7 +78,17 @@ export class AccessService {
     const matching: RoleAssignment[] = [];
     for (const assignment of assignments) {
       if (roleHasPermission(assignment.role, input.permission)) {
-        if (await this.scopeMatches(assignment, context)) matching.push(assignment);
+        if (
+          await this.scopeMatches(assignment, context) &&
+          await this.lifecycle.allowsAssignment({
+            userId: input.userId,
+            permission: input.permission,
+            assignment,
+            context,
+          })
+        ) {
+          matching.push(assignment);
+        }
         continue;
       }
 
@@ -75,6 +97,7 @@ export class AccessService {
         assignment.scopeType === 'PLATFORM' &&
         SUPPORT_READ_PERMISSIONS.has(input.permission) &&
         context.tenantId &&
+        await this.lifecycle.allowsPlatformSupport({ context }) &&
         await this.repository.hasActivePlatformSupportAccess({
           userId: input.userId,
           tenantId: context.tenantId,

@@ -11,6 +11,7 @@ const TENANT = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const OTHER_TENANT = '41000000-0000-4000-8000-000000000001';
 const OTHER_PROJECT = '42000000-0000-4000-8000-000000000001';
+const MANAGER_USER = '31000000-0000-4000-8000-000000000001';
 const BROKER = '33000000-0000-4000-8000-000000000001';
 const BUYER_TRANSACTION = '10000000-0000-4000-8000-000000000061';
 const OTHER_BUYER_TRANSACTION = '20000000-0000-4000-8000-000000000062';
@@ -30,6 +31,7 @@ const db = new Pool({ connectionString: databaseUrl, max: 3 });
 try {
   await certifyHealthAndPublicSurfaces();
   await certifyAuthorizationAndIsolation();
+  await certifyLifecycleRevocation();
   await certifyBrokerRedaction();
   await certifyWorkerEffects();
   await certifyAuthenticatedNotificationProjection();
@@ -93,6 +95,67 @@ async function certifyAuthorizationAndIsolation() {
   assert.equal(brokerAgentTransactions.response.status, 200);
   assert.ok(brokerAgentTransactions.body.some((item) => item.transactionId === BUYER_TRANSACTION));
   assert.ok(!brokerAgentTransactions.body.some((item) => item.transactionId === OTHER_BUYER_TRANSACTION));
+}
+
+async function certifyLifecycleRevocation() {
+  const catalogUrl = `${apiBase}/v1/tenants/${TENANT}/projects/${PROJECT}/catalog`;
+  const active = await fetch(catalogUrl, session(tokens.manager));
+  assert.equal(active.status, 200, 'active tenant/member/project should authorize existing manager session');
+
+  try {
+    await db.query(`UPDATE tenants SET status = 'SUSPENDED' WHERE id = $1::uuid`, [TENANT]);
+    const suspendedTenant = await fetch(catalogUrl, session(tokens.manager));
+    assert.equal(suspendedTenant.status, 403, 'suspended tenant must revoke direct API authorization immediately');
+  } finally {
+    await db.query(`UPDATE tenants SET status = 'ACTIVE' WHERE id = $1::uuid`, [TENANT]);
+  }
+
+  try {
+    await db.query(
+      `UPDATE tenant_memberships SET status = 'SUSPENDED' WHERE tenant_id = $1::uuid AND user_id = $2::uuid`,
+      [TENANT, MANAGER_USER],
+    );
+    const suspendedMembership = await fetch(catalogUrl, session(tokens.manager));
+    assert.equal(suspendedMembership.status, 403, 'suspended membership must revoke direct API authorization immediately');
+  } finally {
+    await db.query(
+      `UPDATE tenant_memberships SET status = 'ACTIVE' WHERE tenant_id = $1::uuid AND user_id = $2::uuid`,
+      [TENANT, MANAGER_USER],
+    );
+  }
+
+  try {
+    await db.query(`UPDATE projects SET status = 'PAUSED' WHERE id = $1::uuid`, [PROJECT]);
+    const pausedRead = await fetch(catalogUrl, session(tokens.manager));
+    assert.equal(pausedRead.status, 200, 'paused project must retain historical/read-only access');
+
+    const pausedWrite = await fetch(`${apiBase}/v1/tenants/${TENANT}/projects/${PROJECT}/unit-types`, {
+      ...session(tokens.manager),
+      method: 'POST',
+      headers: {
+        ...session(tokens.manager).headers,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        code: 'PAUSED-LIFECYCLE-PROBE',
+        name: 'Paused lifecycle probe',
+        indoorAreaSqm: '100',
+        roofAreaSqm: '0',
+        gardenAreaSqm: '0',
+      }),
+    });
+    assert.equal(pausedWrite.status, 403, 'paused project must reject mutating project operations');
+  } finally {
+    await db.query(`UPDATE projects SET status = 'ACTIVE' WHERE id = $1::uuid`, [PROJECT]);
+  }
+
+  try {
+    await db.query(`UPDATE projects SET status = 'ARCHIVED' WHERE id = $1::uuid`, [PROJECT]);
+    const archived = await fetch(catalogUrl, session(tokens.manager));
+    assert.ok([403, 404].includes(archived.status), 'archived project must not authorize direct project access');
+  } finally {
+    await db.query(`UPDATE projects SET status = 'ACTIVE' WHERE id = $1::uuid`, [PROJECT]);
+  }
 }
 
 async function certifyBrokerRedaction() {
