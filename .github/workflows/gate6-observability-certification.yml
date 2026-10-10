@@ -1,0 +1,188 @@
+name: Gate 6 Observability Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/packages/observability/**"
+      - "platform/apps/api/src/main.ts"
+      - "platform/apps/api/src/health/**"
+      - "platform/apps/api/package.json"
+      - "platform/apps/worker/src/main.ts"
+      - "platform/apps/worker/package.json"
+      - "platform/apps/notification-gateway/package.json"
+      - "platform/.env.example"
+      - "platform/docs/gate6-observability.md"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/gate6-observability-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/packages/observability/**"
+      - "platform/apps/api/src/main.ts"
+      - "platform/apps/api/src/health/**"
+      - "platform/apps/api/package.json"
+      - "platform/apps/worker/src/main.ts"
+      - "platform/apps/worker/package.json"
+      - "platform/apps/notification-gateway/package.json"
+      - "platform/.env.example"
+      - "platform/docs/gate6-observability.md"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/gate6-observability-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  observability:
+    name: Privacy-safe telemetry contract
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build observability package
+        run: pnpm --filter @preneura/observability build
+
+      - name: Certify production fail-closed telemetry configuration
+        run: |
+          set -euo pipefail
+          REGISTER=./packages/observability/dist/register.js
+
+          if NODE_ENV=production OTEL_EXPORTER_OTLP_ENDPOINT= OTEL_SDK_DISABLED=false node --import "$REGISTER" -e "" >/tmp/otel-missing.log 2>&1; then
+            echo "Production telemetry unexpectedly started without an OTLP endpoint." >&2
+            exit 1
+          fi
+
+          if NODE_ENV=production OTEL_EXPORTER_OTLP_ENDPOINT=https://collector.example.invalid OTEL_SDK_DISABLED=true node --import "$REGISTER" -e "" >/tmp/otel-disabled.log 2>&1; then
+            echo "Production telemetry unexpectedly allowed OTEL_SDK_DISABLED=true." >&2
+            exit 1
+          fi
+
+          if NODE_ENV=production OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_SDK_DISABLED=false node --import "$REGISTER" -e "" >/tmp/otel-local.log 2>&1; then
+            echo "Production telemetry unexpectedly accepted a localhost collector." >&2
+            exit 1
+          fi
+
+          if NODE_ENV=production OTEL_EXPORTER_OTLP_ENDPOINT=https://user:pass@collector.example.invalid OTEL_SDK_DISABLED=false node --import "$REGISTER" -e "" >/tmp/otel-credentials.log 2>&1; then
+            echo "Production telemetry unexpectedly accepted credentials in the OTLP URL." >&2
+            exit 1
+          fi
+
+          NODE_ENV=production \
+            OTEL_EXPORTER_OTLP_ENDPOINT=https://collector.example.invalid \
+            OTEL_SDK_DISABLED=false \
+            node --import "$REGISTER" -e "console.log('OTEL_CONFIG_OK')" >/tmp/otel-valid.log 2>&1
+          grep -q 'OTEL_CONFIG_OK' /tmp/otel-valid.log
+
+      - name: Certify correlation IDs and PII redaction
+        run: |
+          set -euo pipefail
+          node --input-type=module > /tmp/observability-log.jsonl <<'NODE'
+          import {
+            createLogger,
+            resolveCorrelationId,
+            safeErrorType,
+          } from './packages/observability/dist/index.js';
+
+          const accepted = resolveCorrelationId('req-ABC_123:trace.test');
+          if (accepted !== 'req-ABC_123:trace.test') throw new Error('Valid correlation ID was not preserved.');
+
+          const regenerated = resolveCorrelationId('invalid request id with spaces and ?query=secret');
+          if (regenerated === 'invalid request id with spaces and ?query=secret') {
+            throw new Error('Invalid correlation ID was not regenerated.');
+          }
+          if (!/^[0-9a-f-]{36}$/i.test(regenerated)) throw new Error('Regenerated correlation ID is not UUID-shaped.');
+          if (safeErrorType(new TypeError('SENSITIVE_ERROR_MESSAGE')) !== 'TypeError') {
+            throw new Error('safeErrorType leaked or changed the error type contract.');
+          }
+
+          const logger = createLogger('observability-certification');
+          logger.info({
+            event: 'certification.redaction',
+            authorization: 'Bearer OBS_AUTH_SENTINEL',
+            token: 'OBS_TOKEN_SENTINEL',
+            otp: 'OBS_OTP_SENTINEL',
+            phone: '+201000000000',
+            email: 'private@example.invalid',
+            nationalId: '29901011234567',
+            destination: 'PII_DESTINATION_SENTINEL',
+          });
+          NODE
+
+          for forbidden in OBS_AUTH_SENTINEL OBS_TOKEN_SENTINEL OBS_OTP_SENTINEL +201000000000 private@example.invalid 29901011234567 PII_DESTINATION_SENTINEL; do
+            if grep -Fq "$forbidden" /tmp/observability-log.jsonl; then
+              echo "Structured log leaked forbidden value: $forbidden" >&2
+              cat /tmp/observability-log.jsonl >&2
+              exit 1
+            fi
+          done
+          grep -Fq '[REDACTED]' /tmp/observability-log.jsonl
+
+      - name: Certify application telemetry wiring
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+
+          const packages = [
+            ['apps/api/package.json', '@preneura/api'],
+            ['apps/worker/package.json', '@preneura/worker'],
+            ['apps/notification-gateway/package.json', '@preneura/notification-gateway'],
+          ];
+          for (const [path, name] of packages) {
+            const pkg = JSON.parse(await readFile(path, 'utf8'));
+            if (!String(pkg.scripts?.start ?? '').includes('@preneura/observability/register')) {
+              throw new Error(`${name} does not preload the observability register.`);
+            }
+            if (pkg.dependencies?.['@preneura/observability'] !== 'workspace:*') {
+              throw new Error(`${name} does not declare the observability workspace dependency.`);
+            }
+          }
+
+          const api = await readFile('apps/api/src/main.ts', 'utf8');
+          for (const symbol of ['resolveCorrelationId', 'recordHttpRequest', 'x-request-id']) {
+            if (!api.includes(symbol)) throw new Error(`API telemetry wiring is missing ${symbol}.`);
+          }
+
+          const health = await readFile('apps/api/src/health/health.controller.ts', 'utf8');
+          if (!health.includes('recordReadinessFailure')) throw new Error('Readiness failure metric is not wired.');
+
+          const worker = await readFile('apps/worker/src/main.ts', 'utf8');
+          for (const symbol of ['recordWorkerLoop', 'withRuntimeSpan', 'safeErrorType']) {
+            if (!worker.includes(symbol)) throw new Error(`Worker telemetry wiring is missing ${symbol}.`);
+          }
+          NODE
+
+      - name: Typecheck and build production services
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4100
+        run: |
+          pnpm typecheck
+          pnpm --filter @preneura/api build
+          pnpm --filter @preneura/worker build
+          pnpm --filter @preneura/notification-gateway build
+          pnpm --filter @preneura/web build
+
+      - name: Prove lockfile remains immutable
+        run: git diff --exit-code -- pnpm-lock.yaml
