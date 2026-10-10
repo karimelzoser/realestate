@@ -48,10 +48,18 @@ const SUPPORT_READ_PERMISSIONS = new Set<PermissionCode>([
 
 @Injectable()
 export class AccessService {
+  private readonly lifecycle: AccessLifecycleService;
+
   constructor(
     private readonly repository: AccessRepository,
-    private readonly lifecycle: AccessLifecycleService,
-  ) {}
+    lifecycle?: AccessLifecycleService,
+  ) {
+    const policy = lifecycle ?? repository.lifecycle;
+    if (!policy) {
+      throw new Error('Access lifecycle policy is required.');
+    }
+    this.lifecycle = policy;
+  }
 
   async matchingAssignments(input: {
     userId: string;
