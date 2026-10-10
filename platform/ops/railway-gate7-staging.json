@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "product": "PRENEURA Real Estate OS",
+  "repository": "karimelzoser/realestate",
+  "releaseSha": "f5ab77b77d17275ef6f5249fd06cb235c4ca874d",
+  "railway": {
+    "projectName": "preneura-re-gate7-staging",
+    "environmentName": "staging",
+    "doNotTouchProjects": ["preneura-platform-preview"],
+    "database": {
+      "template": "postgres",
+      "expectedImage": "ghcr.io/railwayapp-templates/postgres-ssl:18",
+      "serviceName": "Postgres"
+    },
+    "objectStorage": {
+      "existingBucketName": "preneura-documents-staging",
+      "requiredReferences": ["ENDPOINT", "BUCKET", "REGION", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY"]
+    },
+    "services": [
+      {
+        "name": "re-web",
+        "rootDirectory": "platform",
+        "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/web build",
+        "startCommand": "pnpm --filter @preneura/web start",
+        "public": true,
+        "healthcheckPath": "/api/health",
+        "requiredVariables": ["NODE_ENV", "NEXT_PUBLIC_API_URL"]
+      },
+      {
+        "name": "re-api",
+        "rootDirectory": "platform",
+        "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/api build",
+        "preDeployCommand": "MIGRATION_ACTOR=railway-release pnpm --filter @preneura/database migrate",
+        "startCommand": "pnpm --filter @preneura/api start",
+        "public": true,
+        "healthcheckPath": "/v1/health/ready",
+        "requiredVariables": [
+          "NODE_ENV", "DATABASE_URL", "WEB_ORIGIN", "TRUST_PROXY_HOPS", "API_BODY_LIMIT_BYTES",
+          "AUTH_IDENTIFIER_HMAC_KEY", "AUTH_OTP_PEPPER", "COOKIE_SIGNING_SECRET",
+          "CONTACT_ENCRYPTION_KEY_BASE64", "CONTACT_HMAC_KEY", "CONTACT_VERIFICATION_PEPPER",
+          "OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET", "OIDC_REDIRECT_URI",
+          "OTP_PROVIDER", "AUTH_OTP_GATEWAY_URL", "CONTACT_VERIFICATION_GATEWAY_URL",
+          "NOTIFICATION_GATEWAY_TOKEN",
+          "OBJECT_STORAGE_BUCKET", "OBJECT_STORAGE_REGION", "OBJECT_STORAGE_ENDPOINT",
+          "OBJECT_STORAGE_ACCESS_KEY_ID", "OBJECT_STORAGE_SECRET_ACCESS_KEY", "OBJECT_STORAGE_FORCE_PATH_STYLE",
+          "DOCUMENT_SCANNER_URL", "DOCUMENT_SCANNER_TOKEN",
+          "FINANCE_PROVIDER_INGRESS_TOKEN", "SETTLEMENT_PROVIDER_INGRESS_TOKEN",
+          "OTEL_EXPORTER_OTLP_ENDPOINT"
+        ]
+      },
+      {
+        "name": "re-worker",
+        "rootDirectory": "platform",
+        "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/worker build",
+        "startCommand": "pnpm --filter @preneura/worker start",
+        "public": false,
+        "requiredVariables": [
+          "NODE_ENV", "DATABASE_URL", "NOTIFICATION_GATEWAY_URL", "NOTIFICATION_GATEWAY_TOKEN",
+          "OUTBOX_POLL_MS", "NOTIFICATION_POLL_MS", "SLA_SCAN_MS", "INSTALLMENT_REMINDER_SCAN_MS",
+          "COMMISSION_DUE_SCAN_MS", "INVENTORY_LOCK_EXPIRY_SCAN_MS", "INVENTORY_LOCK_EXPIRY_BATCH_SIZE",
+          "OTEL_EXPORTER_OTLP_ENDPOINT"
+        ]
+      },
+      {
+        "name": "re-notification-gateway",
+        "rootDirectory": "platform",
+        "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/notification-gateway build",
+        "startCommand": "pnpm --filter @preneura/notification-gateway start",
+        "public": false,
+        "healthcheckPath": "/health",
+        "requiredVariables": [
+          "NODE_ENV", "DATABASE_URL", "NOTIFICATION_GATEWAY_TOKEN", "CONTACT_ENCRYPTION_KEY_BASE64",
+          "META_GRAPH_API_VERSION", "META_WHATSAPP_PHONE_NUMBER_ID", "META_WHATSAPP_ACCESS_TOKEN",
+          "WHATSAPP_TEMPLATE_BINDINGS_JSON", "OTEL_EXPORTER_OTLP_ENDPOINT"
+        ]
+      }
+    ]
+  },
+  "gate7": {
+    "deployOnlyWhen": [
+      "Railway workspace capacity can provision PostgreSQL and four application services",
+      "real OIDC, messaging, scanner, finance/settlement and observability endpoints/secrets are configured",
+      "named operational owner and cutover window are assigned",
+      "staged changes contain only Real Estate resources",
+      "all services are pinned to releaseSha"
+    ]
+  }
+}
