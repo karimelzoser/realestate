@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import type { IncomingMessage } from 'node:http';
 import cookie from '@fastify/cookie';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -27,7 +28,7 @@ async function bootstrap(): Promise<void> {
     trustProxy: resolveTrustProxy(),
     bodyLimit: resolveApiBodyLimit(),
     requestIdHeader: false,
-    genReqId: (request) => resolveCorrelationId(request.headers['x-request-id']),
+    genReqId: (request: IncomingMessage) => resolveCorrelationId(request.headers['x-request-id']),
   });
   const fastify = adapter.getInstance();
 
