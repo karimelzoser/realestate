@@ -10,6 +10,9 @@ export PGPASSWORD
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+CURRENT_SCHEMA_VERSION=40
+FUTURE_SCHEMA_VERSION=41
+
 create_test_databases() {
   local db
   for db in preneura_current preneura_stale preneura_future_compatible preneura_future_incompatible; do
@@ -32,20 +35,22 @@ create_test_databases() {
     done
   done
 
+  # Simulate the next additive migration: newer schema remains compatible with runtime 40.
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_compatible -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 UPDATE platform_runtime_contract
-SET schema_version = 40,
-    minimum_runtime_version = 39,
-    migration_marker = '0040_additive_future',
+SET schema_version = 41,
+    minimum_runtime_version = 40,
+    migration_marker = '0041_additive_future',
     updated_at = now()
 WHERE singleton_key = 'production';
 SQL
 
+  # Simulate a future breaking migration that explicitly requires runtime 41.
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_incompatible -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 UPDATE platform_runtime_contract
-SET schema_version = 40,
-    minimum_runtime_version = 40,
-    migration_marker = '0040_breaking_future',
+SET schema_version = 41,
+    minimum_runtime_version = 41,
+    migration_marker = '0041_breaking_future',
     updated_at = now()
 WHERE singleton_key = 'production';
 SQL
@@ -57,7 +62,7 @@ DO $$
 BEGIN
   BEGIN
     UPDATE platform_runtime_contract
-    SET schema_version = 38
+    SET schema_version = 39
     WHERE singleton_key = 'production';
     RAISE EXCEPTION 'schema downgrade unexpectedly succeeded';
   EXCEPTION WHEN OTHERS THEN
@@ -102,23 +107,14 @@ const db = createDatabase(databaseUrl);
 
 try {
   const snapshot = await assertRuntimeReadiness(db);
-  if (expectedCode) {
-    throw new Error(`Expected readiness failure ${expectedCode}, but readiness passed.`);
-  }
-  if (
-    expectedDatabaseSchemaVersion &&
-    snapshot.databaseSchemaVersion !== Number(expectedDatabaseSchemaVersion)
-  ) {
-    throw new Error(
-      `Expected database schema ${expectedDatabaseSchemaVersion}, got ${snapshot.databaseSchemaVersion}.`,
-    );
+  if (expectedCode) throw new Error(`Expected readiness failure ${expectedCode}, but readiness passed.`);
+  if (expectedDatabaseSchemaVersion && snapshot.databaseSchemaVersion !== Number(expectedDatabaseSchemaVersion)) {
+    throw new Error(`Expected database schema ${expectedDatabaseSchemaVersion}, got ${snapshot.databaseSchemaVersion}.`);
   }
   console.log(JSON.stringify({ result: 'ready', ...snapshot }));
 } catch (error) {
   if (!expectedCode) throw error;
-  if (!(error instanceof RuntimeReadinessError) || error.code !== expectedCode) {
-    throw error;
-  }
+  if (!(error instanceof RuntimeReadinessError) || error.code !== expectedCode) throw error;
   console.log(JSON.stringify({ result: 'not_ready', code: error.code }));
 } finally {
   await db.destroy();
@@ -126,7 +122,7 @@ try {
 TS
 
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_current" \
-    EXPECT_DATABASE_SCHEMA_VERSION=39 \
+    EXPECT_DATABASE_SCHEMA_VERSION="$CURRENT_SCHEMA_VERSION" \
     pnpm --filter @preneura/api exec tsx .runtime-readiness-certification.mts
 
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_stale" \
@@ -134,7 +130,7 @@ TS
     pnpm --filter @preneura/api exec tsx .runtime-readiness-certification.mts
 
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_future_compatible" \
-    EXPECT_DATABASE_SCHEMA_VERSION=40 \
+    EXPECT_DATABASE_SCHEMA_VERSION="$FUTURE_SCHEMA_VERSION" \
     pnpm --filter @preneura/api exec tsx .runtime-readiness-certification.mts
 
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_future_incompatible" \
@@ -154,9 +150,7 @@ wait_for_live() {
       echo "API exited before liveness became available on port $port." >&2
       return 1
     fi
-    if curl --fail --silent "http://127.0.0.1:$port/v1/health/live" >/dev/null; then
-      return 0
-    fi
+    if curl --fail --silent "http://127.0.0.1:$port/v1/health/live" >/dev/null; then return 0; fi
     sleep 1
   done
   cat "$log_file"
@@ -166,9 +160,7 @@ wait_for_live() {
 
 certify_api_current() {
   local log_file=/tmp/preneura-api-current.log
-  NODE_ENV=test \
-  PORT=4100 \
-  WEB_ORIGIN=http://localhost:3000 \
+  NODE_ENV=test PORT=4100 WEB_ORIGIN=http://localhost:3000 \
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_current" \
   OBJECT_STORAGE_BUCKET=readiness-test \
     pnpm --filter @preneura/api start >"$log_file" 2>&1 &
@@ -179,7 +171,7 @@ certify_api_current() {
   curl --fail --silent http://127.0.0.1:4100/v1/health/live | grep -q '"status":"ok"'
   curl --fail --silent http://127.0.0.1:4100/v1/health/ready >/tmp/ready.json
   grep -q '"status":"ready"' /tmp/ready.json
-  grep -q '"databaseSchemaVersion":39' /tmp/ready.json
+  grep -q '"databaseSchemaVersion":40' /tmp/ready.json
 
   kill "$pid"
   wait "$pid" || true
@@ -188,9 +180,7 @@ certify_api_current() {
 
 certify_api_stale() {
   local log_file=/tmp/preneura-api-stale.log
-  NODE_ENV=test \
-  PORT=4101 \
-  WEB_ORIGIN=http://localhost:3000 \
+  NODE_ENV=test PORT=4101 WEB_ORIGIN=http://localhost:3000 \
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_stale" \
   OBJECT_STORAGE_BUCKET=readiness-test \
     pnpm --filter @preneura/api start >"$log_file" 2>&1 &
@@ -199,7 +189,6 @@ certify_api_stale() {
 
   wait_for_live "$pid" 4101 "$log_file"
   curl --fail --silent http://127.0.0.1:4101/v1/health/live | grep -q '"status":"ok"'
-
   local status
   status="$(curl --silent --output /tmp/stale-ready.json --write-out '%{http_code}' http://127.0.0.1:4101/v1/health/ready)"
   test "$status" = '503'
@@ -236,7 +225,7 @@ certify_worker() {
     return 1
   fi
   grep -q 'worker.ready' /tmp/worker-current.log
-  grep -q '"databaseSchemaVersion":39' /tmp/worker-current.log
+  grep -q '"databaseSchemaVersion":40' /tmp/worker-current.log
 }
 
 create_test_databases
