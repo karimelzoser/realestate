@@ -214,7 +214,7 @@ INSERT INTO inventory_locks (
   '34000000-0000-0000-0001-000000000005',
   '34000000-0000-0000-0000-000000000002',
   '34000000-0000-0000-0000-000000000003',
-  'ACTIVE', now() - interval '1 minute', NULL, NULL
+  'ACTIVE', now() + interval '1 minute', NULL, NULL
 );
 
 DO $$
@@ -228,7 +228,7 @@ BEGIN
     RAISE EXCEPTION 'allocator queue session did not retain assigned lock';
   END IF;
 
-  SELECT preneura_expire_inventory_locks(100, now()) INTO v_count;
+  SELECT preneura_expire_inventory_locks(100, now() + interval '2 minutes') INTO v_count;
   IF v_count <> 1 THEN RAISE EXCEPTION 'expected allocator expiry sweep=1, got %', v_count; END IF;
 
   IF (SELECT status FROM queue_entries WHERE id='34000000-0000-0000-0006-000000000001') <> 'CALLED' THEN
