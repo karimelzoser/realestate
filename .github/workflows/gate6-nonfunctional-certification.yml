@@ -164,6 +164,7 @@ jobs:
         env:
           NODE_ENV: test
           PORT: "4110"
+          OBJECT_STORAGE_BUCKET: gate6-test-bucket
         run: |
           pnpm --filter @preneura/api start > /tmp/preneura-api.log 2>&1 &
           echo $! > /tmp/preneura-api.pid
