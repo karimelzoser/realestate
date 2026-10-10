@@ -78,3 +78,5 @@ Worker polling sleeps are interruptible. SIGTERM/SIGINT wakes sleeping loops imm
 - expiry resumes correctly after worker restart;
 - worker shutdown leaves no PostgreSQL sessions behind;
 - schema/runtime readiness advances with canonical migration 41.
+
+The durability workflow and the runtime-readiness workflow deliberately share this documentation path in their trigger sets. A release-evidence update therefore binds both certifications to the same candidate SHA without changing business state or migration semantics. Production configuration is certified separately and requires the expiry loop to remain explicitly configured rather than silently disabled.
