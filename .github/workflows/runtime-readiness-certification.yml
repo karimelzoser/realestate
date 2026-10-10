@@ -137,6 +137,7 @@ jobs:
           COMMON_DB=postgresql://postgres:postgres@127.0.0.1:5432/preneura_current
           COMMON_TOKEN=0123456789abcdef0123456789abcdef
           CONTACT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          COMMON_OTEL=https://otel.preneura.invalid
           EXPECTED_SCHEMA_VERSION=41
 
           NODE_ENV=production \
@@ -163,6 +164,10 @@ jobs:
           DOCUMENT_SCANNER_URL=http://document-scanner.internal/v1/scan \
           DOCUMENT_SCANNER_TOKEN=0123456789abcdef \
           SETTLEMENT_PROVIDER_INGRESS_TOKEN="$COMMON_TOKEN" \
+          OTEL_EXPORTER_OTLP_ENDPOINT="$COMMON_OTEL" \
+          OTEL_TRACES_EXPORTER=none \
+          OTEL_METRICS_EXPORTER=none \
+          PRENEURA_SERVICE_NAME=runtime-readiness-api \
             pnpm --filter @preneura/api start >/tmp/api-valid-config.log 2>&1 &
           API_PID=$!
           trap 'kill "$API_PID" 2>/dev/null || true' EXIT
@@ -193,6 +198,10 @@ jobs:
           SLA_SCAN_MS=30000 \
           INSTALLMENT_REMINDER_SCAN_MS=30000 \
           COMMISSION_DUE_SCAN_MS=30000 \
+          OTEL_EXPORTER_OTLP_ENDPOINT="$COMMON_OTEL" \
+          OTEL_TRACES_EXPORTER=none \
+          OTEL_METRICS_EXPORTER=none \
+          PRENEURA_SERVICE_NAME=runtime-readiness-worker \
             pnpm --filter @preneura/worker start >/tmp/worker-valid-config.log 2>&1 &
           WORKER_PID=$!
           trap 'kill "$WORKER_PID" 2>/dev/null || true' EXIT
