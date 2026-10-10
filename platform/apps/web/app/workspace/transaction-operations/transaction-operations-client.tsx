@@ -177,7 +177,7 @@ export default function TransactionOperationsClient() {
                         <div className={styles.progress}><span style={{ width: `${Math.min(100, Math.max(0, Number(item.completionPercent)))}%` }} /></div>
                         <small>{Number(item.completionPercent).toFixed(0)}%</small>
                       </td>
-                      <td><span className={`${styles.bucket} ${styles[bucketClass(item.bucket)]}`}>{bucketLabel(item.bucket)}</span></td>
+                      <td><span className={`${styles.bucket} ${bucketClassName(item.bucket)}`}>{bucketLabel(item.bucket)}</span></td>
                       <td className={styles.nextAction}>{item.nextAction}</td>
                       <td>
                         <strong>{item.pendingMilestoneCount}</strong>
@@ -217,13 +217,13 @@ function bucketLabel(bucket: TransactionOperationBucket): string {
   }
 }
 
-function bucketClass(bucket: TransactionOperationBucket): string {
+function bucketClassName(bucket: TransactionOperationBucket): string {
   switch (bucket) {
-    case 'READY_TO_COMPLETE': return 'ready';
+    case 'READY_TO_COMPLETE': return styles.ready;
     case 'NEEDS_PAYMENT':
-    case 'NEEDS_CHEQUES': return 'financial';
-    case 'NEEDS_COMPANY_EXECUTION': return 'execution';
-    default: return 'pending';
+    case 'NEEDS_CHEQUES': return styles.financial;
+    case 'NEEDS_COMPANY_EXECUTION': return styles.execution;
+    default: return styles.pending;
   }
 }
 
