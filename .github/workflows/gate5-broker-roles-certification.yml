@@ -1,0 +1,91 @@
+name: Gate 5 Broker Roles Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/api/src/access/**"
+      - "platform/apps/api/src/commissions/**"
+      - "platform/apps/api/src/sales/transaction-list*.ts"
+      - "platform/apps/web/app/workspace/broker/**"
+      - "platform/apps/web/app/workspace/workspace-operations-shortcuts.tsx"
+      - "platform/packages/contracts/src/access.ts"
+      - "platform/packages/contracts/src/commissions.ts"
+      - "platform/packages/database/migrations/**"
+      - "platform/scripts/certify-gate5-broker-roles.mjs"
+      - ".github/workflows/gate5-broker-roles-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/apps/api/src/access/**"
+      - "platform/apps/api/src/commissions/**"
+      - "platform/apps/api/src/sales/transaction-list*.ts"
+      - "platform/apps/web/app/workspace/broker/**"
+      - "platform/apps/web/app/workspace/workspace-operations-shortcuts.tsx"
+      - "platform/packages/contracts/src/access.ts"
+      - "platform/packages/contracts/src/commissions.ts"
+      - "platform/packages/database/migrations/**"
+      - "platform/scripts/certify-gate5-broker-roles.mjs"
+      - ".github/workflows/gate5-broker-roles-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  broker-roles:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura_gate5_broker
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura_gate5_broker"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    defaults:
+      run:
+        working-directory: platform
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_gate5_broker
+      PGPASSWORD: postgres
+      NODE_ENV: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build broker authority graph and web workspace
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4100
+        run: |
+          set -euo pipefail
+          pnpm --filter @preneura/api... build
+          pnpm --filter @preneura/web... build
+
+      - name: Apply canonical migrations
+        run: MIGRATION_ACTOR=gate5-broker-roles pnpm --filter @preneura/database migrate
+
+      - name: Certify broker scope and financial redaction
+        run: node scripts/certify-gate5-broker-roles.mjs
