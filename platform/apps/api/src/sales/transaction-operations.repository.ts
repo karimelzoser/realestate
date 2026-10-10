@@ -9,6 +9,10 @@ import type {
   TransactionOperationQueueSnapshot,
 } from '@preneura/contracts/transaction-operations';
 import { DATABASE } from '../database/database.module.js';
+import {
+  classifyTransactionOperation,
+  type TransactionOperationSignerRole,
+} from './transaction-operations-classifier.js';
 
 const MILESTONE_ORDER: readonly TransactionOperationMilestoneCode[] = [
   'BUYER_DOCUMENTS_COMPLETE',
@@ -144,16 +148,16 @@ export class TransactionOperationsRepository {
       milestonesByTransaction.set(milestone.transaction_id, list);
     }
 
-    const requirementsByTemplate = new Map<string, Set<'BUYER' | 'COMPANY' | 'WITNESS' | 'BROKER'>>();
+    const requirementsByTemplate = new Map<string, Set<TransactionOperationSignerRole>>();
     for (const requirement of signerRequirements) {
-      const set = requirementsByTemplate.get(requirement.template_id) ?? new Set();
+      const set = requirementsByTemplate.get(requirement.template_id) ?? new Set<TransactionOperationSignerRole>();
       set.add(requirement.signer_role);
       requirementsByTemplate.set(requirement.template_id, set);
     }
 
-    const signaturesByDocument = new Map<string, Set<'BUYER' | 'COMPANY' | 'WITNESS' | 'BROKER'>>();
+    const signaturesByDocument = new Map<string, Set<TransactionOperationSignerRole>>();
     for (const signature of signatures) {
-      const set = signaturesByDocument.get(signature.document_id) ?? new Set();
+      const set = signaturesByDocument.get(signature.document_id) ?? new Set<TransactionOperationSignerRole>();
       set.add(signature.signer_role);
       signaturesByDocument.set(signature.document_id, set);
     }
@@ -162,10 +166,20 @@ export class TransactionOperationsRepository {
       const allMilestones = this.sortMilestones(milestonesByTransaction.get(row.transaction_id) ?? []);
       const pendingMilestones = allMilestones.filter((milestone) => !this.isDone(milestone));
       const contract = latestContractByTransaction.get(row.transaction_id) ?? null;
-      const requiredRoles = contract?.template_id ? requirementsByTemplate.get(contract.template_id) ?? new Set() : new Set();
-      const signedRoles = contract ? signaturesByDocument.get(contract.id) ?? new Set() : new Set();
-      const missingRequiredSignerRoles = [...requiredRoles].filter((role) => !signedRoles.has(role));
-      const bucket = this.classify(allMilestones, contract?.id ?? null, missingRequiredSignerRoles);
+      const requiredRoles: Set<TransactionOperationSignerRole> = contract?.template_id
+        ? requirementsByTemplate.get(contract.template_id) ?? new Set<TransactionOperationSignerRole>()
+        : new Set<TransactionOperationSignerRole>();
+      const signedRoles: Set<TransactionOperationSignerRole> = contract
+        ? signaturesByDocument.get(contract.id) ?? new Set<TransactionOperationSignerRole>()
+        : new Set<TransactionOperationSignerRole>();
+      const missingRequiredSignerRoles: TransactionOperationSignerRole[] = [...requiredRoles]
+        .filter((role) => !signedRoles.has(role));
+      const classification = classifyTransactionOperation({
+        milestones: allMilestones,
+        contractDocumentId: contract?.id ?? null,
+        missingSignerRoles: missingRequiredSignerRoles,
+      });
+
       return {
         transactionId: row.transaction_id,
         buyerProfileId: row.buyer_profile_id,
@@ -178,8 +192,8 @@ export class TransactionOperationsRepository {
         completionPercent: Number(row.completion_percent).toFixed(2),
         openedAt: (row.opened_at as Date).toISOString(),
         ageHours: Math.max(0, Math.floor((input.now.getTime() - (row.opened_at as Date).getTime()) / 3_600_000)),
-        bucket,
-        nextAction: this.nextAction(bucket, missingRequiredSignerRoles),
+        bucket: classification.bucket,
+        nextAction: classification.nextAction,
         pendingMilestoneCount: pendingMilestones.length,
         pendingMilestones,
         contractDocumentId: contract?.id ?? null,
@@ -212,40 +226,5 @@ export class TransactionOperationsRepository {
 
   private isDone(milestone: TransactionOperationMilestoneSnapshot | undefined): boolean {
     return Boolean(milestone && ['COMPLETED', 'WAIVED'].includes(milestone.status));
-  }
-
-  private classify(
-    milestones: TransactionOperationMilestoneSnapshot[],
-    contractDocumentId: string | null,
-    missingSignerRoles: Array<'BUYER' | 'COMPANY' | 'WITNESS' | 'BROKER'>,
-  ): TransactionOperationBucket {
-    const byCode = new Map(milestones.map((milestone) => [milestone.code, milestone]));
-    if (!this.isDone(byCode.get('BUYER_DOCUMENTS_COMPLETE'))) return 'NEEDS_DOCUMENTS';
-    if (!this.isDone(byCode.get('DOWN_PAYMENT_RECEIVED'))) return 'NEEDS_PAYMENT';
-    if (!this.isDone(byCode.get('CHEQUES_RECEIVED'))) return 'NEEDS_CHEQUES';
-    if (!this.isDone(byCode.get('CONTRACT_GENERATED')) || !contractDocumentId) return 'NEEDS_CONTRACT';
-    if (!this.isDone(byCode.get('CONTRACT_SIGNED'))) {
-      return missingSignerRoles.includes('BUYER') ? 'NEEDS_BUYER_SIGNATURE' : 'NEEDS_COMPANY_EXECUTION';
-    }
-    if (!this.isDone(byCode.get('CONTRACT_STAMPED'))) return 'NEEDS_COMPANY_EXECUTION';
-    return 'READY_TO_COMPLETE';
-  }
-
-  private nextAction(
-    bucket: TransactionOperationBucket,
-    missingSignerRoles: Array<'BUYER' | 'COMPANY' | 'WITNESS' | 'BROKER'>,
-  ): string {
-    switch (bucket) {
-      case 'NEEDS_DOCUMENTS': return 'Complete and verify required buyer documents.';
-      case 'NEEDS_PAYMENT': return 'Record and verify the required down payment.';
-      case 'NEEDS_CHEQUES': return 'Receive and verify the required cheque instruments.';
-      case 'NEEDS_CONTRACT': return 'Generate or upload the current contract version.';
-      case 'NEEDS_BUYER_SIGNATURE': return 'Obtain the buyer signature on the current contract.';
-      case 'NEEDS_COMPANY_EXECUTION':
-        return missingSignerRoles.length > 0
-          ? `Complete required signatures: ${missingSignerRoles.join(', ')}.`
-          : 'Complete company execution and stamp the contract.';
-      case 'READY_TO_COMPLETE': return 'Review final evidence and complete the transaction.';
-    }
   }
 }
