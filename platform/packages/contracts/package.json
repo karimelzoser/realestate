@@ -4,22 +4,70 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./auth": "./src/auth.ts",
-    "./access": "./src/access.ts",
-    "./accounts": "./src/accounts.ts",
-    "./platform-admin": "./src/platform-admin.ts",
-    "./ai": "./src/ai.ts",
-    "./catalog": "./src/catalog.ts",
-    "./project-catalog": "./src/project-catalog.ts",
-    "./pricing-quote": "./src/pricing-quote.ts",
-    "./sales": "./src/sales.ts",
-    "./documents": "./src/documents.ts",
-    "./contract-execution": "./src/contract-execution.ts",
-    "./finance": "./src/finance.ts",
-    "./commissions": "./src/commissions.ts",
-    "./notifications": "./src/notifications.ts",
-    "./realtime": "./src/realtime.ts"
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./auth": {
+      "types": "./src/auth.ts",
+      "default": "./dist/auth.js"
+    },
+    "./access": {
+      "types": "./src/access.ts",
+      "default": "./dist/access.js"
+    },
+    "./accounts": {
+      "types": "./src/accounts.ts",
+      "default": "./dist/accounts.js"
+    },
+    "./platform-admin": {
+      "types": "./src/platform-admin.ts",
+      "default": "./dist/platform-admin.js"
+    },
+    "./ai": {
+      "types": "./src/ai.ts",
+      "default": "./dist/ai.js"
+    },
+    "./catalog": {
+      "types": "./src/catalog.ts",
+      "default": "./dist/catalog.js"
+    },
+    "./project-catalog": {
+      "types": "./src/project-catalog.ts",
+      "default": "./dist/project-catalog.js"
+    },
+    "./pricing-quote": {
+      "types": "./src/pricing-quote.ts",
+      "default": "./dist/pricing-quote.js"
+    },
+    "./sales": {
+      "types": "./src/sales.ts",
+      "default": "./dist/sales.js"
+    },
+    "./documents": {
+      "types": "./src/documents.ts",
+      "default": "./dist/documents.js"
+    },
+    "./contract-execution": {
+      "types": "./src/contract-execution.ts",
+      "default": "./dist/contract-execution.js"
+    },
+    "./finance": {
+      "types": "./src/finance.ts",
+      "default": "./dist/finance.js"
+    },
+    "./commissions": {
+      "types": "./src/commissions.ts",
+      "default": "./dist/commissions.js"
+    },
+    "./notifications": {
+      "types": "./src/notifications.ts",
+      "default": "./dist/notifications.js"
+    },
+    "./realtime": {
+      "types": "./src/realtime.ts",
+      "default": "./dist/realtime.js"
+    }
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

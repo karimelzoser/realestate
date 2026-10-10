@@ -4,11 +4,19 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./runtime-readiness": {
+      "types": "./src/runtime-readiness.ts",
+      "default": "./dist/runtime-readiness.js"
+    }
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",
+    "migrate": "node scripts/migrate.mjs",
     "test": "node --test",
     "lint": "tsc --noEmit"
   },

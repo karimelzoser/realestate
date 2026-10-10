@@ -1,9 +1,74 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Inject, Logger, ServiceUnavailableException } from '@nestjs/common';
+import type { Database } from '@preneura/database';
+import {
+  assertRuntimeReadiness,
+  RuntimeReadinessError,
+  type RuntimeReadinessErrorCode,
+} from '@preneura/database/runtime-readiness';
+import type { Kysely } from 'kysely';
+import { DATABASE } from '../database/database.module.js';
+
+interface LiveHealthResponse {
+  status: 'ok';
+  service: 'preneura-api';
+}
+
+interface ReadyHealthResponse {
+  status: 'ready';
+  service: 'preneura-api';
+  checks: {
+    database: 'ok';
+    schema: 'ok';
+    runtimeSchemaVersion: number;
+    databaseSchemaVersion: number;
+    minimumRuntimeVersion: number;
+    migrationMarker: string;
+    latencyMs: number;
+  };
+}
 
 @Controller('health')
 export class HealthController {
+  private readonly logger = new Logger(HealthController.name);
+
+  constructor(@Inject(DATABASE) private readonly db: Kysely<Database>) {}
+
   @Get()
-  getHealth(): { status: 'ok'; service: 'preneura-api' } {
+  getHealth(): LiveHealthResponse {
+    return this.live();
+  }
+
+  @Get('live')
+  getLiveness(): LiveHealthResponse {
+    return this.live();
+  }
+
+  @Get('ready')
+  async getReadiness(): Promise<ReadyHealthResponse> {
+    try {
+      const readiness = await assertRuntimeReadiness(this.db);
+      return {
+        status: 'ready',
+        service: 'preneura-api',
+        checks: readiness,
+      };
+    } catch (error) {
+      const code: RuntimeReadinessErrorCode =
+        error instanceof RuntimeReadinessError ? error.code : 'DATABASE_UNAVAILABLE';
+      this.logger.warn(`Readiness check failed: ${code}`);
+      throw new ServiceUnavailableException({
+        status: 'not_ready',
+        service: 'preneura-api',
+        checks: {
+          database: code === 'DATABASE_UNAVAILABLE' ? 'failed' : 'ok',
+          schema: code === 'DATABASE_UNAVAILABLE' ? 'unknown' : 'failed',
+          code,
+        },
+      });
+    }
+  }
+
+  private live(): LiveHealthResponse {
     return { status: 'ok', service: 'preneura-api' };
   }
 }

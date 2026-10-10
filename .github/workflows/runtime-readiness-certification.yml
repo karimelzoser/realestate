@@ -1,0 +1,324 @@
+name: Runtime Readiness Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/api/src/config/**"
+      - "platform/apps/api/src/health/**"
+      - "platform/apps/api/src/main.ts"
+      - "platform/apps/worker/src/main.ts"
+      - "platform/apps/worker/src/runtime-config.ts"
+      - "platform/apps/notification-gateway/src/**"
+      - "platform/apps/notification-gateway/package.json"
+      - "platform/apps/web/app/api/health/**"
+      - "platform/packages/contracts/package.json"
+      - "platform/packages/security/package.json"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
+      - "platform/packages/database/package.json"
+      - "platform/scripts/certify-runtime-readiness.sh"
+      - "platform/docs/runtime-readiness.md"
+      - "platform/README.md"
+      - ".github/workflows/runtime-readiness-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/apps/api/src/config/**"
+      - "platform/apps/api/src/health/**"
+      - "platform/apps/api/src/main.ts"
+      - "platform/apps/worker/src/main.ts"
+      - "platform/apps/worker/src/runtime-config.ts"
+      - "platform/apps/notification-gateway/src/**"
+      - "platform/apps/notification-gateway/package.json"
+      - "platform/apps/web/app/api/health/**"
+      - "platform/packages/contracts/package.json"
+      - "platform/packages/security/package.json"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
+      - "platform/packages/database/package.json"
+      - "platform/scripts/certify-runtime-readiness.sh"
+      - "platform/docs/runtime-readiness.md"
+      - "platform/README.md"
+      - ".github/workflows/runtime-readiness-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-readiness:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and build deployable runtime graph
+        working-directory: platform
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4100
+        run: |
+          set -euo pipefail
+          pnpm typecheck
+          pnpm --filter @preneura/api... build
+          pnpm --filter @preneura/worker... build
+          pnpm --filter @preneura/notification-gateway... build
+          pnpm --filter @preneura/web build
+
+      - name: Reject incomplete production configuration
+        working-directory: platform
+        run: |
+          set -euo pipefail
+          CONTACT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          set +e
+          NODE_ENV=production \
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
+          OBJECT_STORAGE_BUCKET=production-test \
+            pnpm --filter @preneura/api start >/tmp/api-invalid-config.log 2>&1
+          API_RC=$?
+          NODE_ENV=production \
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
+            pnpm --filter @preneura/worker start >/tmp/worker-invalid-config.log 2>&1
+          WORKER_RC=$?
+          NODE_ENV=production \
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
+          CONTACT_ENCRYPTION_KEY_BASE64="$CONTACT_KEY" \
+            pnpm --filter @preneura/notification-gateway start >/tmp/gateway-invalid-config.log 2>&1
+          GATEWAY_RC=$?
+          set -e
+          test "$API_RC" -ne 0
+          test "$WORKER_RC" -ne 0
+          test "$GATEWAY_RC" -ne 0
+          grep -q 'Invalid production configuration' /tmp/api-invalid-config.log
+          grep -q 'Invalid production worker configuration' /tmp/worker-invalid-config.log
+          grep -q 'Invalid production notification gateway configuration' /tmp/gateway-invalid-config.log
+
+      - name: Certify current, stale and rolling-compatible runtime states
+        working-directory: platform
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bash scripts/certify-runtime-readiness.sh
+
+      - name: Accept complete production-shaped configuration
+        working-directory: platform
+        run: |
+          set -Eeuo pipefail
+          COMMON_DB=postgresql://postgres:postgres@127.0.0.1:5432/preneura_current
+          COMMON_TOKEN=0123456789abcdef0123456789abcdef
+          CONTACT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+
+          NODE_ENV=production \
+          PORT=4120 \
+          DATABASE_URL="$COMMON_DB" \
+          WEB_ORIGIN=https://app.preneura.example \
+          AUTH_IDENTIFIER_HMAC_KEY="$COMMON_TOKEN" \
+          AUTH_OTP_PEPPER="$COMMON_TOKEN" \
+          COOKIE_SIGNING_SECRET="$COMMON_TOKEN" \
+          CONTACT_HMAC_KEY="$COMMON_TOKEN" \
+          CONTACT_VERIFICATION_PEPPER="$COMMON_TOKEN" \
+          CONTACT_ENCRYPTION_KEY_BASE64="$CONTACT_KEY" \
+          OTP_PROVIDER=gateway \
+          AUTH_OTP_GATEWAY_URL=http://notification-gateway.internal/auth-otp \
+          CONTACT_VERIFICATION_GATEWAY_URL=http://notification-gateway.internal/contact-verification \
+          NOTIFICATION_GATEWAY_TOKEN="$COMMON_TOKEN" \
+          OIDC_ISSUER=https://identity.preneura.example/realms/preneura \
+          OIDC_CLIENT_ID=preneura-web \
+          OIDC_CLIENT_SECRET=0123456789abcdef \
+          OIDC_REDIRECT_URI=https://api.preneura.example/v1/auth/google/callback \
+          OBJECT_STORAGE_BUCKET=preneura-production \
+          DOCUMENT_SCANNER_URL=http://document-scanner.internal/scan \
+          DOCUMENT_SCANNER_TOKEN=0123456789abcdef \
+          FINANCE_PROVIDER_INGRESS_TOKEN="$COMMON_TOKEN" \
+            pnpm --filter @preneura/api start >/tmp/api-valid-config.log 2>&1 &
+          API_PID=$!
+          trap 'kill "$API_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4120/v1/health/ready >/tmp/api-valid-ready.json; then
+              break
+            fi
+            if ! kill -0 "$API_PID" 2>/dev/null; then
+              cat /tmp/api-valid-config.log
+              exit 1
+            fi
+            sleep 1
+          done
+          grep -q '"status":"ready"' /tmp/api-valid-ready.json
+          grep -q '"databaseSchemaVersion":33' /tmp/api-valid-ready.json
+          kill "$API_PID"
+          wait "$API_PID" || true
+          trap - EXIT
+
+          NODE_ENV=production \
+          DATABASE_URL="$COMMON_DB" \
+          NOTIFICATION_GATEWAY_URL=http://notification-gateway.internal/deliver \
+          NOTIFICATION_GATEWAY_TOKEN="$COMMON_TOKEN" \
+            pnpm --filter @preneura/worker start >/tmp/worker-valid-config.log 2>&1 &
+          WORKER_PID=$!
+          trap 'kill "$WORKER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            if grep -q '"event":"worker.ready"' /tmp/worker-valid-config.log; then
+              break
+            fi
+            if ! kill -0 "$WORKER_PID" 2>/dev/null; then
+              cat /tmp/worker-valid-config.log
+              exit 1
+            fi
+            sleep 1
+          done
+          grep -q '"event":"worker.ready"' /tmp/worker-valid-config.log
+          grep -q '"databaseSchemaVersion":33' /tmp/worker-valid-config.log
+          kill "$WORKER_PID"
+          wait "$WORKER_PID" || true
+          trap - EXIT
+
+          NODE_ENV=production \
+          PORT=4320 \
+          DATABASE_URL="$COMMON_DB" \
+          NOTIFICATION_GATEWAY_TOKEN="$COMMON_TOKEN" \
+          CONTACT_ENCRYPTION_KEY_BASE64="$CONTACT_KEY" \
+          META_GRAPH_API_VERSION=v24.0 \
+          META_WHATSAPP_PHONE_NUMBER_ID=1234567890 \
+          META_WHATSAPP_ACCESS_TOKEN=0123456789abcdef0123456789abcdef \
+          WHATSAPP_TEMPLATE_BINDINGS_JSON='{"auth.login.otp":{"name":"preneura_login_otp","language":"ar","bodyParameterPaths":["code"]}}' \
+            pnpm --filter @preneura/notification-gateway start >/tmp/gateway-valid-config.log 2>&1 &
+          GATEWAY_PID=$!
+          trap 'kill "$GATEWAY_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --silent --fail http://127.0.0.1:4320/health >/tmp/gateway-health.json; then
+              break
+            fi
+            if ! kill -0 "$GATEWAY_PID" 2>/dev/null; then
+              cat /tmp/gateway-valid-config.log
+              exit 1
+            fi
+            sleep 1
+          done
+          grep -q 'notification_gateway.preflight_ready' /tmp/gateway-valid-config.log
+          grep -q '"ok":true' /tmp/gateway-health.json
+          kill "$GATEWAY_PID"
+          wait "$GATEWAY_PID" || true
+          trap - EXIT
+
+          PORT=3020 NEXT_PUBLIC_API_URL=https://api.preneura.example \
+            pnpm --filter @preneura/web start >/tmp/web-health.log 2>&1 &
+          WEB_PID=$!
+          trap 'kill "$WEB_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --silent --fail http://127.0.0.1:3020/api/health >/tmp/web-health.json; then
+              break
+            fi
+            if ! kill -0 "$WEB_PID" 2>/dev/null; then
+              cat /tmp/web-health.log
+              exit 1
+            fi
+            sleep 1
+          done
+          grep -q '"service":"preneura-web"' /tmp/web-health.json
+          kill "$WEB_PID"
+          wait "$WEB_PID" || true
+          trap - EXIT
+
+      - name: Certify production migration runner
+        working-directory: platform
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: |
+          set -Eeuo pipefail
+          export PGPASSWORD
+          EXPECTED_MIGRATIONS="$(find packages/database/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]_*.sql' | wc -l | tr -d ' ')"
+          FRESH_DB="preneura_migrator_fresh_${GITHUB_RUN_ID}"
+          CONCURRENT_DB="preneura_migrator_concurrent_${GITHUB_RUN_ID}"
+          createdb -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$FRESH_DB"
+          createdb -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$CONCURRENT_DB"
+
+          FRESH_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$FRESH_DB"
+          CONCURRENT_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$CONCURRENT_DB"
+          CURRENT_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_current"
+
+          DATABASE_URL="$FRESH_URL" MIGRATION_ACTOR=certification-fresh \
+            pnpm --filter @preneura/database migrate
+          test "$(psql "$FRESH_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = "$EXPECTED_MIGRATIONS"
+          test "$(psql "$FRESH_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'APPLIED'")" = "$EXPECTED_MIGRATIONS"
+
+          DATABASE_URL="$FRESH_URL" MIGRATION_ACTOR=certification-rerun \
+            pnpm --filter @preneura/database migrate
+          test "$(psql "$FRESH_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = "$EXPECTED_MIGRATIONS"
+
+          DATABASE_URL="$CURRENT_URL" MIGRATION_ADOPT_EXISTING=true MIGRATION_ACTOR=certification-adopt \
+            pnpm --filter @preneura/database migrate
+          test "$(psql "$CURRENT_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = "$EXPECTED_MIGRATIONS"
+          test "$(psql "$CURRENT_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'ADOPTED'")" = "$EXPECTED_MIGRATIONS"
+
+          rm -rf /tmp/preneura-migrations-drift
+          cp -R packages/database/migrations /tmp/preneura-migrations-drift
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/preneura-migrations-drift/0001_auth_foundation.sql')
+          text = path.read_text()
+          marker = '\nCOMMIT;'
+          if marker not in text:
+              raise SystemExit('expected final COMMIT in migration 0001')
+          text = text.rsplit(marker, 1)[0] + '\n-- historical checksum drift for certification' + marker + '\n'
+          path.write_text(text)
+          PY
+          set +e
+          DATABASE_URL="$FRESH_URL" MIGRATIONS_DIR=/tmp/preneura-migrations-drift \
+            pnpm --filter @preneura/database migrate >/tmp/preneura-migration-drift.log 2>&1
+          DRIFT_RC=$?
+          set -e
+          if [[ "$DRIFT_RC" -eq 0 ]]; then
+            cat /tmp/preneura-migration-drift.log
+            echo 'Migrator accepted modified historical SQL.' >&2
+            exit 1
+          fi
+          grep -q 'checksum mismatch' /tmp/preneura-migration-drift.log
+
+          DATABASE_URL="$CONCURRENT_URL" MIGRATION_ACTOR=certification-concurrent-a \
+            pnpm --filter @preneura/database migrate >/tmp/preneura-migrator-a.log 2>&1 &
+          FIRST_PID=$!
+          DATABASE_URL="$CONCURRENT_URL" MIGRATION_ACTOR=certification-concurrent-b \
+            pnpm --filter @preneura/database migrate >/tmp/preneura-migrator-b.log 2>&1 &
+          SECOND_PID=$!
+          wait "$FIRST_PID" || { cat /tmp/preneura-migrator-a.log; exit 1; }
+          wait "$SECOND_PID" || { cat /tmp/preneura-migrator-b.log; exit 1; }
+          test "$(psql "$CONCURRENT_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = "$EXPECTED_MIGRATIONS"
+          test "$(psql "$CONCURRENT_URL" -Atqc "SELECT count(*) FROM platform_schema_migrations WHERE apply_mode = 'APPLIED'")" = "$EXPECTED_MIGRATIONS"
