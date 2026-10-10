@@ -1,14 +1,29 @@
 {
-  "version": 1,
+  "version": 2,
   "product": "PRENEURA Real Estate OS",
   "repository": "karimelzoser/realestate",
-  "releaseSha": "288f4afba3b87dbc123eff6b198e1720075edc7d",
-  "releaseSource": "PR #77 canonical production candidate",
+  "release": {
+    "applicationRuntimeSha": "c2746523eb434898cbb4c46cf5df452d122ba78f",
+    "applicationRuntimeSource": "PR #81 emitted full-stack acceptance",
+    "deploymentBundleSha": "8750f94180b89cf58a1963f739c24aa0a56babbd",
+    "deploymentBundleSource": "PR #82 self-hosted deployment bundle",
+    "runtimeSchemaVersion": 41,
+    "migrationMarker": "0041_inventory_lock_expiry_durability.sql"
+  },
   "deployment": {
     "mode": "self-hosted",
     "environmentName": "staging",
     "operatingSystem": "Linux",
-    "reverseProxy": "Nginx or HAProxy",
+    "reverseProxy": "Nginx",
+    "ingress": {
+      "publicService": "re-edge",
+      "bundleListenerPort": 8080,
+      "tlsTermination": "external",
+      "publicHttpsRequired": true,
+      "apiBasePath": "/api",
+      "readinessPath": "/healthz",
+      "livenessPath": "/livez"
+    },
     "database": {
       "engine": "PostgreSQL",
       "majorVersion": 18,
@@ -31,8 +46,8 @@
         "rootDirectory": "platform",
         "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/web build",
         "startCommand": "pnpm --filter @preneura/web start",
-        "public": true,
-        "healthcheckPath": "/api/health",
+        "public": false,
+        "healthcheckPath": "/login",
         "requiredVariables": ["NODE_ENV", "NEXT_PUBLIC_API_URL"]
       },
       {
@@ -40,7 +55,7 @@
         "rootDirectory": "platform",
         "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/api build",
         "startCommand": "pnpm --filter @preneura/api start",
-        "public": true,
+        "public": false,
         "healthcheckPath": "/v1/health/ready",
         "requiredVariables": [
           "NODE_ENV", "DATABASE_URL", "WEB_ORIGIN", "TRUST_PROXY_HOPS", "API_BODY_LIMIT_BYTES",
@@ -83,6 +98,17 @@
         ]
       }
     ],
+    "edge": {
+      "name": "re-edge",
+      "public": true,
+      "internalPort": 8080,
+      "routes": {
+        "/": "re-web:3000",
+        "/api/": "re-api:4100",
+        "/healthz": "re-api:4100/v1/health/ready",
+        "/livez": "re-api:4100/v1/health/live"
+      }
+    },
     "migration": {
       "command": "MIGRATION_ACTOR=<release-id> pnpm --filter @preneura/database migrate",
       "runBeforeApplicationRestart": true,
@@ -90,13 +116,28 @@
     }
   },
   "gate7": {
+    "requiredEvidence": [
+      "topologyTls",
+      "oidc",
+      "objectStorage",
+      "messaging",
+      "documentScanner",
+      "financeSettlement",
+      "observability",
+      "backupRestore",
+      "migrationRehearsal",
+      "rollbackCutover",
+      "securityApproval",
+      "operationalOwnership"
+    ],
     "deployOnlyWhen": [
       "a Linux staging host or cluster with sufficient CPU, RAM, storage and network capacity is available",
       "PostgreSQL 18 and S3-compatible object storage are configured with backups",
       "real OIDC, messaging, scanner, finance/settlement and observability endpoints/secrets are configured",
       "TLS and reverse-proxy routing are configured",
       "named operational owner and cutover window are assigned",
-      "all application processes are pinned to releaseSha",
+      "all deployed application images are built from release.deploymentBundleSha",
+      "the deployed application runtime contains release.applicationRuntimeSha",
       "migration, backup/restore, monitoring and rollback rehearsals are complete"
     ]
   }
