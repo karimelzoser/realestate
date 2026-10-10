@@ -1,0 +1,231 @@
+name: preneura-production
+
+x-runtime-hardening: &runtime-hardening
+  restart: unless-stopped
+  init: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  networks:
+    - backend
+
+x-observability: &observability
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?OTEL_EXPORTER_OTLP_ENDPOINT is required}
+  OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}
+  OTEL_EXPORTER_OTLP_INSECURE: ${OTEL_EXPORTER_OTLP_INSECURE:-false}
+  OTEL_SERVICE_VERSION: ${OTEL_SERVICE_VERSION:?OTEL_SERVICE_VERSION is required}
+  OTEL_TRACE_SAMPLE_RATIO: ${OTEL_TRACE_SAMPLE_RATIO:-0.1}
+  OTEL_EXPORTER_TIMEOUT_MS: ${OTEL_EXPORTER_TIMEOUT_MS:-10000}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
+services:
+  migrate:
+    build:
+      context: ../..
+      dockerfile: platform/deploy/Dockerfile
+      target: migrate
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}/api
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DATABASE_WAIT_TIMEOUT_MS: ${DATABASE_WAIT_TIMEOUT_MS:-60000}
+      MIGRATION_ACTOR: ${MIGRATION_ACTOR:-selfhosted-release}
+      MIGRATION_ADOPT_EXISTING: ${MIGRATION_ADOPT_EXISTING:-false}
+    restart: "no"
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - backend
+
+  notification-gateway:
+    <<: *runtime-hardening
+    build:
+      context: ../..
+      dockerfile: platform/deploy/Dockerfile
+      target: notification-gateway
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}/api
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *observability
+      NODE_ENV: production
+      PORT: "4300"
+      PRENEURA_SERVICE_NAME: preneura-notification-gateway
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      CONTACT_ENCRYPTION_KEY_BASE64: ${CONTACT_ENCRYPTION_KEY_BASE64:?CONTACT_ENCRYPTION_KEY_BASE64 is required}
+      NOTIFICATION_GATEWAY_TOKEN: ${NOTIFICATION_GATEWAY_TOKEN:?NOTIFICATION_GATEWAY_TOKEN is required}
+      META_GRAPH_API_VERSION: ${META_GRAPH_API_VERSION:?META_GRAPH_API_VERSION is required}
+      META_WHATSAPP_PHONE_NUMBER_ID: ${META_WHATSAPP_PHONE_NUMBER_ID:?META_WHATSAPP_PHONE_NUMBER_ID is required}
+      META_WHATSAPP_ACCESS_TOKEN: ${META_WHATSAPP_ACCESS_TOKEN:?META_WHATSAPP_ACCESS_TOKEN is required}
+      WHATSAPP_TEMPLATE_BINDINGS_JSON: ${WHATSAPP_TEMPLATE_BINDINGS_JSON:?WHATSAPP_TEMPLATE_BINDINGS_JSON is required}
+      SMS_PROVIDER_URL: ${SMS_PROVIDER_URL:-}
+      SMS_PROVIDER_TOKEN: ${SMS_PROVIDER_TOKEN:-}
+      EMAIL_PROVIDER_URL: ${EMAIL_PROVIDER_URL:-}
+      EMAIL_PROVIDER_TOKEN: ${EMAIL_PROVIDER_TOKEN:-}
+    expose:
+      - "4300"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4300/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  api:
+    <<: *runtime-hardening
+    build:
+      context: ../..
+      dockerfile: platform/deploy/Dockerfile
+      target: api
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}/api
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      notification-gateway:
+        condition: service_healthy
+    environment:
+      <<: *observability
+      NODE_ENV: production
+      PORT: "4100"
+      PRENEURA_SERVICE_NAME: preneura-api
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      WEB_ORIGIN: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
+      API_BODY_LIMIT_BYTES: ${API_BODY_LIMIT_BYTES:-8388608}
+      AUTH_IDENTIFIER_HMAC_KEY: ${AUTH_IDENTIFIER_HMAC_KEY:?AUTH_IDENTIFIER_HMAC_KEY is required}
+      AUTH_OTP_PEPPER: ${AUTH_OTP_PEPPER:?AUTH_OTP_PEPPER is required}
+      AUTH_OTP_TTL_SECONDS: ${AUTH_OTP_TTL_SECONDS:-300}
+      AUTH_OTP_MAX_ATTEMPTS: ${AUTH_OTP_MAX_ATTEMPTS:-5}
+      AUTH_OTP_RESEND_SECONDS: ${AUTH_OTP_RESEND_SECONDS:-60}
+      AUTH_OTP_REQUEST_WINDOW_SECONDS: ${AUTH_OTP_REQUEST_WINDOW_SECONDS:-600}
+      AUTH_OTP_MAX_REQUESTS_PER_WINDOW: ${AUTH_OTP_MAX_REQUESTS_PER_WINDOW:-5}
+      COOKIE_SIGNING_SECRET: ${COOKIE_SIGNING_SECRET:?COOKIE_SIGNING_SECRET is required}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-preneura_session}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-43200}
+      CONTACT_ENCRYPTION_KEY_BASE64: ${CONTACT_ENCRYPTION_KEY_BASE64:?CONTACT_ENCRYPTION_KEY_BASE64 is required}
+      CONTACT_HMAC_KEY: ${CONTACT_HMAC_KEY:?CONTACT_HMAC_KEY is required}
+      CONTACT_VERIFICATION_PEPPER: ${CONTACT_VERIFICATION_PEPPER:?CONTACT_VERIFICATION_PEPPER is required}
+      CONTACT_VERIFICATION_TTL_SECONDS: ${CONTACT_VERIFICATION_TTL_SECONDS:-600}
+      OTP_CHANNEL: ${OTP_CHANNEL:-sms}
+      OTP_PROVIDER: gateway
+      AUTH_OTP_GATEWAY_URL: http://notification-gateway:4300/auth-otp
+      CONTACT_VERIFICATION_GATEWAY_URL: http://notification-gateway:4300/contact-verification
+      NOTIFICATION_GATEWAY_TOKEN: ${NOTIFICATION_GATEWAY_TOKEN:?NOTIFICATION_GATEWAY_TOKEN is required}
+      OIDC_ISSUER: ${OIDC_ISSUER:?OIDC_ISSUER is required}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?OIDC_CLIENT_ID is required}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?OIDC_CLIENT_SECRET is required}
+      OIDC_REDIRECT_URI: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}/api/v1/auth/google/callback
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:?OBJECT_STORAGE_BUCKET is required}
+      OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-us-east-1}
+      OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT:-}
+      OBJECT_STORAGE_ACCESS_KEY_ID: ${OBJECT_STORAGE_ACCESS_KEY_ID:-}
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: ${OBJECT_STORAGE_SECRET_ACCESS_KEY:-}
+      OBJECT_STORAGE_FORCE_PATH_STYLE: ${OBJECT_STORAGE_FORCE_PATH_STYLE:-false}
+      DOCUMENT_SCANNER_URL: ${DOCUMENT_SCANNER_URL:?DOCUMENT_SCANNER_URL is required}
+      DOCUMENT_SCANNER_TOKEN: ${DOCUMENT_SCANNER_TOKEN:?DOCUMENT_SCANNER_TOKEN is required}
+      DOCUMENT_SCANNER_TIMEOUT_MS: ${DOCUMENT_SCANNER_TIMEOUT_MS:-20000}
+      FINANCE_PROVIDER_INGRESS_TOKEN: ${FINANCE_PROVIDER_INGRESS_TOKEN:?FINANCE_PROVIDER_INGRESS_TOKEN is required}
+      SETTLEMENT_PROVIDER_INGRESS_TOKEN: ${SETTLEMENT_PROVIDER_INGRESS_TOKEN:?SETTLEMENT_PROVIDER_INGRESS_TOKEN is required}
+      AI_PROVIDER_URL: ${AI_PROVIDER_URL:-}
+      AI_PROVIDER_TOKEN: ${AI_PROVIDER_TOKEN:-}
+      AI_PROVIDER_MODEL: ${AI_PROVIDER_MODEL:-}
+      AI_PROVIDER_TIMEOUT_MS: ${AI_PROVIDER_TIMEOUT_MS:-8000}
+    expose:
+      - "4100"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4100/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 15s
+
+  worker:
+    <<: *runtime-hardening
+    build:
+      context: ../..
+      dockerfile: platform/deploy/Dockerfile
+      target: worker
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}/api
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      notification-gateway:
+        condition: service_healthy
+    environment:
+      <<: *observability
+      NODE_ENV: production
+      PRENEURA_SERVICE_NAME: preneura-worker
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      WORKER_ID: ${WORKER_ID:-selfhosted-worker-1}
+      INVENTORY_LOCK_EXPIRY_SCAN_MS: ${INVENTORY_LOCK_EXPIRY_SCAN_MS:-1000}
+      INVENTORY_LOCK_EXPIRY_BATCH_SIZE: ${INVENTORY_LOCK_EXPIRY_BATCH_SIZE:-500}
+      OUTBOX_POLL_MS: ${OUTBOX_POLL_MS:-300}
+      NOTIFICATION_POLL_MS: ${NOTIFICATION_POLL_MS:-1000}
+      SLA_SCAN_MS: ${SLA_SCAN_MS:-30000}
+      INSTALLMENT_REMINDER_SCAN_MS: ${INSTALLMENT_REMINDER_SCAN_MS:-30000}
+      COMMISSION_DUE_SCAN_MS: ${COMMISSION_DUE_SCAN_MS:-30000}
+      NOTIFICATION_GATEWAY_URL: http://notification-gateway:4300/deliver
+      NOTIFICATION_GATEWAY_TOKEN: ${NOTIFICATION_GATEWAY_TOKEN:?NOTIFICATION_GATEWAY_TOKEN is required}
+
+  web:
+    <<: *runtime-hardening
+    build:
+      context: ../..
+      dockerfile: platform/deploy/Dockerfile
+      target: web
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}/api
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    expose:
+      - "3000"
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /srv/preneura/apps/web/.next/cache:size=128m,uid=1000,gid=1000
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  edge:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+networks:
+  backend:
+    driver: bridge
