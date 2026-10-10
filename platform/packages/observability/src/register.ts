@@ -1,3 +1,6 @@
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+
 const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT?.trim();
 const explicitlyDisabled = process.env.OTEL_SDK_DISABLED === 'true';
 const production = process.env.NODE_ENV === 'production';
@@ -17,6 +20,9 @@ if (endpoint) {
   }
 }
 
+let sdk: NodeSDK | null = null;
+let shutdownPromise: Promise<void> | null = null;
+
 if (!explicitlyDisabled && endpoint) {
   process.env.OTEL_SERVICE_NAME ??= process.env.PRENEURA_SERVICE_NAME ?? process.env.npm_package_name ?? 'preneura-runtime';
   process.env.OTEL_TRACES_EXPORTER ??= 'otlp';
@@ -24,5 +30,24 @@ if (!explicitlyDisabled && endpoint) {
   process.env.OTEL_EXPORTER_OTLP_PROTOCOL ??= 'http/protobuf';
   process.env.OTEL_METRIC_EXPORT_INTERVAL ??= '15000';
   process.env.OTEL_LOG_LEVEL ??= 'error';
-  await import('@opentelemetry/auto-instrumentations-node/register');
+
+  sdk = new NodeSDK({
+    instrumentations: [getNodeAutoInstrumentations()],
+  });
+  sdk.start();
 }
+
+export async function shutdownObservability(): Promise<void> {
+  if (!sdk) return;
+  if (shutdownPromise) return shutdownPromise;
+
+  const activeSdk = sdk;
+  sdk = null;
+  shutdownPromise = activeSdk.shutdown().finally(() => {
+    shutdownPromise = null;
+  });
+  return shutdownPromise;
+}
+
+process.once('SIGTERM', () => void shutdownObservability());
+process.once('SIGINT', () => void shutdownObservability());
