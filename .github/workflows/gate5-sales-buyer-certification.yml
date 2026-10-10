@@ -54,6 +54,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_gate5_sales
       PGPASSWORD: postgres
       NODE_ENV: test
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:4100
       AUTH_IDENTIFIER_HMAC_KEY: gate5-sales-auth-identifier-key-000000000001
       CONTACT_HMAC_KEY: gate5-sales-contact-hmac-key-00000000000001
       CONTACT_ENCRYPTION_KEY_BASE64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
