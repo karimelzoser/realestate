@@ -39,13 +39,13 @@ FROM generate_series(1, 200) gs;
 
 INSERT INTO inventory_locks (
   tenant_id, project_id, unit_type_id, inventory_slot_id, buyer_user_id,
-  locked_by_user_id, status, expires_at
+  locked_by_user_id, status, expires_at, created_at, updated_at
 )
 SELECT
   s.tenant_id, s.project_id, s.unit_type_id, s.id,
   '34000000-0000-0000-0000-000000000002'::uuid,
   '34000000-0000-0000-0000-000000000001'::uuid,
-  'ACTIVE', now() - interval '1 minute'
+  'ACTIVE', now() - interval '1 minute', now() - interval '5 minutes', now() - interval '5 minutes'
 FROM inventory_slots s
 WHERE s.internal_reference LIKE 'CONCURRENT-%';
 SQL
@@ -80,13 +80,13 @@ WITH slot AS (
 )
 INSERT INTO inventory_locks (
   tenant_id, project_id, unit_type_id, inventory_slot_id, buyer_user_id,
-  locked_by_user_id, status, expires_at
+  locked_by_user_id, status, expires_at, created_at, updated_at
 )
 SELECT
   tenant_id, project_id, unit_type_id, id,
   '34000000-0000-0000-0000-000000000002',
   '34000000-0000-0000-0000-000000000001',
-  'ACTIVE', now() - interval '5 seconds'
+  'ACTIVE', now() - interval '5 seconds', now() - interval '1 minute', now() - interval '1 minute'
 FROM slot;
 SQL
 }
