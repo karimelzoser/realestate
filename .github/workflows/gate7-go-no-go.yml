@@ -1,0 +1,176 @@
+name: Gate 7 Production Go-No-Go
+
+on:
+  push:
+    branches:
+      - 'feature/production-gate7-*'
+      - 'release/**'
+    paths:
+      - 'platform/**'
+      - 'docs/PRODUCTION_DELIVERY_GATES.md'
+      - '.github/workflows/gate7-go-no-go.yml'
+  pull_request:
+    paths:
+      - 'platform/**'
+      - 'docs/PRODUCTION_DELIVERY_GATES.md'
+      - '.github/workflows/gate7-go-no-go.yml'
+  workflow_dispatch:
+    inputs:
+      final_certification:
+        description: 'Run final live Gate 7 certification'
+        type: boolean
+        required: true
+        default: false
+      api_url:
+        description: 'Deployed API HTTPS origin, e.g. https://api.example.com'
+        type: string
+        required: false
+      web_url:
+        description: 'Deployed web HTTPS origin'
+        type: string
+        required: false
+      oidc_issuer_url:
+        description: 'Production OIDC issuer HTTPS URL'
+        type: string
+        required: false
+      operational_owner:
+        description: 'Named on-call/release operational owner'
+        type: string
+        required: false
+      integrations_verified:
+        description: 'Production provider credentials/endpoints verified (Google/OIDC, messaging, scanner, finance/settlement as applicable)'
+        type: boolean
+        required: false
+        default: false
+      backup_restore_verified:
+        description: 'Backup/restore evidence reviewed for this release'
+        type: boolean
+        required: false
+        default: false
+      monitoring_alerts_live:
+        description: 'Monitoring dashboards and alerts are live'
+        type: boolean
+        required: false
+        default: false
+      rollback_validated:
+        description: 'Rollback/cutover path rehearsed and validated'
+        type: boolean
+        required: false
+        default: false
+      migration_rehearsal_complete:
+        description: 'Migration rehearsal completed against production-like data/topology'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+  issues: read
+
+env:
+  NODE_VERSION: '24'
+  PNPM_VERSION: '12.9.1'
+
+jobs:
+  structural-preflight:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Structural Gate 7 preflight
+        run: node --import tsx scripts/certify-gate7-preflight.mts
+      - name: Reject open P0/P1 launch defects
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd ..
+          p0="$(gh issue list --state open --search 'label:P0' --json number,title --jq 'length')"
+          p1="$(gh issue list --state open --search 'label:P1' --json number,title --jq 'length')"
+          if [ "$p0" -gt 0 ] || [ "$p1" -gt 0 ]; then
+            echo "Open launch defects: P0=$p0 P1=$p1" >&2
+            gh issue list --state open --search 'label:P0 OR label:P1' --json number,title,url --jq '.[] | "#\(.number) \(.title) \(.url)"' || true
+            exit 1
+          fi
+          echo "No open P0/P1 issues found."
+
+  final-live-certification:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.final_certification }}
+    needs: structural-preflight
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate release attestations
+        env:
+          API_URL: ${{ inputs.api_url }}
+          WEB_URL: ${{ inputs.web_url }}
+          OIDC_ISSUER_URL: ${{ inputs.oidc_issuer_url }}
+          OPERATIONAL_OWNER: ${{ inputs.operational_owner }}
+          INTEGRATIONS_VERIFIED: ${{ inputs.integrations_verified }}
+          BACKUP_RESTORE_VERIFIED: ${{ inputs.backup_restore_verified }}
+          MONITORING_ALERTS_LIVE: ${{ inputs.monitoring_alerts_live }}
+          ROLLBACK_VALIDATED: ${{ inputs.rollback_validated }}
+          MIGRATION_REHEARSAL_COMPLETE: ${{ inputs.migration_rehearsal_complete }}
+        run: |
+          set -euo pipefail
+          for name in API_URL WEB_URL OIDC_ISSUER_URL OPERATIONAL_OWNER; do
+            value="${!name:-}"
+            if [ -z "$value" ]; then echo "$name is required for final Gate 7 certification." >&2; exit 1; fi
+          done
+          for name in INTEGRATIONS_VERIFIED BACKUP_RESTORE_VERIFIED MONITORING_ALERTS_LIVE ROLLBACK_VALIDATED MIGRATION_REHEARSAL_COMPLETE; do
+            value="${!name:-false}"
+            if [ "$value" != 'true' ]; then echo "$name must be explicitly attested true." >&2; exit 1; fi
+          done
+          for name in API_URL WEB_URL OIDC_ISSUER_URL; do
+            value="${!name}"
+            case "$value" in https://*) ;; *) echo "$name must use HTTPS." >&2; exit 1;; esac
+          done
+
+      - name: Probe deployed API liveness/readiness
+        env:
+          API_URL: ${{ inputs.api_url }}
+        run: |
+          set -euo pipefail
+          api="${API_URL%/}"
+          curl --fail --silent --show-error --max-time 15 "$api/v1/health/live" | tee /tmp/live.json
+          curl --fail --silent --show-error --max-time 15 "$api/v1/health/ready" | tee /tmp/ready.json
+          grep -q '"status":"ok"' /tmp/live.json
+          grep -q '"status":"ok"' /tmp/ready.json
+
+      - name: Probe deployed web
+        env:
+          WEB_URL: ${{ inputs.web_url }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --max-time 20 --output /tmp/web.html "${WEB_URL%/}/"
+          test -s /tmp/web.html
+
+      - name: Probe OIDC discovery
+        env:
+          OIDC_ISSUER_URL: ${{ inputs.oidc_issuer_url }}
+        run: |
+          set -euo pipefail
+          issuer="${OIDC_ISSUER_URL%/}"
+          curl --fail --silent --show-error --max-time 15 "$issuer/.well-known/openid-configuration" | tee /tmp/oidc.json
+          grep -q '"issuer"' /tmp/oidc.json
+          grep -q '"jwks_uri"' /tmp/oidc.json
+
+      - name: Gate 7 decision
+        env:
+          OPERATIONAL_OWNER: ${{ inputs.operational_owner }}
+        run: |
+          echo 'GATE7_FINAL_DECISION=GO'
+          echo "OPERATIONAL_OWNER=$OPERATIONAL_OWNER"
+          echo "RELEASE_SHA=$GITHUB_SHA"
