@@ -24,6 +24,8 @@ export function validateWorkerRuntimeConfig(env: NodeJS.ProcessEnv = process.env
     failures.push(`NOTIFICATION_GATEWAY_TOKEN must be a non-placeholder secret of at least ${MIN_SECRET_LENGTH} characters.`);
   }
 
+  validateInterval(env, 'INVENTORY_LOCK_EXPIRY_SCAN_MS', 100, 60_000, failures);
+  validateIntegerRange(env, 'INVENTORY_LOCK_EXPIRY_BATCH_SIZE', 1, 5000, failures);
   validateInterval(env, 'OUTBOX_POLL_MS', 50, 60_000, failures);
   validateInterval(env, 'NOTIFICATION_POLL_MS', 100, 60_000, failures);
   validateInterval(env, 'SLA_SCAN_MS', 1_000, 3_600_000, failures);
@@ -58,11 +60,21 @@ function validateInterval(
   maximum: number,
   failures: string[],
 ): void {
+  validateIntegerRange(env, name, minimum, maximum, failures);
+}
+
+function validateIntegerRange(
+  env: NodeJS.ProcessEnv,
+  name: string,
+  minimum: number,
+  maximum: number,
+  failures: string[],
+): void {
   const raw = env[name]?.trim();
   if (!raw) return;
   const value = Number(raw);
   if (!Number.isInteger(value) || value < minimum || value > maximum) {
-    failures.push(`${name} must be an integer between ${minimum} and ${maximum} milliseconds.`);
+    failures.push(`${name} must be an integer between ${minimum} and ${maximum}.`);
   }
 }
 
