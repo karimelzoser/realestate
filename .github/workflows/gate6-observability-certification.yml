@@ -13,6 +13,7 @@ on:
       - "platform/.env.example"
       - "platform/docs/gate6-observability.md"
       - "platform/pnpm-lock.yaml"
+      - "platform/pnpm-workspace.yaml"
       - ".github/workflows/gate6-observability-certification.yml"
   push:
     branches:
@@ -29,6 +30,7 @@ on:
       - "platform/.env.example"
       - "platform/docs/gate6-observability.md"
       - "platform/pnpm-lock.yaml"
+      - "platform/pnpm-workspace.yaml"
       - ".github/workflows/gate6-observability-certification.yml"
 
 permissions:
