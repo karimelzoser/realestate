@@ -14,7 +14,8 @@ export function validateWorkerRuntimeConfig(env: Env = process.env): void {
   // Inventory expiry is a correctness reconciliation loop, not a browser timer or
   // cache refresh. Bound both cadence and batch size so production cannot disable
   // timely capacity release or accidentally configure a database busy loop. These
-  // bounds are certified by runtime-readiness, production-config and durability gates.
+  // bounds are certified by runtime-readiness, production-config, durability and
+  // telemetry-ready production startup gates.
   requireInterval(env, 'INVENTORY_LOCK_EXPIRY_SCAN_MS', 100, 60_000, failures);
   requireIntegerRange(env, 'INVENTORY_LOCK_EXPIRY_BATCH_SIZE', 1, 5000, failures);
   requireInterval(env, 'OUTBOX_POLL_MS', 50, 60_000, failures);
