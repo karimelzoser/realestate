@@ -8,7 +8,6 @@ const REDACT_PATHS = [
   '*.authorization','*.cookie','*.password','*.secret','*.token','*.otp','*.nationalId','*.national_id','*.phone','*.email','*.destination',
 ];
 
-const CORRELATION_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 const meter = metrics.getMeter('preneura-runtime', '1.0.0');
 const tracer = trace.getTracer('preneura-runtime', '1.0.0');
 
@@ -55,11 +54,8 @@ export function createLogger(service: string, bindings: Record<string, unknown> 
   });
 }
 
-export function resolveCorrelationId(value: unknown): string {
-  const candidate = Array.isArray(value) ? value[0] : value;
-  return typeof candidate === 'string' && CORRELATION_ID_PATTERN.test(candidate)
-    ? candidate
-    : randomUUID();
+export function createRequestId(): string {
+  return randomUUID();
 }
 
 export function annotateActiveSpan(attributes: Record<string, string | number | boolean>): void {
