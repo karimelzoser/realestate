@@ -27,6 +27,7 @@ for (const artifact of [
   'platform/docs/backup-restore.md',
   'platform/docs/gate6-nonfunctional-certification.md',
   'platform/docs/gate6-security-scan.md',
+  'platform/ops/railway-gate7-staging.json',
   'docs/PRODUCTION_DELIVERY_GATES.md',
   'platform/.env.example',
 ]) requireFile(artifact);
@@ -64,6 +65,46 @@ for (const name of requiredEnv) {
   if (!new RegExp(`^${name}=`, 'm').test(envExample)) failures.push(`.env.example is missing ${name}.`);
 }
 
+const topologyPath = resolve(platform, 'ops/railway-gate7-staging.json');
+if (existsSync(topologyPath)) {
+  const topology = JSON.parse(readFileSync(topologyPath, 'utf8'));
+  const canonicalReleaseSha = '288f4afba3b87dbc123eff6b198e1720075edc7d';
+
+  if (topology.product !== 'PRENEURA Real Estate OS') failures.push('Gate 7 topology is not scoped to PRENEURA Real Estate OS.');
+  if (topology.repository !== 'karimelzoser/realestate') failures.push('Gate 7 topology points to the wrong GitHub repository.');
+  if (topology.releaseSha !== canonicalReleaseSha) failures.push(`Gate 7 topology release SHA must remain pinned to ${canonicalReleaseSha}.`);
+  if (topology.railway?.projectName !== 'preneura-re-gate7-staging') failures.push('Gate 7 topology points to the wrong Railway project.');
+  if (topology.railway?.environmentName !== 'staging') failures.push('Gate 7 topology must target the staging environment.');
+  if (!topology.railway?.doNotTouchProjects?.includes('preneura-platform-preview')) {
+    failures.push('Gate 7 topology must explicitly protect the separate preneura-platform-preview project.');
+  }
+  if (topology.railway?.database?.template !== 'postgres') failures.push('Gate 7 database must use the Railway postgres template.');
+  if (topology.railway?.database?.expectedImage !== 'ghcr.io/railwayapp-templates/postgres-ssl:18') {
+    failures.push('Gate 7 database image must remain PostgreSQL 18.');
+  }
+
+  const services = new Map((topology.railway?.services ?? []).map((service) => [service.name, service]));
+  const expectedServices = ['re-web', 're-api', 're-worker', 're-notification-gateway'];
+  if (services.size !== expectedServices.length || expectedServices.some((name) => !services.has(name))) {
+    failures.push(`Gate 7 service set must be exactly: ${expectedServices.join(', ')}.`);
+  }
+
+  const web = services.get('re-web');
+  const api = services.get('re-api');
+  const worker = services.get('re-worker');
+  const gateway = services.get('re-notification-gateway');
+  for (const [name, service] of services) {
+    if (service.rootDirectory !== 'platform') failures.push(`${name} must build from platform/.`);
+    if (!service.buildCommand?.includes('pnpm install --frozen-lockfile')) failures.push(`${name} must use frozen dependency installation.`);
+  }
+  if (web?.healthcheckPath !== '/login') failures.push('re-web must use /login as its stable staging health path.');
+  if (api?.healthcheckPath !== '/v1/health/ready') failures.push('re-api must use the readiness endpoint, not liveness, for traffic admission.');
+  if (!api?.preDeployCommand?.includes('@preneura/database migrate')) failures.push('re-api must run the certified migration command before deploy.');
+  if (worker?.public !== false) failures.push('re-worker must remain private.');
+  if (gateway?.public !== false) failures.push('re-notification-gateway must remain private.');
+  if (gateway?.healthcheckPath !== '/health') failures.push('re-notification-gateway health path must be /health.');
+}
+
 const deliveryGates = readFileSync(resolve(root, 'docs/PRODUCTION_DELIVERY_GATES.md'), 'utf8');
 for (const phrase of [
   'no open P0/P1 launch defects',
@@ -86,4 +127,6 @@ if (failures.length) {
 console.log('GATE7_STRUCTURAL_PREFLIGHT=PASS');
 console.log(`LATEST_MIGRATION=${latestMigration}`);
 console.log('RUNTIME_SCHEMA_VERSION=41');
+console.log('CANONICAL_RELEASE_SHA=288f4afba3b87dbc123eff6b198e1720075edc7d');
+console.log('RAILWAY_PROJECT=preneura-re-gate7-staging');
 console.log('NOTE=External deployment, credential, monitoring, rollback and ownership evidence is intentionally not certified by this structural preflight.');
