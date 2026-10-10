@@ -12,6 +12,7 @@
     "./access": { "types": "./src/access.ts", "default": "./dist/access.js" },
     "./accounts": { "types": "./src/accounts.ts", "default": "./dist/accounts.js" },
     "./platform-admin": { "types": "./src/platform-admin.ts", "default": "./dist/platform-admin.js" },
+    "./management": { "types": "./src/management.ts", "default": "./dist/management.js" },
     "./ai": { "types": "./src/ai.ts", "default": "./dist/ai.js" },
     "./catalog": { "types": "./src/catalog.ts", "default": "./dist/catalog.js" },
     "./project-catalog": { "types": "./src/project-catalog.ts", "default": "./dist/project-catalog.js" },
