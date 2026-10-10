@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "environment": "production",
+  "releaseSha": "REPLACE_ME_RELEASE_SHA",
+  "changeId": "REPLACE_ME_CHANGE_ID",
+  "migrationRehearsalId": "REPLACE_ME_MIGRATION_REHEARSAL",
+  "migrationPlanId": "REPLACE_ME_MIGRATION_PLAN",
+  "rollbackPlanId": "REPLACE_ME_ROLLBACK_PLAN",
+  "backupEvidenceId": "REPLACE_ME_BACKUP_EVIDENCE",
+  "restoreRehearsalId": "REPLACE_ME_RESTORE_REHEARSAL",
+  "databasePitrEvidenceId": "REPLACE_ME_PITR_EVIDENCE",
+  "objectStorageRecoveryEvidenceId": "REPLACE_ME_OBJECT_STORAGE_RECOVERY",
+  "securityReviewId": "REPLACE_ME_SECURITY_REVIEW",
+  "monitoringDashboardUrl": "https://REPLACE_ME_MONITORING_DASHBOARD",
+  "alertDeploymentId": "REPLACE_ME_ALERT_DEPLOYMENT",
+  "providerVerificationId": "REPLACE_ME_PROVIDER_VERIFICATION",
+  "oncallPrimary": "REPLACE_ME_PRIMARY_ONCALL",
+  "oncallSecondary": "REPLACE_ME_SECONDARY_ONCALL",
+  "customerSignoffId": "REPLACE_ME_CUSTOMER_SIGNOFF",
+  "runbookVersion": "REPLACE_ME_RUNBOOK_VERSION",
+  "releaseManager": "REPLACE_ME_RELEASE_MANAGER",
+  "attestedAt": "REPLACE_ME_ATTESTED_AT"
+}
