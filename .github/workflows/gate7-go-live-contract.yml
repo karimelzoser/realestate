@@ -1,0 +1,117 @@
+name: Gate 7 Go-Live Contract
+
+on:
+  pull_request:
+    paths:
+      - "platform/ops/release-evidence*.json"
+      - "platform/scripts/production-go-no-go.mjs"
+      - "platform/scripts/certify-production-status.mjs"
+      - "platform/docs/production-go-live-runbook.md"
+      - "docs/PRODUCTION_IMPLEMENTATION_STATUS.md"
+      - ".github/workflows/gate7-go-live-contract.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/ops/release-evidence*.json"
+      - "platform/scripts/production-go-no-go.mjs"
+      - "platform/scripts/certify-production-status.mjs"
+      - "platform/docs/production-go-live-runbook.md"
+      - "docs/PRODUCTION_IMPLEMENTATION_STATUS.md"
+      - ".github/workflows/gate7-go-live-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  go-live-contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Validate evidence schema document
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const schema = JSON.parse(fs.readFileSync('ops/release-evidence.schema.json','utf8'));
+          if (schema.type !== 'object' || schema.additionalProperties !== false) throw new Error('Release evidence schema must be a closed object.');
+          if (!Array.isArray(schema.required) || schema.required.length < 20) throw new Error('Release evidence schema is missing required fields.');
+          for (const field of ['releaseSha','backupEvidenceId','restoreRehearsalId','databasePitrEvidenceId','securityReviewId','monitoringDashboardUrl','customerSignoffId','oncallPrimary','oncallSecondary']) {
+            if (!schema.required.includes(field)) throw new Error(`Required evidence field missing: ${field}`);
+          }
+          NODE
+
+      - name: Prove placeholder template fails closed
+        run: |
+          set -euo pipefail
+          if node scripts/production-go-no-go.mjs ops/release-evidence.example.json --offline-test > /tmp/gate7-placeholder.log 2>&1; then
+            cat /tmp/gate7-placeholder.log
+            echo "Placeholder evidence unexpectedly passed." >&2
+            exit 1
+          fi
+          grep -q '"decision":"NO_GO"' /tmp/gate7-placeholder.log
+
+      - name: Build synthetic structurally complete evidence
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const evidence = {
+            version: 1,
+            environment: 'production',
+            releaseSha: 'a'.repeat(40),
+            changeId: 'CHG-GATE7-STRUCTURAL-TEST',
+            migrationRehearsalId: 'MIGRATION-REHEARSAL-TEST',
+            migrationPlanId: 'MIGRATION-PLAN-TEST',
+            rollbackPlanId: 'ROLLBACK-PLAN-TEST',
+            backupEvidenceId: 'BACKUP-EVIDENCE-TEST',
+            restoreRehearsalId: 'RESTORE-REHEARSAL-TEST',
+            databasePitrEvidenceId: 'PITR-EVIDENCE-TEST',
+            objectStorageRecoveryEvidenceId: 'OBJECT-RECOVERY-TEST',
+            securityReviewId: 'SECURITY-REVIEW-TEST',
+            monitoringDashboardUrl: 'https://monitoring.example.test/preneura',
+            alertDeploymentId: 'ALERT-DEPLOYMENT-TEST',
+            providerVerificationId: 'PROVIDER-VERIFICATION-TEST',
+            oncallPrimary: 'primary-oncall-test',
+            oncallSecondary: 'secondary-oncall-test',
+            customerSignoffId: 'CUSTOMER-SIGNOFF-TEST',
+            runbookVersion: 'gate7-v1-test',
+            releaseManager: 'release-manager-test',
+            attestedAt: new Date().toISOString(),
+          };
+          fs.writeFileSync('/tmp/gate7-synthetic.json', JSON.stringify(evidence));
+          NODE
+
+      - name: Structural evidence may pass only as offline test
+        run: |
+          node scripts/production-go-no-go.mjs /tmp/gate7-synthetic.json --offline-test | tee /tmp/gate7-offline.log
+          grep -q '"decision":"STRUCTURAL_PASS"' /tmp/gate7-offline.log
+          if grep -q '"decision":"GO"' /tmp/gate7-offline.log; then
+            echo "Offline test must never issue production GO." >&2
+            exit 1
+          fi
+
+      - name: Production mode fails without external/runtime evidence
+        run: |
+          set -euo pipefail
+          if node scripts/production-go-no-go.mjs /tmp/gate7-synthetic.json > /tmp/gate7-production.log 2>&1; then
+            cat /tmp/gate7-production.log
+            echo "Production GO unexpectedly passed without external environment evidence." >&2
+            exit 1
+          fi
+          grep -q '"decision":"NO_GO"' /tmp/gate7-production.log
+
+      - name: Certify full requirement and release-gate traceability
+        run: node scripts/certify-production-status.mjs
+
+      - name: Verify go-live runbook contains stop/rollback authority
+        run: |
+          grep -q 'Traffic-ramp stop conditions' docs/production-go-live-runbook.md
+          grep -q 'Rollback and forward repair' docs/production-go-live-runbook.md
+          grep -q 'NO_GO' docs/production-go-live-runbook.md
