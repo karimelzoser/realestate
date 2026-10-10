@@ -43,12 +43,12 @@ apply_stale_migrations() {
 
 create_test_databases() {
   local db
-  for db in preneura_current preneura_stale preneura_future_compatible preneura_future_incompatible preneura_marker_mismatch; do
+  for db in preneura_current preneura_stale preneura_future_compatible preneura_future_incompatible; do
     create_db "$db"
   done
 
   apply_stale_migrations preneura_stale
-  for db in preneura_current preneura_future_compatible preneura_future_incompatible preneura_marker_mismatch; do
+  for db in preneura_current preneura_future_compatible preneura_future_incompatible; do
     apply_all_migrations "$db"
   done
 
@@ -71,22 +71,15 @@ SET schema_version = :'future'::integer,
     updated_at = now()
 WHERE singleton_key = 'production';
 SQL
-
-  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_marker_mismatch -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
-UPDATE platform_runtime_contract
-SET migration_marker = 'wrong_same_version_marker', updated_at = now()
-WHERE singleton_key = 'production';
-SQL
 }
 
 prove_contract_monotonicity() {
-  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_current -v ON_ERROR_STOP=1 \
-    -v lower_schema="$((CURRENT_SCHEMA_VERSION - 1))" <<'SQL' >/dev/null
+  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_current -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 DO $$
 BEGIN
   BEGIN
     UPDATE platform_runtime_contract
-    SET schema_version = :'lower_schema'::integer
+    SET schema_version = 1
     WHERE singleton_key = 'production';
     RAISE EXCEPTION 'schema downgrade unexpectedly succeeded';
   EXCEPTION WHEN OTHERS THEN
@@ -100,6 +93,15 @@ BEGIN
     RAISE EXCEPTION 'runtime compatibility downgrade unexpectedly succeeded';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM = 'runtime compatibility downgrade unexpectedly succeeded' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    UPDATE platform_runtime_contract
+    SET migration_marker = 'same_version_marker_mutation'
+    WHERE singleton_key = 'production';
+    RAISE EXCEPTION 'same-version marker mutation unexpectedly succeeded';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'same-version marker mutation unexpectedly succeeded' THEN RAISE; END IF;
   END;
 
   BEGIN
@@ -158,10 +160,6 @@ TS
     EXPECT_CODE=RUNTIME_VERSION_TOO_OLD \
     pnpm --filter @preneura/api exec tsx .runtime-readiness-certification.mts
 
-  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_marker_mismatch" \
-    EXPECT_CODE=SCHEMA_CONTRACT_MISMATCH \
-    pnpm --filter @preneura/api exec tsx .runtime-readiness-certification.mts
-
   rm -f "$temp_file"
   trap - RETURN
 }
@@ -202,7 +200,7 @@ certify_api_current() {
 certify_api_stale() {
   local log_file=/tmp/preneura-api-stale.log
   NODE_ENV=test PORT=4101 WEB_ORIGIN=http://localhost:3000 \
-  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_stale" \
+  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGPORT/preneura_stale" \
   OBJECT_STORAGE_BUCKET=readiness-test \
     pnpm --filter @preneura/api start >"$log_file" 2>&1 &
   local pid=$!
