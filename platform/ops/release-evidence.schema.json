@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://preneura.example/schemas/release-evidence.schema.json",
+  "title": "PRENEURA Gate 7 production release evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "releaseSha",
+    "environment",
+    "generatedAt",
+    "expiresAt",
+    "defects",
+    "migrationRehearsal",
+    "configurationReview",
+    "staging",
+    "providers",
+    "backupRestore",
+    "monitoring",
+    "rollback",
+    "security",
+    "operations",
+    "signoffs"
+  ],
+  "properties": {
+    "version": { "const": 1 },
+    "releaseSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "environment": { "const": "production" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "defects": { "$ref": "#/$defs/defects" },
+    "migrationRehearsal": { "$ref": "#/$defs/passEvidence" },
+    "configurationReview": { "$ref": "#/$defs/passEvidence" },
+    "staging": { "$ref": "#/$defs/staging" },
+    "providers": { "$ref": "#/$defs/providers" },
+    "backupRestore": { "$ref": "#/$defs/backupRestore" },
+    "monitoring": { "$ref": "#/$defs/monitoring" },
+    "rollback": { "$ref": "#/$defs/passEvidence" },
+    "security": { "$ref": "#/$defs/security" },
+    "operations": { "$ref": "#/$defs/operations" },
+    "signoffs": { "$ref": "#/$defs/signoffs" }
+  },
+  "$defs": {
+    "evidenceRef": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 500
+    },
+    "passEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checkedAt", "evidenceRef"],
+      "properties": {
+        "status": { "const": "PASS" },
+        "checkedAt": { "type": "string", "format": "date-time" },
+        "evidenceRef": { "$ref": "#/$defs/evidenceRef" }
+      }
+    },
+    "defects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["openP0", "openP1", "checkedAt", "evidenceRef"],
+      "properties": {
+        "openP0": { "const": 0 },
+        "openP1": { "const": 0 },
+        "checkedAt": { "type": "string", "format": "date-time" },
+        "evidenceRef": { "$ref": "#/$defs/evidenceRef" }
+      }
+    },
+    "staging": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "releaseSha", "baseUrl", "smokeCheckedAt", "evidenceRef"],
+      "properties": {
+        "status": { "const": "PASS" },
+        "releaseSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "baseUrl": { "type": "string", "pattern": "^https://" },
+        "smokeCheckedAt": { "type": "string", "format": "date-time" },
+        "evidenceRef": { "$ref": "#/$defs/evidenceRef" }
+      }
+    },
+    "providerEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checkedAt", "evidenceRef"],
+      "properties": {
+        "status": { "enum": ["PASS", "DISABLED"] },
+        "checkedAt": { "type": "string", "format": "date-time" },
+        "evidenceRef": { "$ref": "#/$defs/evidenceRef" },
+        "reason": { "type": "string", "minLength": 4, "maxLength": 500 }
+      }
+    },
+    "requiredProviderEvidence": {
+      "allOf": [
+        { "$ref": "#/$defs/providerEvidence" },
+        {
+          "properties": { "status": { "const": "PASS" } }
+        }
+      ]
+    },
+    "providers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "oidcGoogle",
+        "objectStorage",
+        "documentScanner",
+        "whatsapp",
+        "financeIngress",
+        "settlementIngress"
+      ],
+      "properties": {
+        "oidcGoogle": { "$ref": "#/$defs/requiredProviderEvidence" },
+        "objectStorage": { "$ref": "#/$defs/requiredProviderEvidence" },
+        "documentScanner": { "$ref": "#/$defs/requiredProviderEvidence" },
+        "whatsapp": { "$ref": "#/$defs/requiredProviderEvidence" },
+        "financeIngress": { "$ref": "#/$defs/requiredProviderEvidence" },
+        "settlementIngress": { "$ref": "#/$defs/requiredProviderEvidence" },
+        "sms": { "$ref": "#/$defs/providerEvidence" },
+        "email": { "$ref": "#/$defs/providerEvidence" },
+        "aiProvider": { "$ref": "#/$defs/providerEvidence" }
+      }
+    },
+    "backupRestore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "backupCheckedAt", "restoreRehearsedAt", "rpoMinutes", "rtoMinutes", "evidenceRef"],
+      "properties": {
+        "status": { "const": "PASS" },
+        "backupCheckedAt": { "type": "string", "format": "date-time" },
+        "restoreRehearsedAt": { "type": "string", "format": "date-time" },
+        "rpoMinutes": { "type": "integer", "minimum": 0, "maximum": 1440 },
+        "rtoMinutes": { "type": "integer", "minimum": 1, "maximum": 1440 },
+        "evidenceRef": { "$ref": "#/$defs/evidenceRef" }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "dashboardsLive", "alertsLive", "checkedAt", "evidenceRef"],
+      "properties": {
+        "status": { "const": "PASS" },
+        "dashboardsLive": { "const": true },
+        "alertsLive": { "const": true },
+        "checkedAt": { "type": "string", "format": "date-time" },
+        "evidenceRef": { "$ref": "#/$defs/evidenceRef" }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "tlsVerified", "wafVerified", "secretsReviewed", "externalReviewStatus", "checkedAt", "evidenceRef"],
+      "properties": {
+        "status": { "const": "PASS" },
+        "tlsVerified": { "const": true },
+        "wafVerified": { "const": true },
+        "secretsReviewed": { "const": true },
+        "externalReviewStatus": { "enum": ["PASS", "ACCEPTED_RISK"] },
+        "checkedAt": { "type": "string", "format": "date-time" },
+        "evidenceRef": { "$ref": "#/$defs/evidenceRef" }
+      }
+    },
+    "operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["onCallOwner", "releaseOwner", "businessOwner", "runbookReviewedAt", "evidenceRef"],
+      "properties": {
+        "onCallOwner": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "releaseOwner": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "businessOwner": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "runbookReviewedAt": { "type": "string", "format": "date-time" },
+        "evidenceRef": { "$ref": "#/$defs/evidenceRef" }
+      }
+    },
+    "signoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "owner", "signedAt", "evidenceRef"],
+      "properties": {
+        "decision": { "const": "GO" },
+        "owner": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "signedAt": { "type": "string", "format": "date-time" },
+        "evidenceRef": { "$ref": "#/$defs/evidenceRef" }
+      }
+    },
+    "signoffs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product", "engineering", "qa", "sre", "security"],
+      "properties": {
+        "product": { "$ref": "#/$defs/signoff" },
+        "engineering": { "$ref": "#/$defs/signoff" },
+        "qa": { "$ref": "#/$defs/signoff" },
+        "sre": { "$ref": "#/$defs/signoff" },
+        "security": { "$ref": "#/$defs/signoff" }
+      }
+    }
+  }
+}
