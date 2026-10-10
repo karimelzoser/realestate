@@ -24,7 +24,7 @@
         "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/web build",
         "startCommand": "pnpm --filter @preneura/web start",
         "public": true,
-        "healthcheckPath": "/api/health",
+        "healthcheckPath": "/login",
         "requiredVariables": ["NODE_ENV", "NEXT_PUBLIC_API_URL"]
       },
       {
