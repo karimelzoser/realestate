@@ -52,3 +52,29 @@ export interface ManagementProjectOverviewSnapshot {
     failed: number;
   };
 }
+
+export interface ManagementTenantProjectSnapshot {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  projectStatus: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'CLOSED';
+  overview: ManagementProjectOverviewSnapshot;
+}
+
+export interface ManagementTenantOverviewSnapshot {
+  generatedAt: string;
+  tenantId: string;
+  tenantName: string;
+  totals: {
+    projectCount: number;
+    activeProjects: number;
+    availableCapacity: number;
+    queueWaiting: number;
+    openTransactions: number;
+    readyForCompletion: number;
+    overdueItems: number;
+    commissionOverdueCases: number;
+    failedNotifications: number;
+  };
+  projects: ManagementTenantProjectSnapshot[];
+}
