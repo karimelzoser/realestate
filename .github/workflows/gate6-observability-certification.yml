@@ -97,24 +97,22 @@ jobs:
             node --import "$REGISTER" -e "console.log('OTEL_CONFIG_OK')" >/tmp/otel-valid.log 2>&1
           grep -q 'OTEL_CONFIG_OK' /tmp/otel-valid.log
 
-      - name: Certify correlation IDs and PII redaction
+      - name: Certify request IDs and PII redaction
         run: |
           set -euo pipefail
           node --input-type=module > /tmp/observability-log.jsonl <<'NODE'
           import {
             createLogger,
-            resolveCorrelationId,
+            createRequestId,
             safeErrorType,
           } from './packages/observability/dist/index.js';
 
-          const accepted = resolveCorrelationId('req-ABC_123:trace.test');
-          if (accepted !== 'req-ABC_123:trace.test') throw new Error('Valid correlation ID was not preserved.');
-
-          const regenerated = resolveCorrelationId('invalid request id with spaces and ?query=secret');
-          if (regenerated === 'invalid request id with spaces and ?query=secret') {
-            throw new Error('Invalid correlation ID was not regenerated.');
+          const first = createRequestId();
+          const second = createRequestId();
+          const uuidShape = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          if (!uuidShape.test(first) || !uuidShape.test(second) || first === second) {
+            throw new Error('Server-generated request IDs are not unique UUIDv4 values.');
           }
-          if (!/^[0-9a-f-]{36}$/i.test(regenerated)) throw new Error('Regenerated correlation ID is not UUID-shaped.');
           if (safeErrorType(new TypeError('SENSITIVE_ERROR_MESSAGE')) !== 'TypeError') {
             throw new Error('safeErrorType leaked or changed the error type contract.');
           }
@@ -163,7 +161,7 @@ jobs:
           }
 
           const api = await readFile('apps/api/src/main.ts', 'utf8');
-          for (const symbol of ['resolveCorrelationId', 'recordHttpRequest', 'x-request-id']) {
+          for (const symbol of ['createRequestId', 'recordHttpRequest', 'x-request-id']) {
             if (!api.includes(symbol)) throw new Error(`API telemetry wiring is missing ${symbol}.`);
           }
 
