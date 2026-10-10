@@ -1,14 +1,12 @@
 import { lookup } from 'node:dns/promises';
-import { writeFile } from 'node:fs/promises';
-import { connect as tlsConnect } from 'node:tls';
+import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { connect as tlsConnect } from 'node:tls';
 
 const EXPECTED_RUNTIME_SCHEMA = 41;
 const EXPECTED_MIGRATION = '0041_inventory_lock_expiry_durability';
 const manifest = JSON.parse(
-  await import('node:fs/promises').then(({ readFile }) =>
-    readFile(resolve(process.cwd(), 'ops/selfhosted-gate7-staging.json'), 'utf8'),
-  ),
+  await readFile(resolve(process.cwd(), 'ops/selfhosted-gate7-staging.json'), 'utf8'),
 );
 
 const evidenceEnv = {
@@ -37,7 +35,7 @@ function fullSha(value, name) {
   return value;
 }
 
-function safeHttpsUrl(value, name, { allowPath = true } = {}) {
+function safeHttpsUrl(value, name) {
   let url;
   try {
     url = new URL(value);
@@ -47,17 +45,42 @@ function safeHttpsUrl(value, name, { allowPath = true } = {}) {
   if (url.protocol !== 'https:') throw new Error(`${name} must use HTTPS.`);
   if (url.username || url.password) throw new Error(`${name} must not contain embedded credentials.`);
   if (url.search || url.hash) throw new Error(`${name} must not contain query strings or fragments.`);
-  if (!allowPath && url.pathname !== '/' && url.pathname !== '') throw new Error(`${name} must be an origin without a path.`);
   if (['localhost', '127.0.0.1', '::1'].includes(url.hostname)) throw new Error(`${name} must not use a loopback host.`);
   return url;
 }
 
 function evidenceRef(value, name) {
-  const trimmed = value.trim();
+  const trimmed = String(value ?? '').trim();
   if (trimmed.length < 4 || trimmed.length > 500) throw new Error(`${name} must be a bounded evidence reference.`);
   if (/\s/.test(trimmed)) throw new Error(`${name} must not contain whitespace.`);
   if (/^(https:\/\/|gh-run:|artifact:|ticket:|runbook:|change:|incident:|approval:)[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]+$/.test(trimmed)) return trimmed;
   throw new Error(`${name} must be a traceable HTTPS or approved evidence reference (gh-run:, artifact:, ticket:, runbook:, change:, incident:, approval:).`);
+}
+
+function parseEvidenceBundle() {
+  const bundleRaw = (process.env.GATE7_EVIDENCE_JSON ?? '').trim();
+  let bundle = {};
+  if (bundleRaw) {
+    if (Buffer.byteLength(bundleRaw, 'utf8') > 16_384) throw new Error('GATE7_EVIDENCE_JSON exceeds 16 KiB.');
+    try {
+      bundle = JSON.parse(bundleRaw);
+    } catch {
+      throw new Error('GATE7_EVIDENCE_JSON must be valid JSON.');
+    }
+    if (!bundle || typeof bundle !== 'object' || Array.isArray(bundle)) throw new Error('GATE7_EVIDENCE_JSON must be a JSON object.');
+  }
+
+  const evidence = {};
+  const requiredEvidence = new Set(manifest.gate7?.requiredEvidence ?? []);
+  const allowedKeys = new Set(Object.keys(evidenceEnv));
+  for (const key of Object.keys(bundle)) {
+    if (!allowedKeys.has(key)) throw new Error(`GATE7_EVIDENCE_JSON contains unknown evidence category ${key}.`);
+  }
+  for (const [key, envName] of Object.entries(evidenceEnv)) {
+    if (!requiredEvidence.has(key)) throw new Error(`Manifest does not require Gate 7 evidence category ${key}.`);
+    evidence[key] = evidenceRef(bundle[key] ?? process.env[envName], bundleRaw ? `evidence.${key}` : envName);
+  }
+  return evidence;
 }
 
 function joinUrl(base, suffix) {
@@ -116,8 +139,7 @@ async function tlsProbe(url, minimumDays) {
           if (!cert?.valid_to || !cert.fingerprint256) throw new Error('TLS certificate metadata is incomplete.');
           const validTo = new Date(cert.valid_to);
           const remainingMs = validTo.getTime() - Date.now();
-          const minimumMs = minimumDays * 86_400_000;
-          if (!Number.isFinite(validTo.getTime()) || remainingMs < minimumMs) {
+          if (!Number.isFinite(validTo.getTime()) || remainingMs < minimumDays * 86_400_000) {
             throw new Error(`TLS certificate for ${url.hostname} expires too soon (${cert.valid_to}).`);
           }
           resolvePromise({
@@ -156,13 +178,7 @@ const webUrl = safeHttpsUrl(required('WEB_URL'), 'WEB_URL');
 const oidcIssuer = safeHttpsUrl(required('OIDC_ISSUER_URL'), 'OIDC_ISSUER_URL');
 const operationalOwner = required('OPERATIONAL_OWNER');
 if (operationalOwner.length < 3 || operationalOwner.length > 160) throw new Error('OPERATIONAL_OWNER must identify a named release/on-call owner.');
-
-const evidence = {};
-const requiredEvidence = new Set(manifest.gate7?.requiredEvidence ?? []);
-for (const [key, envName] of Object.entries(evidenceEnv)) {
-  if (!requiredEvidence.has(key)) throw new Error(`Manifest does not require Gate 7 evidence category ${key}.`);
-  evidence[key] = evidenceRef(required(envName), envName);
-}
+const evidence = parseEvidenceBundle();
 
 const minimumTlsDays = Number(process.env.GATE7_TLS_MIN_REMAINING_DAYS ?? 14);
 if (!Number.isInteger(minimumTlsDays) || minimumTlsDays < 1 || minimumTlsDays > 90) {
