@@ -6,10 +6,10 @@ DO $$
 DECLARE
   v_tenant uuid;
   v_project uuid;
-  v_allocator_1 uuid;
-  v_allocator_2 uuid;
-  v_buyer_user_1 uuid;
-  v_buyer_user_2 uuid;
+  v_allocator_1 uuid := '51000000-0000-4000-8000-000000000001';
+  v_allocator_2 uuid := '51000000-0000-4000-8000-000000000002';
+  v_buyer_user_1 uuid := '51000000-0000-4000-8000-000000000011';
+  v_buyer_user_2 uuid := '51000000-0000-4000-8000-000000000012';
   v_buyer_1 uuid;
   v_buyer_2 uuid;
   v_policy uuid;
@@ -27,17 +27,11 @@ DECLARE
   v_reservation uuid;
   v_rejected boolean;
 BEGIN
-  INSERT INTO users (display_name, status) VALUES
-    ('Gate5 Allocator One', 'ACTIVE'),
-    ('Gate5 Allocator Two', 'ACTIVE'),
-    ('Gate5 Buyer One', 'ACTIVE'),
-    ('Gate5 Buyer Two', 'ACTIVE')
-  RETURNING id INTO v_allocator_1;
-  -- INSERT ... RETURNING only exposes the last row to a scalar target; resolve the others by name.
-  SELECT id INTO v_allocator_1 FROM users WHERE display_name='Gate5 Allocator One';
-  SELECT id INTO v_allocator_2 FROM users WHERE display_name='Gate5 Allocator Two';
-  SELECT id INTO v_buyer_user_1 FROM users WHERE display_name='Gate5 Buyer One';
-  SELECT id INTO v_buyer_user_2 FROM users WHERE display_name='Gate5 Buyer Two';
+  INSERT INTO users (id, display_name, status) VALUES
+    (v_allocator_1, 'Gate5 Allocator One', 'ACTIVE'),
+    (v_allocator_2, 'Gate5 Allocator Two', 'ACTIVE'),
+    (v_buyer_user_1, 'Gate5 Buyer One', 'ACTIVE'),
+    (v_buyer_user_2, 'Gate5 Buyer Two', 'ACTIVE');
 
   INSERT INTO tenants (code, name, status, default_currency, default_timezone)
   VALUES ('G5-ALLOC', 'Gate 5 Allocation Tenant', 'ACTIVE', 'EGP', 'Africa/Cairo')
@@ -102,14 +96,12 @@ BEGIN
     'CALLED', '2026-01-02T09:01:00+00', '2026-01-02T09:06:00+00', v_allocator_1
   ) RETURNING id INTO v_queue_2;
 
-  -- Oldest called buyer goes to allocator one.
   SELECT preneura_claim_called_queue_entry(v_tenant, v_project, v_allocator_1, '2026-01-02T09:07:00+00')
     INTO v_claimed;
   IF v_claimed IS DISTINCT FROM v_queue_1 THEN
     RAISE EXCEPTION 'allocator one did not claim the oldest called buyer';
   END IF;
 
-  -- A single allocator may not accumulate multiple live buyer sessions.
   v_rejected := false;
   BEGIN
     PERFORM preneura_claim_called_queue_entry(v_tenant, v_project, v_allocator_1, '2026-01-02T09:07:01+00');
@@ -148,7 +140,6 @@ BEGIN
   INSERT INTO inventory_slots (tenant_id, project_id, unit_type_id, state, internal_reference)
   VALUES (v_tenant, v_project, v_unit_type, 'AVAILABLE', 'G5-A2') RETURNING id INTO v_slot_2;
 
-  -- Even the generic inventory-lock INSERT path must reject allocator one locking buyer two.
   v_rejected := false;
   BEGIN
     INSERT INTO inventory_locks (
@@ -174,8 +165,8 @@ BEGIN
       AND allocator_user_id=v_allocator_1
   ) THEN RAISE EXCEPTION 'allocator lock was not bound to queue session'; END IF;
 
-  -- Releasing the lock must reopen the same allocation session rather than losing the buyer.
-  UPDATE inventory_locks SET status='RELEASED', released_at='2026-01-02T09:11:00+00', release_reason='change selection'
+  UPDATE inventory_locks
+  SET status='RELEASED', released_at='2026-01-02T09:11:00+00', release_reason='change selection'
   WHERE id=v_lock_1;
   IF NOT EXISTS (
     SELECT 1 FROM queue_entries WHERE id=v_queue_1 AND status='CALLED' AND allocation_lock_id IS NULL
@@ -187,7 +178,6 @@ BEGIN
   );
   IF v_lock_2 IS NULL THEN RAISE EXCEPTION 'second assigned allocator lock was not created'; END IF;
 
-  -- Another allocator may not convert allocator one's session even with the correct lock ID.
   v_rejected := false;
   BEGIN
     INSERT INTO reservations (
