@@ -70,6 +70,7 @@ function isPlaceholder(value: string): boolean {
   const normalized = value.toLowerCase();
   return (
     normalized.includes('replace-me') ||
+    normalized.includes('replace-with') ||
     normalized.includes('changeme') ||
     normalized.includes('change-me') ||
     normalized.includes('placeholder') ||
