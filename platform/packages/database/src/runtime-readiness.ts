@@ -1,8 +1,8 @@
 import { sql, type Kysely } from 'kysely';
 import type { Database } from './index.js';
 
-export const RUNTIME_SCHEMA_VERSION = 39;
-export const RUNTIME_MIGRATION_MARKER = '0039_eoi_projection_authority_one_shot';
+export const RUNTIME_SCHEMA_VERSION = 40;
+export const RUNTIME_MIGRATION_MARKER = '0040_allocator_assignment_authority';
 
 export type RuntimeReadinessErrorCode =
   | 'DATABASE_UNAVAILABLE'
@@ -40,45 +40,22 @@ export async function assertRuntimeReadiness(
   try {
     await sql`SELECT 1`.execute(db);
   } catch (error) {
-    throw new RuntimeReadinessError(
-      'DATABASE_UNAVAILABLE',
-      'PostgreSQL connectivity check failed.',
-      { cause: error },
-    );
+    throw new RuntimeReadinessError('DATABASE_UNAVAILABLE', 'PostgreSQL connectivity check failed.', { cause: error });
   }
 
-  let row:
-    | {
-        schema_version: number;
-        minimum_runtime_version: number;
-        migration_marker: string;
-      }
-    | undefined;
+  let row: { schema_version: number; minimum_runtime_version: number; migration_marker: string } | undefined;
   try {
-    const result = await sql<{
-      schema_version: number;
-      minimum_runtime_version: number;
-      migration_marker: string;
-    }>`
+    const result = await sql<{ schema_version: number; minimum_runtime_version: number; migration_marker: string }>`
       SELECT schema_version, minimum_runtime_version, migration_marker
       FROM platform_runtime_contract
       WHERE singleton_key = 'production'
     `.execute(db);
     row = result.rows[0];
   } catch (error) {
-    throw new RuntimeReadinessError(
-      'SCHEMA_CONTRACT_MISSING',
-      'Runtime schema contract is not available.',
-      { cause: error },
-    );
+    throw new RuntimeReadinessError('SCHEMA_CONTRACT_MISSING', 'Runtime schema contract is not available.', { cause: error });
   }
 
-  if (!row) {
-    throw new RuntimeReadinessError(
-      'SCHEMA_CONTRACT_MISSING',
-      'Runtime schema contract row is missing.',
-    );
-  }
+  if (!row) throw new RuntimeReadinessError('SCHEMA_CONTRACT_MISSING', 'Runtime schema contract row is missing.');
 
   if (row.schema_version < RUNTIME_SCHEMA_VERSION) {
     throw new RuntimeReadinessError(
@@ -94,10 +71,7 @@ export async function assertRuntimeReadiness(
     );
   }
 
-  if (
-    row.schema_version === RUNTIME_SCHEMA_VERSION &&
-    row.migration_marker !== RUNTIME_MIGRATION_MARKER
-  ) {
+  if (row.schema_version === RUNTIME_SCHEMA_VERSION && row.migration_marker !== RUNTIME_MIGRATION_MARKER) {
     throw new RuntimeReadinessError(
       'SCHEMA_CONTRACT_MISMATCH',
       `Runtime schema ${RUNTIME_SCHEMA_VERSION} does not match migration marker ${RUNTIME_MIGRATION_MARKER}.`,
