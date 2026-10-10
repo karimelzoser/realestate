@@ -5,36 +5,44 @@
   "planningBranch": "plan/egypt-platform-completion",
   "integrationBranch": "completion/egypt-full-platform",
   "taskBranch": "task/e01-tenant-lifecycle",
+  "taskPr": 86,
   "observedHeadBeforeCheckpoint": "23cba476f37b9b53d461e30503f9fdfef2198282",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "taskImplementationHead": "9281d02040293778675b38a71c43f698aa2aad22",
+  "taskImplementationHead": "4a9aa771d8759c261c6bc5d010ec3a91d8e95a25",
   "activeTaskId": "E01.1",
   "activeTaskStatus": "IMPLEMENTED",
-  "completedCheckpoint": "E00 integrated; E01.1 lifecycle policy and emitted-stack regression implemented on focused task branch; validation pending",
-  "nextAction": "Open a draft PR from task/e01-tenant-lifecycle to completion/egypt-full-platform; run full-stack acceptance and production foundation; diagnose any lifecycle/type/runtime failures before marking TESTED",
+  "completedCheckpoint": "E00 integrated; E01.1 lifecycle policy, workspace lifecycle filtering and emitted-stack regression implemented; prior CI harness/strict-TS defects fixed; exact-head validation rerunning",
+  "nextAction": "Inspect PR #86 workflows for 4a9aa771; require Production Platform Foundation, Full Stack Acceptance, Gate 5 Full Role Parity and Gate 5 Broker Roles to pass before marking E01.1 TESTED; fix only concrete failures",
   "changedFiles": [
     "platform/apps/api/src/access/access-lifecycle.service.ts",
     "platform/apps/api/src/access/access.service.ts",
     "platform/apps/api/src/access/access.module.ts",
+    "platform/apps/api/src/access/access.repository.ts",
     "platform/packages/database/tests/full_stack_acceptance.mjs"
   ],
   "commandsAndResults": [
     {"action":"verify planning/candidate/demo authority","result":"planning 446cfe4 parent c2746523; main 1a6e61c"},
     {"action":"create integration branch","result":"completion/egypt-full-platform created and control ledger persisted"},
-    {"action":"inspect access path","result":"workspace filters tenant lifecycle but listActiveAssignments/access decisions did not enforce tenant membership, tenant status or project lifecycle"},
-    {"action":"implement E01.1 first increment","result":"central lifecycle service now participates in AccessService decisions; full-stack regression mutates tenant/membership/project lifecycle using an existing session"}
+    {"action":"inspect access path","result":"direct AccessService decisions did not enforce tenant membership, tenant status, broker-company status or project lifecycle"},
+    {"action":"implement lifecycle guard","result":"central AccessLifecycleService now gates normal assignments and platform support reads"},
+    {"action":"align workspace context","result":"suspended tenant memberships and inactive broker-company assignments are removed from /me/workspace"},
+    {"action":"first PR CI","result":"foundation initially passed on 9281d020; Gate 5 scripts failed because manual AccessService construction omitted lifecycle dependency"},
+    {"action":"certification compatibility fix","result":"PostgresAccessRepository binds the same lifecycle evaluator; AccessService uses injected or repository-bound policy and fails closed otherwise"},
+    {"action":"strict TypeScript fix","result":"added required override modifier; exact head 4a9aa771 queued for full validation"}
   ],
   "evidencePaths": [
     "platform/apps/api/src/access/access-lifecycle.service.ts",
     "platform/apps/api/src/access/access.service.ts",
+    "platform/apps/api/src/access/access.repository.ts",
     "platform/packages/database/tests/full_stack_acceptance.mjs",
-    "docs/production-completion/PROGRESS.md"
+    "https://github.com/karimelzoser/realestate/pull/86"
   ],
   "remainingTests": [
-    "Full Stack Acceptance Certification on task implementation SHA",
-    "Production Platform Foundation/typecheck/build on task implementation SHA",
-    "Review project DRAFT/PAUSED/CLOSED policy against affected existing role tests"
+    "Production Platform Foundation on 4a9aa771",
+    "Full Stack Acceptance Certification on 4a9aa771",
+    "Gate 5 Full Role Parity Certification on 4a9aa771",
+    "Gate 5 Broker Roles Certification on 4a9aa771"
   ],
   "externalBlockerIds": [
     "DEPLOYMENT_DEFERRED",
