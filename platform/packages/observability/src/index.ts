@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { metrics, SpanStatusCode, trace } from '@opentelemetry/api';
 import pino, { type Logger } from 'pino';
 
@@ -7,11 +8,38 @@ const REDACT_PATHS = [
   '*.authorization','*.cookie','*.password','*.secret','*.token','*.otp','*.nationalId','*.national_id','*.phone','*.email','*.destination',
 ];
 
+const CORRELATION_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 const meter = metrics.getMeter('preneura-runtime', '1.0.0');
 const tracer = trace.getTracer('preneura-runtime', '1.0.0');
-const workerLoopDuration = meter.createHistogram('preneura.worker.loop.duration', { description: 'Worker loop execution duration.', unit: 'ms' });
-const workerLoopProcessed = meter.createCounter('preneura.worker.loop.processed', { description: 'Records processed by worker loops.', unit: '{record}' });
-const workerLoopFailures = meter.createCounter('preneura.worker.loop.failures', { description: 'Failed worker loop executions.', unit: '{failure}' });
+
+const httpRequests = meter.createCounter('preneura.api.http.requests', {
+  description: 'Completed PRENEURA API requests.',
+  unit: '{request}',
+});
+const httpDuration = meter.createHistogram('preneura.api.http.duration', {
+  description: 'PRENEURA API request duration.',
+  unit: 'ms',
+});
+const readinessFailures = meter.createCounter('preneura.api.readiness.failures', {
+  description: 'Failed API readiness checks.',
+  unit: '{failure}',
+});
+const workerLoopDuration = meter.createHistogram('preneura.worker.loop.duration', {
+  description: 'Worker loop execution duration.',
+  unit: 'ms',
+});
+const workerLoopProcessed = meter.createCounter('preneura.worker.loop.processed', {
+  description: 'Records processed by worker loops.',
+  unit: '{record}',
+});
+const workerLoopFailures = meter.createCounter('preneura.worker.loop.failures', {
+  description: 'Failed worker loop executions.',
+  unit: '{failure}',
+});
+const workerLoopRuns = meter.createCounter('preneura.worker.loop.runs', {
+  description: 'Worker loop executions, including empty successful runs.',
+  unit: '{run}',
+});
 
 export function createLogger(service: string, bindings: Record<string, unknown> = {}): Logger {
   return pino({
@@ -25,6 +53,13 @@ export function createLogger(service: string, bindings: Record<string, unknown> 
       return context.traceId && context.spanId ? { traceId: context.traceId, spanId: context.spanId } : {};
     },
   });
+}
+
+export function resolveCorrelationId(value: unknown): string {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return typeof candidate === 'string' && CORRELATION_ID_PATTERN.test(candidate)
+    ? candidate
+    : randomUUID();
 }
 
 export function annotateActiveSpan(attributes: Record<string, string | number | boolean>): void {
@@ -44,8 +79,8 @@ export async function withRuntimeSpan<T>(
       span.setStatus({ code: SpanStatusCode.OK });
       return result;
     } catch (error) {
-      if (error instanceof Error) span.recordException(error);
-      span.setStatus({ code: SpanStatusCode.ERROR, message: error instanceof Error ? error.message.slice(0, 500) : 'runtime operation failed' });
+      span.setAttribute('error.type', error instanceof Error ? error.name : 'UnknownError');
+      span.setStatus({ code: SpanStatusCode.ERROR, message: 'runtime operation failed' });
       throw error;
     } finally {
       span.end();
@@ -53,9 +88,42 @@ export async function withRuntimeSpan<T>(
   });
 }
 
-export function recordWorkerLoop(input: { loop: string; durationMs: number; processed: number; success: boolean }): void {
-  const attributes = { 'preneura.worker.loop': input.loop };
+export function recordHttpRequest(input: {
+  method: string;
+  route: string;
+  statusCode: number;
+  durationMs: number;
+}): void {
+  const attributes = {
+    'http.request.method': input.method,
+    'http.route': input.route,
+    'http.response.status_code_class': `${Math.floor(input.statusCode / 100)}xx`,
+  };
+  httpRequests.add(1, attributes);
+  httpDuration.record(input.durationMs, attributes);
+}
+
+export function recordReadinessFailure(code: string): void {
+  readinessFailures.add(1, { 'preneura.readiness.code': boundedLabel(code) });
+}
+
+export function recordWorkerLoop(input: {
+  loop: string;
+  durationMs: number;
+  processed: number;
+  success: boolean;
+}): void {
+  const attributes = { 'preneura.worker.loop': boundedLabel(input.loop) };
+  workerLoopRuns.add(1, attributes);
   workerLoopDuration.record(input.durationMs, attributes);
   if (input.processed > 0) workerLoopProcessed.add(input.processed, attributes);
   if (!input.success) workerLoopFailures.add(1, attributes);
+}
+
+export function safeErrorType(error: unknown): string {
+  return error instanceof Error ? boundedLabel(error.name || 'Error') : 'UnknownError';
+}
+
+function boundedLabel(value: string): string {
+  return value.replace(/[^A-Za-z0-9_.:-]/g, '_').slice(0, 80) || 'unknown';
 }
