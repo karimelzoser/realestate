@@ -1,0 +1,194 @@
+name: Full Stack Acceptance Certification
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - "platform/apps/api/**"
+      - "platform/apps/web/**"
+      - "platform/apps/worker/**"
+      - "platform/apps/notification-gateway/**"
+      - "platform/packages/contracts/**"
+      - "platform/packages/database/**"
+      - "platform/packages/security/**"
+      - "platform/packages/observability/**"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/full-stack-acceptance-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/apps/api/**"
+      - "platform/apps/web/**"
+      - "platform/apps/worker/**"
+      - "platform/apps/notification-gateway/**"
+      - "platform/packages/contracts/**"
+      - "platform/packages/database/**"
+      - "platform/packages/security/**"
+      - "platform/packages/observability/**"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/full-stack-acceptance-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  emitted-full-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Build emitted production applications
+        working-directory: platform
+        env:
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:4100
+        run: |
+          set -euo pipefail
+          pnpm --filter @preneura/api... build
+          pnpm --filter @preneura/worker... build
+          pnpm --filter @preneura/notification-gateway... build
+          pnpm --filter @preneura/web... build
+
+      - name: Migrate and seed shared acceptance database
+        working-directory: platform
+        env:
+          PGPASSWORD: postgres
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_acceptance
+        run: |
+          set -euo pipefail
+          createdb -h 127.0.0.1 -U postgres preneura_acceptance
+          MIGRATION_ACTOR=full-stack-acceptance pnpm --filter @preneura/database migrate
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/database/tests/full_stack_acceptance_seed.sql
+
+      - name: Start emitted API, gateway, worker and web
+        working-directory: platform
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_acceptance
+          OBJECT_STORAGE_BUCKET: acceptance-private-bucket
+          NOTIFICATION_GATEWAY_TOKEN: 0123456789abcdef0123456789abcdef
+          NOTIFICATION_GATEWAY_URL: http://127.0.0.1:4300/deliver
+          INVENTORY_LOCK_EXPIRY_SCAN_MS: 100
+          INVENTORY_LOCK_EXPIRY_BATCH_SIZE: 500
+          OUTBOX_POLL_MS: 100
+          NOTIFICATION_POLL_MS: 100
+          SLA_SCAN_MS: 60000
+          INSTALLMENT_REMINDER_SCAN_MS: 60000
+          COMMISSION_DUE_SCAN_MS: 60000
+          CONTACT_ENCRYPTION_KEY_BASE64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          OTEL_TRACES_EXPORTER: none
+          OTEL_METRICS_EXPORTER: none
+        run: |
+          set -Eeuo pipefail
+          rm -f /tmp/preneura-api.log /tmp/preneura-gateway.log /tmp/preneura-worker.log /tmp/preneura-web.log
+
+          NODE_ENV=test PORT=4100 WEB_ORIGIN=http://127.0.0.1:3000 \
+            pnpm --filter @preneura/api start >/tmp/preneura-api.log 2>&1 &
+          echo $! >/tmp/preneura-api.pid
+
+          NODE_ENV=test PORT=4300 \
+            pnpm --filter @preneura/notification-gateway start >/tmp/preneura-gateway.log 2>&1 &
+          echo $! >/tmp/preneura-gateway.pid
+
+          NODE_ENV=test \
+            pnpm --filter @preneura/worker start >/tmp/preneura-worker.log 2>&1 &
+          echo $! >/tmp/preneura-worker.pid
+
+          NODE_ENV=production PORT=3000 NEXT_PUBLIC_API_URL=http://127.0.0.1:4100 \
+            pnpm --filter @preneura/web start >/tmp/preneura-web.log 2>&1 &
+          echo $! >/tmp/preneura-web.pid
+
+          wait_http() {
+            local url="$1"
+            local pid_file="$2"
+            local log_file="$3"
+            for _ in $(seq 1 60); do
+              if curl --silent --fail "$url" >/dev/null 2>&1; then
+                return 0
+              fi
+              if ! kill -0 "$(cat "$pid_file")" 2>/dev/null; then
+                cat "$log_file"
+                return 1
+              fi
+              sleep 0.5
+            done
+            cat "$log_file"
+            return 1
+          }
+
+          wait_http http://127.0.0.1:4100/v1/health/ready /tmp/preneura-api.pid /tmp/preneura-api.log
+          wait_http http://127.0.0.1:4300/health /tmp/preneura-gateway.pid /tmp/preneura-gateway.log
+          wait_http http://127.0.0.1:3000/login /tmp/preneura-web.pid /tmp/preneura-web.log
+
+          for _ in $(seq 1 60); do
+            if grep -q 'worker.ready' /tmp/preneura-worker.log; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/preneura-worker.pid)" 2>/dev/null; then
+              cat /tmp/preneura-worker.log
+              exit 1
+            fi
+            sleep 0.5
+          done
+          cat /tmp/preneura-worker.log
+          exit 1
+
+      - name: Certify cross-process authorization and durability
+        working-directory: platform
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_acceptance
+          ACCEPTANCE_API_URL: http://127.0.0.1:4100
+          ACCEPTANCE_WEB_URL: http://127.0.0.1:3000
+          ACCEPTANCE_GATEWAY_URL: http://127.0.0.1:4300
+        run: node packages/database/tests/full_stack_acceptance.mjs
+
+      - name: Dump service logs on failure
+        if: failure()
+        run: |
+          for file in /tmp/preneura-api.log /tmp/preneura-gateway.log /tmp/preneura-worker.log /tmp/preneura-web.log; do
+            echo "===== $file ====="
+            cat "$file" 2>/dev/null || true
+          done
+
+      - name: Stop emitted services
+        if: always()
+        run: |
+          for file in /tmp/preneura-api.pid /tmp/preneura-gateway.pid /tmp/preneura-worker.pid /tmp/preneura-web.pid; do
+            if [[ -f "$file" ]]; then
+              kill "$(cat "$file")" 2>/dev/null || true
+            fi
+          done

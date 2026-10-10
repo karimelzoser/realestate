@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Post,
   Req,
   Res,
@@ -70,6 +72,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @HttpCode(HttpStatus.OK)
   async logout(
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
