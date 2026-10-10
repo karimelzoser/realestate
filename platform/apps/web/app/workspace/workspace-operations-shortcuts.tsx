@@ -18,6 +18,7 @@ export default function WorkspaceOperationsShortcuts() {
   const [showCommissions, setShowCommissions] = useState(false);
   const [showReminders, setShowReminders] = useState(false);
   const [showAi, setShowAi] = useState(false);
+  const [showExports, setShowExports] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +53,7 @@ export default function WorkspaceOperationsShortcuts() {
           roleHasPermission(role, 'ai.manager.use') ||
           roleHasPermission(role, 'ai.settings.manage'),
         )));
+        setShowExports(workspace.projects.length > 0);
       })
       .catch(() => undefined);
     return () => {
@@ -59,7 +61,7 @@ export default function WorkspaceOperationsShortcuts() {
     };
   }, []);
 
-  if (!showAdmin && !showProjectSetup && !showAccounts && !showRefunds && !showDocumentPolicy && !showDocumentTemplates && !showCommissions && !showReminders && !showAi) return null;
+  if (!showAdmin && !showProjectSetup && !showAccounts && !showRefunds && !showDocumentPolicy && !showDocumentTemplates && !showCommissions && !showReminders && !showAi && !showExports) return null;
 
   return (
     <nav className={styles.shortcuts} aria-label="Additional operations">
@@ -71,6 +73,7 @@ export default function WorkspaceOperationsShortcuts() {
       {showRefunds ? <a href="/workspace/refunds">Refunds</a> : null}
       {showCommissions ? <a href="/workspace/commissions">Commissions</a> : null}
       {showReminders ? <a href="/workspace/reminders">Reminders</a> : null}
+      {showExports ? <a href="/workspace/exports">Exports</a> : null}
       {showDocumentPolicy ? <a href="/workspace/document-requirements">Document policy</a> : null}
       {showDocumentTemplates ? <a href="/workspace/document-templates">Templates</a> : null}
     </nav>
