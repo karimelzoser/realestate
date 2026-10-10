@@ -10,6 +10,7 @@ on:
       - 'docs/PRODUCTION_DELIVERY_GATES.md'
       - '.github/workflows/full-stack-acceptance-certification.yml'
       - '.github/workflows/selfhosted-deployment-certification.yml'
+      - '.github/workflows/gate7-evidence-contract.yml'
       - '.github/workflows/gate7-go-no-go.yml'
   pull_request:
     paths:
@@ -17,6 +18,7 @@ on:
       - 'docs/PRODUCTION_DELIVERY_GATES.md'
       - '.github/workflows/full-stack-acceptance-certification.yml'
       - '.github/workflows/selfhosted-deployment-certification.yml'
+      - '.github/workflows/gate7-evidence-contract.yml'
       - '.github/workflows/gate7-go-no-go.yml'
   workflow_dispatch:
     inputs:
