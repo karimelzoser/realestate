@@ -9,12 +9,14 @@ on:
       - 'platform/**'
       - 'docs/PRODUCTION_DELIVERY_GATES.md'
       - '.github/workflows/full-stack-acceptance-certification.yml'
+      - '.github/workflows/selfhosted-deployment-certification.yml'
       - '.github/workflows/gate7-go-no-go.yml'
   pull_request:
     paths:
       - 'platform/**'
       - 'docs/PRODUCTION_DELIVERY_GATES.md'
       - '.github/workflows/full-stack-acceptance-certification.yml'
+      - '.github/workflows/selfhosted-deployment-certification.yml'
       - '.github/workflows/gate7-go-no-go.yml'
   workflow_dispatch:
     inputs:
@@ -24,55 +26,34 @@ on:
         required: true
         default: false
       deployed_release_sha:
-        description: 'Exact Real Estate runtime commit deployed to all PRENEURA application services'
+        description: 'Exact certified deployment-bundle Git SHA running in production'
         type: string
         required: false
       api_url:
-        description: 'Deployed API HTTPS origin, e.g. https://api.example.com'
+        description: 'Public API HTTPS base. Use https://host/api when API is behind PRENEURA edge, or a direct API origin.'
         type: string
         required: false
       web_url:
-        description: 'Deployed web HTTPS origin'
+        description: 'Public PRENEURA web HTTPS origin'
         type: string
         required: false
       oidc_issuer_url:
-        description: 'Production OIDC issuer HTTPS URL'
+        description: 'Production OIDC issuer HTTPS URL, including realm path when applicable'
         type: string
         required: false
       operational_owner:
         description: 'Named on-call/release operational owner'
         type: string
         required: false
-      integrations_verified:
-        description: 'Production provider credentials/endpoints verified (Google/OIDC, messaging, scanner, finance/settlement as applicable)'
-        type: boolean
+      evidence_json:
+        description: 'JSON object containing all 12 Gate 7 evidence references (HTTPS or approved ref prefixes); never place credentials here'
+        type: string
         required: false
-        default: false
-      backup_restore_verified:
-        description: 'Backup/restore evidence reviewed for this release'
-        type: boolean
+      tls_min_remaining_days:
+        description: 'Minimum remaining validity required for public TLS certificates'
+        type: number
         required: false
-        default: false
-      monitoring_alerts_live:
-        description: 'Monitoring dashboards and alerts are live'
-        type: boolean
-        required: false
-        default: false
-      rollback_validated:
-        description: 'Rollback/cutover path rehearsed and validated'
-        type: boolean
-        required: false
-        default: false
-      migration_rehearsal_complete:
-        description: 'Migration rehearsal completed against production-like data/topology'
-        type: boolean
-        required: false
-        default: false
-      self_hosted_topology_verified:
-        description: 'Linux host/container topology, TLS, reverse proxy, private network boundaries and process supervision verified'
-        type: boolean
-        required: false
-        default: false
+        default: 14
 
 permissions:
   contents: read
@@ -86,14 +67,21 @@ jobs:
   full-stack-acceptance:
     uses: ./.github/workflows/full-stack-acceptance-certification.yml
 
+  self-hosted-deployment:
+    uses: ./.github/workflows/selfhosted-deployment-certification.yml
+
   structural-preflight:
-    needs: full-stack-acceptance
+    needs:
+      - full-stack-acceptance
+      - self-hosted-deployment
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: platform
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: ${{ env.PNPM_VERSION }}
@@ -126,76 +114,50 @@ jobs:
     needs: structural-preflight
     runs-on: ubuntu-latest
     environment: production
+    defaults:
+      run:
+        working-directory: platform
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate release attestations
+      - name: Evaluate live Gate 7 evidence
         env:
           DEPLOYED_RELEASE_SHA: ${{ inputs.deployed_release_sha }}
           API_URL: ${{ inputs.api_url }}
           WEB_URL: ${{ inputs.web_url }}
           OIDC_ISSUER_URL: ${{ inputs.oidc_issuer_url }}
           OPERATIONAL_OWNER: ${{ inputs.operational_owner }}
-          INTEGRATIONS_VERIFIED: ${{ inputs.integrations_verified }}
-          BACKUP_RESTORE_VERIFIED: ${{ inputs.backup_restore_verified }}
-          MONITORING_ALERTS_LIVE: ${{ inputs.monitoring_alerts_live }}
-          ROLLBACK_VALIDATED: ${{ inputs.rollback_validated }}
-          MIGRATION_REHEARSAL_COMPLETE: ${{ inputs.migration_rehearsal_complete }}
-          SELF_HOSTED_TOPOLOGY_VERIFIED: ${{ inputs.self_hosted_topology_verified }}
+          GATE7_EVIDENCE_JSON: ${{ inputs.evidence_json }}
+          GATE7_TLS_MIN_REMAINING_DAYS: ${{ inputs.tls_min_remaining_days }}
+          REPORT_PATH: gate7-live-evidence.json
+        run: node scripts/certify-gate7-live.mjs
+
+      - name: Publish evidence summary
         run: |
-          set -euo pipefail
-          for name in DEPLOYED_RELEASE_SHA API_URL WEB_URL OIDC_ISSUER_URL OPERATIONAL_OWNER; do
-            value="${!name:-}"
-            if [ -z "$value" ]; then echo "$name is required for final Gate 7 certification." >&2; exit 1; fi
-          done
+          node --input-type=module <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          import { readFileSync } from 'node:fs';
+          const report = JSON.parse(readFileSync('gate7-live-evidence.json', 'utf8'));
+          console.log('# Gate 7 live certification');
+          console.log('');
+          console.log(`**Decision:** ${report.decision}`);
+          console.log(`**Certified bundle:** \`${report.release.certifiedBundleSha}\``);
+          console.log(`**Application runtime:** \`${report.release.applicationRuntimeSha}\``);
+          console.log(`**Runtime schema:** ${report.release.runtimeSchemaVersion}`);
+          console.log(`**Operational owner:** ${report.environment.operationalOwner}`);
+          console.log(`**API:** ${report.environment.apiUrl}`);
+          console.log(`**Web:** ${report.environment.webUrl}`);
+          console.log(`**OIDC:** ${report.environment.oidcIssuer}`);
+          console.log('');
+          console.log('All required evidence categories were supplied as traceable references and all live DNS/TLS/API/Web/OIDC probes passed.');
+          NODE
 
-          expected_release_sha="$(node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('platform/ops/selfhosted-gate7-staging.json','utf8')); process.stdout.write(m.releaseSha);")"
-          if [ "$DEPLOYED_RELEASE_SHA" != "$expected_release_sha" ]; then
-            echo "Deployed Real Estate SHA $DEPLOYED_RELEASE_SHA does not match certified candidate $expected_release_sha." >&2
-            exit 1
-          fi
-          case "$DEPLOYED_RELEASE_SHA" in
-            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
-            *) echo 'DEPLOYED_RELEASE_SHA must be a full 40-character lowercase Git SHA.' >&2; exit 1 ;;
-          esac
-
-          for name in INTEGRATIONS_VERIFIED BACKUP_RESTORE_VERIFIED MONITORING_ALERTS_LIVE ROLLBACK_VALIDATED MIGRATION_REHEARSAL_COMPLETE SELF_HOSTED_TOPOLOGY_VERIFIED; do
-            value="${!name:-false}"
-            if [ "$value" != 'true' ]; then echo "$name must be explicitly attested true." >&2; exit 1; fi
-          done
-          for name in API_URL WEB_URL OIDC_ISSUER_URL; do
-            value="${!name}"
-            case "$value" in https://*) ;; *) echo "$name must use HTTPS." >&2; exit 1;; esac
-          done
-
-      - name: Probe deployed API liveness/readiness
-        env:
-          API_URL: ${{ inputs.api_url }}
-        run: |
-          set -euo pipefail
-          api="${API_URL%/}"
-          curl --fail --silent --show-error --max-time 15 "$api/v1/health/live" | tee /tmp/live.json
-          curl --fail --silent --show-error --max-time 15 "$api/v1/health/ready" | tee /tmp/ready.json
-          grep -q '"status":"ok"' /tmp/live.json
-          grep -q '"status":"ok"' /tmp/ready.json
-
-      - name: Probe deployed web
-        env:
-          WEB_URL: ${{ inputs.web_url }}
-        run: |
-          set -euo pipefail
-          curl --fail --silent --show-error --location --max-time 20 --output /tmp/web.html "${WEB_URL%/}/"
-          test -s /tmp/web.html
-
-      - name: Probe OIDC discovery
-        env:
-          OIDC_ISSUER_URL: ${{ inputs.oidc_issuer_url }}
-        run: |
-          set -euo pipefail
-          issuer="${OIDC_ISSUER_URL%/}"
-          curl --fail --silent --show-error --max-time 15 "$issuer/.well-known/openid-configuration" | tee /tmp/oidc.json
-          grep -q '"issuer"' /tmp/oidc.json
-          grep -q '"jwks_uri"' /tmp/oidc.json
+      - name: Upload immutable Gate 7 evidence report
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate7-live-evidence-${{ github.run_id }}
+          path: platform/gate7-live-evidence.json
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Gate 7 decision
         env:
@@ -205,5 +167,6 @@ jobs:
           echo 'GATE7_FINAL_DECISION=GO'
           echo 'DEPLOYMENT_MODE=self-hosted'
           echo "OPERATIONAL_OWNER=$OPERATIONAL_OWNER"
-          echo "DEPLOYED_RELEASE_SHA=$DEPLOYED_RELEASE_SHA"
+          echo "DEPLOYED_BUNDLE_SHA=$DEPLOYED_RELEASE_SHA"
           echo "CERTIFICATION_WORKFLOW_SHA=$GITHUB_SHA"
+          echo "EVIDENCE_ARTIFACT=gate7-live-evidence-$GITHUB_RUN_ID"
