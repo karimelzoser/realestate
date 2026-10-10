@@ -18,6 +18,7 @@
     "./pricing-quote": { "types": "./src/pricing-quote.ts", "default": "./dist/pricing-quote.js" },
     "./sales": { "types": "./src/sales.ts", "default": "./dist/sales.js" },
     "./allocation": { "types": "./src/allocation.ts", "default": "./dist/allocation.js" },
+    "./transaction-operations": { "types": "./src/transaction-operations.ts", "default": "./dist/transaction-operations.js" },
     "./documents": { "types": "./src/documents.ts", "default": "./dist/documents.js" },
     "./contract-execution": { "types": "./src/contract-execution.ts", "default": "./dist/contract-execution.js" },
     "./finance": { "types": "./src/finance.ts", "default": "./dist/finance.js" },
