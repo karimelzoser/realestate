@@ -124,7 +124,7 @@ jobs:
           COMMON_DB=postgresql://postgres:postgres@127.0.0.1:5432/preneura_current
           COMMON_TOKEN=0123456789abcdef0123456789abcdef
           CONTACT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-          EXPECTED_SCHEMA_VERSION=40
+          EXPECTED_SCHEMA_VERSION=41
 
           NODE_ENV=production \
           PORT=4120 \
@@ -173,6 +173,8 @@ jobs:
           DATABASE_URL="$COMMON_DB" \
           NOTIFICATION_GATEWAY_URL=http://notification-gateway.internal/v1/notifications \
           NOTIFICATION_GATEWAY_TOKEN="$COMMON_TOKEN" \
+          INVENTORY_LOCK_EXPIRY_SCAN_MS=1000 \
+          INVENTORY_LOCK_EXPIRY_BATCH_SIZE=500 \
           OUTBOX_POLL_MS=300 \
           NOTIFICATION_POLL_MS=1000 \
           SLA_SCAN_MS=30000 \
