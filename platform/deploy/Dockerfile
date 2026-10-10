@@ -51,4 +51,4 @@ EXPOSE 3000
 CMD ["pnpm", "--filter", "@preneura/web", "start"]
 
 FROM runtime-base AS migrate
-ENTRYPOINT ["pnpm", "--filter", "@preneura/database", "migrate"]
+ENTRYPOINT ["sh", "-c", "node packages/database/scripts/wait-for-database.mjs && exec pnpm --filter @preneura/database migrate"]
