@@ -1,0 +1,293 @@
+{
+  "schemaVersion": 1,
+  "stage": "PLAN_PREPARED_IMPLEMENTATION_NOT_STARTED",
+  "planningBranch": "plan/egypt-platform-completion",
+  "intendedIntegrationBranch": "completion/egypt-full-platform",
+  "baselineProductionSha": "c2746523eb434898cbb4c46cf5df452d122ba78f",
+  "epics": [
+    {
+      "id": "E00",
+      "title": "Repository authority and interruption-safe execution",
+      "dependencies": [],
+      "status": "NOT_STARTED",
+      "planSection": "E00",
+      "acceptanceReference": "PLAN.md, section 6, E00",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E01",
+      "title": "Security, release and testing defect closure",
+      "dependencies": [
+        "E00"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E01",
+      "acceptanceReference": "PLAN.md, section 6, E01",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E02",
+      "title": "Egypt identity and Arabic/English foundations",
+      "dependencies": [
+        "E01"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E02",
+      "acceptanceReference": "PLAN.md, section 6, E02",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E03",
+      "title": "Developer/brokerage onboarding",
+      "dependencies": [
+        "E01",
+        "E02"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E03",
+      "acceptanceReference": "PLAN.md, section 6, E03",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E04",
+      "title": "Catalog, exact physical inventory, assets and pricing",
+      "dependencies": [
+        "E03"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E04",
+      "acceptanceReference": "PLAN.md, section 6, E04",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E05",
+      "title": "Public buyer journey and apartment-type EOI",
+      "dependencies": [
+        "E02",
+        "E03",
+        "E04"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E05",
+      "acceptanceReference": "PLAN.md, section 6, E05",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E06",
+      "title": "Shared queue and allocation sessions",
+      "dependencies": [
+        "E05"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E06",
+      "acceptanceReference": "PLAN.md, section 6, E06",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E07",
+      "title": "Exact-apartment selection and locking",
+      "dependencies": [
+        "E04",
+        "E06"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E07",
+      "acceptanceReference": "PLAN.md, section 6, E07",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E08",
+      "title": "Short/extended grace and operator decisions",
+      "dependencies": [
+        "E07"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E08",
+      "acceptanceReference": "PLAN.md, section 6, E08",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E09",
+      "title": "Payments, installments, cheques and reconciliation",
+      "dependencies": [
+        "E05",
+        "E07"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E09",
+      "acceptanceReference": "PLAN.md, section 6, E09",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E10",
+      "title": "Documents, generated contracts and signing",
+      "dependencies": [
+        "E07",
+        "E09"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E10",
+      "acceptanceReference": "PLAN.md, section 6, E10",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E11",
+      "title": "Full My Property, receipts, updates and support",
+      "dependencies": [
+        "E09",
+        "E10"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E11",
+      "acceptanceReference": "PLAN.md, section 6, E11",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E12",
+      "title": "Brokerage and developer control rooms",
+      "dependencies": [
+        "E03",
+        "E08",
+        "E09",
+        "E10",
+        "E11"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E12",
+      "acceptanceReference": "PLAN.md, section 6, E12",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E13",
+      "title": "Messaging, reminders and delivery lifecycle",
+      "dependencies": [
+        "E01",
+        "E02",
+        "E09"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E13",
+      "acceptanceReference": "PLAN.md, section 6, E13",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E14",
+      "title": "English voice and safe advisory AI",
+      "dependencies": [
+        "E01",
+        "E04",
+        "E07"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E14",
+      "acceptanceReference": "PLAN.md, section 6, E14",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E15",
+      "title": "Demo parity and complete browser acceptance",
+      "dependencies": [
+        "E08",
+        "E10",
+        "E11",
+        "E12",
+        "E13",
+        "E14"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E15",
+      "acceptanceReference": "PLAN.md, section 6, E15",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E16",
+      "title": "Containers, operations and deployment package",
+      "dependencies": [
+        "E00",
+        "E01"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E16",
+      "acceptanceReference": "PLAN.md, section 6, E16",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    },
+    {
+      "id": "E17",
+      "title": "Final security/load/recovery/software readiness",
+      "dependencies": [
+        "E15",
+        "E16"
+      ],
+      "status": "NOT_STARTED",
+      "planSection": "E17",
+      "acceptanceReference": "PLAN.md, section 6, E17",
+      "implementationCommits": [],
+      "evidence": [],
+      "owner": "execution-agent with domain/review owners as needed"
+    }
+  ],
+  "initialTasks": [
+    {
+      "id": "E00.1",
+      "title": "Reverify planning/candidate heads and create or recover completion integration branch",
+      "status": "NOT_STARTED",
+      "dependencies": []
+    },
+    {
+      "id": "E00.2",
+      "title": "Validate controls, expand implementation task ledger and record resume checkpoint",
+      "status": "NOT_STARTED",
+      "dependencies": [
+        "E00.1"
+      ]
+    },
+    {
+      "id": "E01.1",
+      "title": "Reproduce and repair direct-request tenant lifecycle enforcement",
+      "status": "NOT_STARTED",
+      "dependencies": [
+        "E00.2"
+      ]
+    }
+  ],
+  "deferredStage": {
+    "id": "DEPLOY-LIVE",
+    "status": "DEPLOYMENT_DEFERRED",
+    "reason": "User requires software and deployment-package completion before server deployment",
+    "deploymentAuthorized": false
+  }
+}
