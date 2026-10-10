@@ -84,18 +84,25 @@ jobs:
           grep -q '"status":"ready"' /tmp/api-ready.json || fail 'API readiness payload is not ready'
           grep -qi '<html' /tmp/login.html || fail 'web login response is not HTML'
 
-          [[ -z "$("${compose[@]}" port api 4100 2>/dev/null || true)" ]] || fail 'API port is published to the host'
-          [[ -z "$("${compose[@]}" port web 3000 2>/dev/null || true)" ]] || fail 'web port is published to the host'
-          [[ -z "$("${compose[@]}" port notification-gateway 4300 2>/dev/null || true)" ]] || fail 'notification gateway port is published to the host'
-          edge_binding="$("${compose[@]}" port edge 8080 2>/dev/null || true)"
-          [[ -n "$edge_binding" ]] || fail 'edge port is not published'
-
           for service in api worker notification-gateway web migrate; do
             container_id="$("${compose[@]}" ps --all -q "$service")"
             [[ -n "$container_id" ]] || fail "$service container is missing"
+
             container_user="$(docker inspect --format '{{.Config.User}}' "$container_id")"
             [[ "$container_user" == "node" ]] || fail "$service container user is '$container_user', expected 'node'"
+
+            case "$service" in
+              api|web|notification-gateway)
+                port_bindings="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$container_id")"
+                [[ "$port_bindings" == "null" || "$port_bindings" == "{}" ]] || fail "$service has host port bindings: $port_bindings"
+                ;;
+            esac
           done
+
+          edge_id="$("${compose[@]}" ps --all -q edge)"
+          [[ -n "$edge_id" ]] || fail 'edge container is missing'
+          edge_bindings="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$edge_id")"
+          grep -q '8080/tcp' <<<"$edge_bindings" || fail "edge 8080/tcp is not host-published: $edge_bindings"
 
           worker_logs="$("${compose[@]}" logs --no-color worker)"
           grep -q 'worker.ready' <<<"$worker_logs" || fail 'worker never reached worker.ready'
