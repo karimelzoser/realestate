@@ -26,12 +26,26 @@ VALUES ('$SLOT_ID','$TENANT_ID','$PROJECT_ID','$TYPE_ID','AVAILABLE','G6-SLOT') 
 DELETE FROM inventory_locks WHERE inventory_slot_id='$SLOT_ID';
 SQL
 
-export DATABASE_URL PG_CLIENT_DOCKER PG_CLIENT_IMAGE TENANT_ID PROJECT_ID USER_ID TYPE_ID SLOT_ID
-attempt_lock='source "'"$SCRIPT_DIR"'/pg-client.sh"; run_pg_tool psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -c "INSERT INTO inventory_locks(tenant_id,project_id,unit_type_id,inventory_slot_id,locked_by_user_id,status,expires_at) VALUES ('"'"$TENANT_ID"'"','"'"$PROJECT_ID"'"','"'"$TYPE_ID"'"','"'"$SLOT_ID"'"','"'"$USER_ID"'"','"'"ACTIVE"'"',now()+interval '"'"15 minutes"'"');" >/dev/null 2>&1'
+attempt_lock() {
+  psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 \
+    -v tenant="$TENANT_ID" \
+    -v project="$PROJECT_ID" \
+    -v unit_type="$TYPE_ID" \
+    -v slot="$SLOT_ID" \
+    -v actor="$USER_ID" \
+    -c "INSERT INTO inventory_locks(tenant_id,project_id,unit_type_id,inventory_slot_id,locked_by_user_id,status,expires_at) VALUES (:'tenant',:'project',:'unit_type',:'slot',:'actor','ACTIVE',now()+interval '15 minutes');" \
+    >/dev/null 2>&1
+}
+export -f attempt_lock
+export DATABASE_URL TENANT_ID PROJECT_ID USER_ID TYPE_ID SLOT_ID
 
-set +e
-seq 1 "$CONTENDERS" | xargs -P "$PARALLELISM" -I{} bash -c "$attempt_lock"
-set -e
+run_round() {
+  set +e
+  seq 1 "$CONTENDERS" | xargs -P "$PARALLELISM" -I{} bash -c 'attempt_lock'
+  set -e
+}
+
+run_round
 
 active_count="$(run_pg_tool psql "$DATABASE_URL" -X -A -t -c "SELECT count(*) FROM inventory_locks WHERE inventory_slot_id='$SLOT_ID' AND status='ACTIVE';" | tr -d '[:space:]')"
 total_count="$(run_pg_tool psql "$DATABASE_URL" -X -A -t -c "SELECT count(*) FROM inventory_locks WHERE inventory_slot_id='$SLOT_ID';" | tr -d '[:space:]')"
@@ -43,9 +57,7 @@ fi
 
 run_pg_tool psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -c "UPDATE inventory_locks SET status='RELEASED', released_at=now(), release_reason='GATE6_TEST' WHERE inventory_slot_id='$SLOT_ID' AND status='ACTIVE';" >/dev/null
 
-set +e
-seq 1 "$CONTENDERS" | xargs -P "$PARALLELISM" -I{} bash -c "$attempt_lock"
-set -e
+run_round
 
 active_count="$(run_pg_tool psql "$DATABASE_URL" -X -A -t -c "SELECT count(*) FROM inventory_locks WHERE inventory_slot_id='$SLOT_ID' AND status='ACTIVE';" | tr -d '[:space:]')"
 total_count="$(run_pg_tool psql "$DATABASE_URL" -X -A -t -c "SELECT count(*) FROM inventory_locks WHERE inventory_slot_id='$SLOT_ID';" | tr -d '[:space:]')"
