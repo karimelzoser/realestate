@@ -1,9 +1,11 @@
 import 'reflect-metadata';
 import cookie from '@fastify/cookie';
 import { randomUUID } from 'node:crypto';
+import type { IncomingMessage } from 'node:http';
+import type { Http2ServerRequest } from 'node:http2';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { AppModule } from './app.module.js';
 import { validateApiRuntimeConfig } from './config/runtime-config.js';
 
@@ -15,7 +17,7 @@ async function bootstrap(): Promise<void> {
   const adapter = new FastifyAdapter({
     logger: process.env.NODE_ENV !== 'test',
     trustProxy: true,
-    genReqId: (request: FastifyRequest) => {
+    genReqId: (request: IncomingMessage | Http2ServerRequest) => {
       const incoming = request.headers['x-request-id'];
       if (typeof incoming === 'string' && REQUEST_ID_PATTERN.test(incoming)) return incoming;
       return randomUUID();
