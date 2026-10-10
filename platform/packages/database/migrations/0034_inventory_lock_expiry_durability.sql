@@ -4,6 +4,86 @@ CREATE INDEX IF NOT EXISTS inventory_locks_expiry_scan
   ON inventory_locks(expires_at, id)
   WHERE status = 'ACTIVE';
 
+CREATE OR REPLACE FUNCTION preneura_guard_inventory_lock_transition()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF OLD.status <> NEW.status THEN
+    IF OLD.status <> 'ACTIVE' THEN
+      RAISE EXCEPTION 'inventory lock % is terminal in status %', OLD.id, OLD.status;
+    END IF;
+
+    IF NEW.status NOT IN ('RELEASED', 'EXPIRED', 'CONVERTED') THEN
+      RAISE EXCEPTION 'invalid inventory lock transition % -> % for %', OLD.status, NEW.status, OLD.id;
+    END IF;
+  END IF;
+
+  IF NEW.status = 'EXPIRED' THEN
+    IF NEW.released_at IS NULL OR NEW.converted_at IS NOT NULL THEN
+      RAISE EXCEPTION 'expired inventory lock % requires released_at and no converted_at', OLD.id;
+    END IF;
+    NEW.release_reason := COALESCE(NULLIF(NEW.release_reason, ''), 'TTL_EXPIRED');
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS inventory_locks_transition_guard ON inventory_locks;
+CREATE TRIGGER inventory_locks_transition_guard
+BEFORE UPDATE OF status, released_at, converted_at ON inventory_locks
+FOR EACH ROW
+EXECUTE FUNCTION preneura_guard_inventory_lock_transition();
+
+CREATE OR REPLACE FUNCTION preneura_emit_inventory_lock_expired()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF OLD.status = 'ACTIVE' AND NEW.status = 'EXPIRED' THEN
+    INSERT INTO domain_outbox_events (
+      tenant_id,
+      project_id,
+      aggregate_type,
+      aggregate_id,
+      event_type,
+      payload,
+      occurred_at,
+      published_at,
+      attempts
+    )
+    VALUES (
+      NEW.tenant_id,
+      NEW.project_id,
+      'INVENTORY_LOCK',
+      NEW.id,
+      'inventory.lock.expired',
+      jsonb_build_object(
+        'unitTypeId', NEW.unit_type_id,
+        'inventorySlotId', NEW.inventory_slot_id,
+        'buyerUserId', NEW.buyer_user_id,
+        'lockedByUserId', NEW.locked_by_user_id,
+        'expiresAt', NEW.expires_at,
+        'expiredAt', NEW.released_at,
+        'reason', NEW.release_reason
+      ),
+      COALESCE(NEW.released_at, now()),
+      NULL,
+      0
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS inventory_locks_expired_outbox ON inventory_locks;
+CREATE TRIGGER inventory_locks_expired_outbox
+AFTER UPDATE OF status ON inventory_locks
+FOR EACH ROW
+WHEN (OLD.status = 'ACTIVE' AND NEW.status = 'EXPIRED')
+EXECUTE FUNCTION preneura_emit_inventory_lock_expired();
+
 CREATE OR REPLACE FUNCTION preneura_expire_inventory_locks(
   p_limit integer DEFAULT 500,
   p_now timestamptz DEFAULT now()
@@ -37,56 +117,16 @@ BEGIN
     WHERE l.id = c.id
       AND l.status = 'ACTIVE'
       AND l.expires_at <= p_now
-    RETURNING
-      l.id,
-      l.tenant_id,
-      l.project_id,
-      l.unit_type_id,
-      l.inventory_slot_id,
-      l.buyer_user_id,
-      l.locked_by_user_id,
-      l.expires_at
-  ), events AS (
-    INSERT INTO domain_outbox_events (
-      tenant_id,
-      project_id,
-      aggregate_type,
-      aggregate_id,
-      event_type,
-      payload,
-      occurred_at,
-      published_at,
-      attempts
-    )
-    SELECT
-      e.tenant_id,
-      e.project_id,
-      'INVENTORY_LOCK',
-      e.id,
-      'inventory.lock.expired',
-      jsonb_build_object(
-        'unitTypeId', e.unit_type_id,
-        'inventorySlotId', e.inventory_slot_id,
-        'buyerUserId', e.buyer_user_id,
-        'lockedByUserId', e.locked_by_user_id,
-        'expiresAt', e.expires_at,
-        'expiredAt', p_now,
-        'reason', 'TTL_EXPIRED'
-      ),
-      p_now,
-      NULL,
-      0
-    FROM expired e
-    RETURNING 1
+    RETURNING l.id
   )
-  SELECT count(*) INTO v_expired FROM events;
+  SELECT count(*) INTO v_expired FROM expired;
 
   RETURN v_expired;
 END;
 $$;
 
 COMMENT ON FUNCTION preneura_expire_inventory_locks(integer, timestamptz) IS
-  'Atomically expires overdue ACTIVE inventory locks in bounded SKIP LOCKED batches and emits one durable outbox event per transition.';
+  'Atomically expires overdue ACTIVE inventory locks in bounded SKIP LOCKED batches. Expiry evidence is emitted by the inventory lock transition trigger.';
 
 UPDATE platform_runtime_contract
 SET
