@@ -93,7 +93,43 @@ export class PostgresAccessRepository extends AccessRepository {
       .executeTakeFirst();
     if (!user) return null;
 
-    const assignments = await this.listActiveAssignments(userId);
+    const rawAssignments = await this.listActiveAssignments(userId);
+    const scopedTenantIds = unique(rawAssignments
+      .filter((assignment) => assignment.scopeType !== 'PLATFORM' && assignment.tenantId)
+      .map((assignment) => assignment.tenantId!));
+    const activeMembershipRows = scopedTenantIds.length === 0
+      ? []
+      : await this.db
+        .selectFrom('tenant_memberships')
+        .select('tenant_id')
+        .where('user_id', '=', userId)
+        .where('tenant_id', 'in', scopedTenantIds)
+        .where('status', '=', 'ACTIVE')
+        .execute();
+    const activeMembershipTenantIds = new Set(activeMembershipRows.map((row) => row.tenant_id));
+
+    const assignedBrokerCompanyIds = unique(rawAssignments
+      .filter((assignment) => assignment.scopeType === 'BROKER_COMPANY' && assignment.brokerCompanyId)
+      .map((assignment) => assignment.brokerCompanyId!));
+    const activeBrokerRows = assignedBrokerCompanyIds.length === 0
+      ? []
+      : await this.db
+        .selectFrom('broker_companies')
+        .select('id')
+        .where('id', 'in', assignedBrokerCompanyIds)
+        .where('status', '=', 'ACTIVE')
+        .execute();
+    const activeBrokerCompanyIds = new Set(activeBrokerRows.map((row) => row.id));
+
+    const assignments = rawAssignments.filter((assignment) => {
+      if (assignment.scopeType === 'PLATFORM') return true;
+      if (!assignment.tenantId || !activeMembershipTenantIds.has(assignment.tenantId)) return false;
+      if (assignment.scopeType === 'BROKER_COMPANY') {
+        return Boolean(assignment.brokerCompanyId && activeBrokerCompanyIds.has(assignment.brokerCompanyId));
+      }
+      return true;
+    });
+
     const projectRows = new Map<string, ProjectRow>();
     const hasPlatformScope = assignments.some((assignment) => assignment.scopeType === 'PLATFORM');
     const tenantIds = unique(assignments
