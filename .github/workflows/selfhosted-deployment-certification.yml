@@ -1,0 +1,130 @@
+name: Self-Hosted Deployment Certification
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - "platform/deploy/**"
+      - "platform/apps/**"
+      - "platform/packages/database/**"
+      - "platform/packages/observability/**"
+      - "platform/packages/security/**"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/selfhosted-deployment-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/deploy/**"
+      - "platform/apps/**"
+      - "platform/packages/database/**"
+      - "platform/packages/observability/**"
+      - "platform/packages/security/**"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/selfhosted-deployment-certification.yml"
+
+permissions:
+  contents: read
+
+env:
+  PUBLIC_ORIGIN: https://app.preneura.test
+  HTTP_PORT: "18080"
+  DATABASE_URL: postgresql://preneura:preneura-certification@postgres:5432/preneura
+  DATABASE_WAIT_TIMEOUT_MS: "120000"
+  MIGRATION_ACTOR: selfhosted-certification
+  AUTH_IDENTIFIER_HMAC_KEY: ci-auth-identifier-hmac-key-0123456789abcdef
+  AUTH_OTP_PEPPER: ci-auth-otp-pepper-0123456789abcdef012345
+  COOKIE_SIGNING_SECRET: ci-cookie-signing-secret-0123456789abcdef
+  CONTACT_HMAC_KEY: ci-contact-hmac-key-0123456789abcdef012345
+  CONTACT_VERIFICATION_PEPPER: ci-contact-verification-pepper-0123456789abcdef
+  CONTACT_ENCRYPTION_KEY_BASE64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+  NOTIFICATION_GATEWAY_TOKEN: ci-notification-gateway-token-0123456789abcdef
+  OIDC_ISSUER: https://id.preneura.test/realms/preneura
+  OIDC_CLIENT_ID: preneura-web-ci
+  OIDC_CLIENT_SECRET: ci-oidc-client-secret-0123456789abcdef
+  OBJECT_STORAGE_BUCKET: preneura-certification
+  OBJECT_STORAGE_REGION: us-east-1
+  OBJECT_STORAGE_ENDPOINT: https://s3.preneura.test
+  OBJECT_STORAGE_ACCESS_KEY_ID: ci-access-key
+  OBJECT_STORAGE_SECRET_ACCESS_KEY: ci-secret-access-key
+  OBJECT_STORAGE_FORCE_PATH_STYLE: "true"
+  DOCUMENT_SCANNER_URL: https://scanner.preneura.test/scan
+  DOCUMENT_SCANNER_TOKEN: ci-scanner-service-token-0123456789abcdef
+  FINANCE_PROVIDER_INGRESS_TOKEN: ci-finance-ingress-token-0123456789abcdef
+  SETTLEMENT_PROVIDER_INGRESS_TOKEN: ci-settlement-ingress-token-0123456789abcdef
+  META_GRAPH_API_VERSION: v23.0
+  META_WHATSAPP_PHONE_NUMBER_ID: "123456789012345"
+  META_WHATSAPP_ACCESS_TOKEN: EAACIcertificationtoken0123456789abcdef
+  WHATSAPP_TEMPLATE_BINDINGS_JSON: '{"auth.login.otp":{"name":"preneura_login_otp","language":"ar","bodyParameterPaths":["code"]},"auth.enrollment.verify":{"name":"preneura_account_verify","language":"ar","bodyParameterPaths":["code"]}}'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_EXPORTER_OTLP_INSECURE: "true"
+  OTEL_SERVICE_VERSION: selfhosted-certification
+  OTEL_TRACE_SAMPLE_RATIO: "0.01"
+  LOG_LEVEL: info
+
+jobs:
+  compose-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Compose model
+        working-directory: platform/deploy
+        run: docker compose -f docker-compose.production.yml -f docker-compose.certification.yml config --quiet
+
+      - name: Build immutable application targets
+        working-directory: platform/deploy
+        run: docker compose -f docker-compose.production.yml -f docker-compose.certification.yml build --pull
+
+      - name: Start certified deployment topology
+        working-directory: platform/deploy
+        run: docker compose -f docker-compose.production.yml -f docker-compose.certification.yml up -d
+
+      - name: Wait for public edge readiness
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 90); do
+            if curl --silent --fail http://127.0.0.1:18080/healthz >/tmp/edge-health.json; then
+              cat /tmp/edge-health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f platform/deploy/docker-compose.production.yml -f platform/deploy/docker-compose.certification.yml ps -a
+          exit 1
+
+      - name: Certify migration, routing and private service exposure
+        working-directory: platform/deploy
+        run: |
+          set -euo pipefail
+          migrate_id="$(docker compose -f docker-compose.production.yml -f docker-compose.certification.yml ps -aq migrate)"
+          test -n "$migrate_id"
+          test "$(docker inspect --format '{{.State.ExitCode}}' "$migrate_id")" = "0"
+
+          curl --silent --fail http://127.0.0.1:18080/livez >/dev/null
+          curl --silent --fail http://127.0.0.1:18080/api/v1/health/ready >/tmp/api-ready.json
+          curl --silent --fail http://127.0.0.1:18080/login >/tmp/login.html
+          grep -q '"status":"ok"' /tmp/api-ready.json
+          grep -qi '<html' /tmp/login.html
+
+          test -z "$(docker compose -f docker-compose.production.yml -f docker-compose.certification.yml port api 4100 2>/dev/null || true)"
+          test -z "$(docker compose -f docker-compose.production.yml -f docker-compose.certification.yml port web 3000 2>/dev/null || true)"
+          test -z "$(docker compose -f docker-compose.production.yml -f docker-compose.certification.yml port notification-gateway 4300 2>/dev/null || true)"
+
+          docker compose -f docker-compose.production.yml -f docker-compose.certification.yml logs worker | grep -q 'worker.ready'
+
+      - name: Dump deployment logs on failure
+        if: failure()
+        working-directory: platform/deploy
+        run: |
+          docker compose -f docker-compose.production.yml -f docker-compose.certification.yml ps -a || true
+          docker compose -f docker-compose.production.yml -f docker-compose.certification.yml logs --no-color || true
+
+      - name: Tear down certification stack
+        if: always()
+        working-directory: platform/deploy
+        run: docker compose -f docker-compose.production.yml -f docker-compose.certification.yml down -v --remove-orphans || true
