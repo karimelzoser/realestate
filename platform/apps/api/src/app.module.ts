@@ -9,6 +9,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { DocumentModule } from './documents/document.module.js';
 import { FinanceModule } from './finance/finance.module.js';
 import { HealthController } from './health/health.controller.js';
+import { ManagementModule } from './management/management.module.js';
 import { NotificationModule } from './notifications/notification.module.js';
 import { PlatformAdminModule } from './platform-admin/platform-admin.module.js';
 import { ProjectCatalogModule } from './project-catalog/project-catalog.module.js';
@@ -30,6 +31,7 @@ import { StorageModule } from './storage/storage.module.js';
     ProjectCatalogModule,
     AiModule,
     SalesModule,
+    ManagementModule,
     CommissionModule,
     DocumentModule,
     FinanceModule,
