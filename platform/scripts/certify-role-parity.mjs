@@ -27,8 +27,11 @@ function requireLacks(role, permissions) {
 requireHas('BROKER_AGENT', ['commission.status.read','broker.buyers.read','inventory.read','transaction.read']);
 requireLacks('BROKER_AGENT', ['commission.amount.read','commission.rate.read','commission.payment.manage','commission.plan.manage','payment.verify','pricing.publish']);
 
-requireHas('BROKER_FINANCE', ['commission.status.read','commission.amount.read','commission.rate.read','commission.payment.manage','payment.read']);
-requireLacks('BROKER_FINANCE', ['unit.lock','pricing.publish','contract.execute']);
+// Broker Finance can reconcile economics and manage invoices, but cannot manufacture
+// a paid commission projection. Payment is settlement-derived through the internal
+// payout authority introduced by Gate 4.
+requireHas('BROKER_FINANCE', ['commission.status.read','commission.amount.read','commission.rate.read','commission.invoice.manage','payment.read']);
+requireLacks('BROKER_FINANCE', ['commission.payment.manage','commission.payout.manage','unit.lock','pricing.publish','contract.execute']);
 
 requireHas('BROKER_MANAGER', ['broker.users.manage','broker.performance.read','commission.status.read','commission.amount.read','commission.rate.read']);
 requireLacks('BROKER_MANAGER', ['payment.verify','contract.execute','pricing.publish']);
