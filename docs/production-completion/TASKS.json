@@ -1,293 +1,90 @@
 {
-  "schemaVersion": 1,
-  "stage": "PLAN_PREPARED_IMPLEMENTATION_NOT_STARTED",
+  "schemaVersion": 2,
+  "stage": "IMPLEMENTATION_STARTED",
   "planningBranch": "plan/egypt-platform-completion",
-  "intendedIntegrationBranch": "completion/egypt-full-platform",
+  "integrationBranch": "completion/egypt-full-platform",
   "baselineProductionSha": "c2746523eb434898cbb4c46cf5df452d122ba78f",
+  "planningHeadSha": "446cfe4803bedc9868ee28799ff4b376277c0d91",
+  "demoMainSha": "1a6e61c891e040221f09c773e6de589928a9a0b7",
+  "activeTaskId": "E01.1",
+  "taskDefaults": {
+    "actorScope": "execution-agent using existing RBAC/domain boundaries",
+    "requiredEvidence": ["focused code diff", "task-specific positive/negative tests", "affected existing CI gates", "checkpoint update"]
+  },
   "epics": [
-    {
-      "id": "E00",
-      "title": "Repository authority and interruption-safe execution",
-      "dependencies": [],
-      "status": "NOT_STARTED",
-      "planSection": "E00",
-      "acceptanceReference": "PLAN.md, section 6, E00",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E01",
-      "title": "Security, release and testing defect closure",
-      "dependencies": [
-        "E00"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E01",
-      "acceptanceReference": "PLAN.md, section 6, E01",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E02",
-      "title": "Egypt identity and Arabic/English foundations",
-      "dependencies": [
-        "E01"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E02",
-      "acceptanceReference": "PLAN.md, section 6, E02",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E03",
-      "title": "Developer/brokerage onboarding",
-      "dependencies": [
-        "E01",
-        "E02"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E03",
-      "acceptanceReference": "PLAN.md, section 6, E03",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E04",
-      "title": "Catalog, exact physical inventory, assets and pricing",
-      "dependencies": [
-        "E03"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E04",
-      "acceptanceReference": "PLAN.md, section 6, E04",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E05",
-      "title": "Public buyer journey and apartment-type EOI",
-      "dependencies": [
-        "E02",
-        "E03",
-        "E04"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E05",
-      "acceptanceReference": "PLAN.md, section 6, E05",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E06",
-      "title": "Shared queue and allocation sessions",
-      "dependencies": [
-        "E05"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E06",
-      "acceptanceReference": "PLAN.md, section 6, E06",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E07",
-      "title": "Exact-apartment selection and locking",
-      "dependencies": [
-        "E04",
-        "E06"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E07",
-      "acceptanceReference": "PLAN.md, section 6, E07",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E08",
-      "title": "Short/extended grace and operator decisions",
-      "dependencies": [
-        "E07"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E08",
-      "acceptanceReference": "PLAN.md, section 6, E08",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E09",
-      "title": "Payments, installments, cheques and reconciliation",
-      "dependencies": [
-        "E05",
-        "E07"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E09",
-      "acceptanceReference": "PLAN.md, section 6, E09",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E10",
-      "title": "Documents, generated contracts and signing",
-      "dependencies": [
-        "E07",
-        "E09"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E10",
-      "acceptanceReference": "PLAN.md, section 6, E10",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E11",
-      "title": "Full My Property, receipts, updates and support",
-      "dependencies": [
-        "E09",
-        "E10"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E11",
-      "acceptanceReference": "PLAN.md, section 6, E11",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E12",
-      "title": "Brokerage and developer control rooms",
-      "dependencies": [
-        "E03",
-        "E08",
-        "E09",
-        "E10",
-        "E11"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E12",
-      "acceptanceReference": "PLAN.md, section 6, E12",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E13",
-      "title": "Messaging, reminders and delivery lifecycle",
-      "dependencies": [
-        "E01",
-        "E02",
-        "E09"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E13",
-      "acceptanceReference": "PLAN.md, section 6, E13",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E14",
-      "title": "English voice and safe advisory AI",
-      "dependencies": [
-        "E01",
-        "E04",
-        "E07"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E14",
-      "acceptanceReference": "PLAN.md, section 6, E14",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E15",
-      "title": "Demo parity and complete browser acceptance",
-      "dependencies": [
-        "E08",
-        "E10",
-        "E11",
-        "E12",
-        "E13",
-        "E14"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E15",
-      "acceptanceReference": "PLAN.md, section 6, E15",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E16",
-      "title": "Containers, operations and deployment package",
-      "dependencies": [
-        "E00",
-        "E01"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E16",
-      "acceptanceReference": "PLAN.md, section 6, E16",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    },
-    {
-      "id": "E17",
-      "title": "Final security/load/recovery/software readiness",
-      "dependencies": [
-        "E15",
-        "E16"
-      ],
-      "status": "NOT_STARTED",
-      "planSection": "E17",
-      "acceptanceReference": "PLAN.md, section 6, E17",
-      "implementationCommits": [],
-      "evidence": [],
-      "owner": "execution-agent with domain/review owners as needed"
-    }
+    {"id":"E00","title":"Repository authority and interruption-safe execution","dependencies":[],"status":"INTEGRATED","tasks":[
+      {"id":"E00.1","title":"Reverify planning/candidate/demo heads and create canonical completion branch","dependencies":[],"priority":"P0","status":"INTEGRATED","deliverable":"Canonical integration branch from verified planning head while preserving Pages demo","acceptance":"Branch authority is reproducible from GitHub and no demo/runtime code is changed."},
+      {"id":"E00.2","title":"Persist expanded task ledger and resumable checkpoint controls","dependencies":["E00.1"],"priority":"P0","status":"INTEGRATED","deliverable":"TASKS/PROGRESS/WORK_STATE/SERVICE_READINESS/CONTINUE controls on canonical branch","acceptance":"A new session can resume the exact unfinished task without repeating settled decisions."}
+    ]},
+    {"id":"E01","title":"Security, release and testing defect closure","dependencies":["E00"],"status":"IN_PROGRESS","tasks":[
+      {"id":"E01.1","title":"Centralize tenant/membership/project lifecycle enforcement for direct requests","dependencies":["E00.2"],"priority":"P0","status":"IN_PROGRESS","deliverable":"Central authorization lifecycle guard plus negative direct-request tests","acceptance":"Suspended/inactive tenant, membership or project cannot retain unauthorized direct API access; historical-read policy is explicit."},
+      {"id":"E01.2","title":"Revalidate SSE/session/support access on revocation, expiry and suspension","dependencies":["E01.1"],"priority":"P0","status":"NOT_STARTED","deliverable":"Stream revalidation/termination and support-session expiry enforcement","acceptance":"Open streams lose access promptly after role/session/support/tenant lifecycle changes."},
+      {"id":"E01.3","title":"Enforce privileged assurance, release correctness and truthful normal test/lint commands","dependencies":["E01.1"],"priority":"P0","status":"NOT_STARTED","deliverable":"MFA/step-up policy, readiness/build pin fixes, meaningful test/lint scripts and security hardening","acceptance":"No phone-OTP privileged bypass; readiness/build identity is machine-verified; mandatory normal commands cannot pass with zero tests."}
+    ]},
+    {"id":"E02","title":"Egypt identity and Arabic/English foundations","dependencies":["E01"],"status":"NOT_STARTED","tasks":[
+      {"id":"E02.1","title":"Implement Arabic/English RTL/LTR accessible UI and Cairo/EGP formatting","dependencies":["E01.3"],"priority":"P0","status":"NOT_STARTED","deliverable":"Shared i18n/accessibility/time/currency foundation","acceptance":"Critical journeys are equivalent in Arabic/English with correct RTL, Africa/Cairo and EGP behavior."},
+      {"id":"E02.2","title":"Implement Egypt phone/National-ID/passport normalization, consent and truthful verification","dependencies":["E01.3"],"priority":"P0","status":"NOT_STARTED","deliverable":"PII-minimized identity profile/verification/recovery model","acceptance":"Phone ownership is not misrepresented as National-ID ownership; cross-tenant linking and recovery are scoped/audited."}
+    ]},
+    {"id":"E03","title":"Developer/brokerage onboarding","dependencies":["E01","E02"],"status":"NOT_STARTED","tasks":[
+      {"id":"E03.1","title":"Complete developer/project branding, staff invitations and lifecycle onboarding","dependencies":["E02.2"],"priority":"P1","status":"NOT_STARTED","deliverable":"Developer/client onboarding and deactivation workflows","acceptance":"Tenant/project lifecycle is scoped, auditable and cannot grant cross-tenant access."},
+      {"id":"E03.2","title":"Complete brokerage multi-developer agreements, user roles, attribution transfers and B2B administration","dependencies":["E03.1"],"priority":"P1","status":"NOT_STARTED","deliverable":"Scoped brokerage organization/agreement/attribution/entitlement workflows","acceptance":"Same brokerage sees only approved projects; agents cannot self-escalate or steal attribution."}
+    ]},
+    {"id":"E04","title":"Catalog, exact physical inventory, assets and pricing","dependencies":["E03"],"status":"NOT_STARTED","tasks":[
+      {"id":"E04.1","title":"Complete public catalog/assets and verified physical-unit to slot mapping","dependencies":["E03.1"],"priority":"P0","status":"NOT_STARTED","deliverable":"Published project/type/building/floor/physical-unit catalog with trusted assets","acceptance":"Unpublished inventory remains private and exact selection never uses anonymous unmapped stock."},
+      {"id":"E04.2","title":"Complete exact-unit price adjustments, deterministic quote snapshots and safe imports","dependencies":["E04.1"],"priority":"P0","status":"NOT_STARTED","deliverable":"Exact identity/price component quote and validated import/rollback path","acceptance":"Counts/prices reconcile and imports cannot create duplicate/orphan scope or mutate executed history."}
+    ]},
+    {"id":"E05","title":"Public buyer journey and apartment-type EOI","dependencies":["E02","E03","E04"],"status":"NOT_STARTED","tasks":[
+      {"id":"E05.1","title":"Complete public browse/account/preferences and direct/broker/staff buyer entry","dependencies":["E02.2","E04.1"],"priority":"P0","status":"NOT_STARTED","deliverable":"One scoped buyer journey across acquisition channels","acceptance":"Refresh/relogin preserves progress and attribution remains authorized."},
+      {"id":"E05.2","title":"Implement apartment-type EOI, payment/policy acceptance and eligibility checklist","dependencies":["E05.1","E04.2"],"priority":"P0","status":"NOT_STARTED","deliverable":"EOI type selection independent from exact apartment capacity","acceptance":"EOI cannot lock exact inventory or invent eligibility and paid policy history is immutable."}
+    ]},
+    {"id":"E06","title":"Shared queue and allocation sessions","dependencies":["E05"],"status":"NOT_STARTED","tasks":[
+      {"id":"E06.1","title":"Implement allocation windows, invitation/check-in and stable shared queue ordering","dependencies":["E05.2"],"priority":"P0","status":"NOT_STARTED","deliverable":"Durable online/offline shared queue authority","acceptance":"Concurrent check-in/dispatch preserves stable priority and unauthorized priority changes fail."},
+      {"id":"E06.2","title":"Implement allocator/online service slots, scoped allocation sessions and manager capacity views","dependencies":["E06.1"],"priority":"P0","status":"NOT_STARTED","deliverable":"One active session per service slot/allocator with restart-safe policies","acceptance":"No arbitrary buyer selection or blanket buyer locking capability."}
+    ]},
+    {"id":"E07","title":"Exact-apartment selection and locking","dependencies":["E04","E06"],"status":"NOT_STARTED","tasks":[
+      {"id":"E07.1","title":"Implement Master Plan to exact apartment selection with session/type/quote guards","dependencies":["E04.2","E06.2"],"priority":"P0","status":"NOT_STARTED","deliverable":"Authorized exact physical-unit selection and quote confirmation","acceptance":"Buyer explicitly selects one eligible available apartment; no silent substitution."},
+      {"id":"E07.2","title":"Implement idempotent atomic exact-unit locking and propagate identity through sale evidence","dependencies":["E07.1"],"priority":"P0","status":"NOT_STARTED","deliverable":"Exact-unit lock/reservation/transaction/contract/property identity path","acceptance":"High concurrency yields one winner; retries are stable; cross-project/stale/ineligible requests fail."}
+    ]},
+    {"id":"E08","title":"Short/extended grace and operator decisions","dependencies":["E07"],"status":"NOT_STARTED","tasks":[
+      {"id":"E08.1","title":"Persist short grace, extension/offline requests, decisions and operator inbox","dependencies":["E07.2"],"priority":"P1","status":"NOT_STARTED","deliverable":"Server-authoritative grace workflow and shared countdown state","acceptance":"Pending requests survive expiry as records without holding inventory indefinitely."},
+      {"id":"E08.2","title":"Certify expiry/approval/conversion races and same-unit atomic reacquire","dependencies":["E08.1"],"priority":"P1","status":"NOT_STARTED","deliverable":"Atomic post-expiry decision semantics and recovery tests","acceptance":"Approval never steals another buyer's lock; one transition wins under races/restarts."}
+    ]},
+    {"id":"E09","title":"Payments, installments, cheques and reconciliation","dependencies":["E05","E07"],"status":"NOT_STARTED","tasks":[
+      {"id":"E09.1","title":"Bind EGP payment plan to frozen exact quote and complete approved provider/manual evidence ingress","dependencies":["E05.2","E07.2"],"priority":"P0","status":"NOT_STARTED","deliverable":"Verified payment intent/callback/manual evidence boundary","acceptance":"Wrong signature/merchant/amount/project fails; browser success cannot manufacture payment."},
+      {"id":"E09.2","title":"Complete partial/out-of-order/reversal/refund/cheque reconciliation, receipts and maker-checker operations","dependencies":["E09.1"],"priority":"P0","status":"NOT_STARTED","deliverable":"Reconciled ledger/report/unmatched-event/receipt operations","acceptance":"Replays never double-post and finance outputs reconcile exactly to ledger evidence."}
+    ]},
+    {"id":"E10","title":"Documents, generated contracts and signing","dependencies":["E07","E09"],"status":"NOT_STARTED","tasks":[
+      {"id":"E10.1","title":"Complete document quarantine/scanning/private access and exact bilingual contract rendering","dependencies":["E07.2","E09.1"],"priority":"P0","status":"NOT_STARTED","deliverable":"Trusted documents and durable populated Arabic/English contract PDF","acceptance":"Exact apartment/price/plan/template data is pinned; scanner/renderer failures fail closed."},
+      {"id":"E10.2","title":"Complete single-use signature challenges, company execution and immutable final evidence","dependencies":["E10.1"],"priority":"P0","status":"NOT_STARTED","deliverable":"Ordered signer evidence and immutable executed contract manifest","acceptance":"Replay/reordering/revoked signer/mutated object fails; no fake biometric/legal proof."}
+    ]},
+    {"id":"E11","title":"Full My Property, receipts, updates and support","dependencies":["E09","E10"],"status":"NOT_STARTED","tasks":[
+      {"id":"E11.1","title":"Complete exact property, finance schedule/receipts and contract/document buyer portal","dependencies":["E09.2","E10.2"],"priority":"P1","status":"NOT_STARTED","deliverable":"Buyer after-sale property/finance/document experience","acceptance":"Displayed money and evidence reconcile to one authoritative snapshot/ledger."},
+      {"id":"E11.2","title":"Implement published updates and buyer-scoped support cases with private attachments/SLA","dependencies":["E11.1"],"priority":"P1","status":"NOT_STARTED","deliverable":"Updates/support workflow","acceptance":"No unrelated buyer/project data leaks and stale requests cannot overwrite another project view."}
+    ]},
+    {"id":"E12","title":"Brokerage and developer control rooms","dependencies":["E03","E08","E09","E10","E11"],"status":"NOT_STARTED","tasks":[
+      {"id":"E12.1","title":"Complete broker/developer control rooms, commissions, grace, collections and operational views","dependencies":["E03.2","E08.2","E09.2","E11.2"],"priority":"P1","status":"NOT_STARTED","deliverable":"Role-correct operational control rooms","acceptance":"Sensitive economics stay independently redacted and role matrix holds across channels."},
+      {"id":"E12.2","title":"Add server aggregates, cursor paging/filter/sort/export and high-volume/realtime certification","dependencies":["E12.1"],"priority":"P1","status":"NOT_STARTED","deliverable":"Production-scale list/KPI/query/realtime behavior","acceptance":"Counts are not derived from capped rows and older cases remain navigable without refetch storms."}
+    ]},
+    {"id":"E13","title":"Messaging, reminders and delivery lifecycle","dependencies":["E01","E02","E09"],"status":"NOT_STARTED","tasks":[
+      {"id":"E13.1","title":"Complete verified-contact preferences and Arabic/English provider template/callback lifecycle","dependencies":["E02.1","E02.2","E09.2"],"priority":"P1","status":"NOT_STARTED","deliverable":"Verified messaging contacts/templates/callback evidence","acceptance":"Wrong-signature callbacks fail and unverified contacts are never used."},
+      {"id":"E13.2","title":"Handle uncertain external sends, reconciliation, retries/dead-letter and obsolete reminder cancellation","dependencies":["E13.1"],"priority":"P1","status":"NOT_STARTED","deliverable":"Crash/outage-safe delivery lifecycle","acceptance":"Accepted-but-response-lost does not cause uncontrolled duplicate external sends."}
+    ]},
+    {"id":"E14","title":"English voice and safe advisory AI","dependencies":["E01","E04","E07"],"status":"NOT_STARTED","tasks":[
+      {"id":"E14.1","title":"Port English ASR/TTS/chat navigation with opt-in, barge-in and text fallback","dependencies":["E01.3","E04.1"],"priority":"P1","status":"NOT_STARTED","deliverable":"Production English voice/advisor UX","acceptance":"Audio is user-controlled, accessible fallback works, and primary buying actions remain visible."},
+      {"id":"E14.2","title":"Enforce authorized exact candidates, hard eligibility/currency filters and allowlisted model actions","dependencies":["E07.2","E14.1"],"priority":"P1","status":"NOT_STARTED","deliverable":"Safe advisory AI boundary with quotas/timeouts/outage behavior","acceptance":"AI cannot alter price/eligibility/turn/locks/payments/grace/signatures and PII stays out of prompts."}
+    ]},
+    {"id":"E15","title":"Demo parity and complete browser acceptance","dependencies":["E08","E10","E11","E12","E13","E14"],"status":"NOT_STARTED","tasks":[
+      {"id":"E15.1","title":"Reconcile demo parity matrix and one coherent Egyptian synthetic EGP dataset","dependencies":["E12.2","E14.2"],"priority":"P1","status":"NOT_STARTED","deliverable":"Synthetic demo parity/data/status/currency correction","acceptance":"Pages remains synthetic/shareable with no production secrets/PII/provider side effects."},
+      {"id":"E15.2","title":"Complete Arabic/English desktop/mobile full production browser journeys and Pages route/deep-link tests","dependencies":["E15.1","E13.2"],"priority":"P1","status":"NOT_STARTED","deliverable":"End-to-end buyer/broker/offline/grace/document/property acceptance","acceptance":"Fixtures seed data only; tested commands perform the real business transitions."}
+    ]},
+    {"id":"E16","title":"Containers, operations and deployment package","dependencies":["E00","E01"],"status":"NOT_STARTED","tasks":[
+      {"id":"E16.1","title":"Build non-root images/Compose/migration service plus proxy/TLS/SSE/config/deploy scripts","dependencies":["E01.3"],"priority":"P0","status":"NOT_STARTED","deliverable":"Reproducible self-hosted deployment bundle and CLI/SSH workflow","acceptance":"Fresh disposable production-config environment boots with malformed config failing closed; target server untouched."},
+      {"id":"E16.2","title":"Deliver backup/restore/rollback, observability/alerts and artifact/offline installation certification","dependencies":["E16.1"],"priority":"P0","status":"NOT_STARTED","deliverable":"Recovery/monitoring/offline operations package","acceptance":"Coordinated restore verifies DB/identity/object/config evidence and actionable alert paths."}
+    ]},
+    {"id":"E17","title":"Final security/load/recovery/software readiness","dependencies":["E15","E16"],"status":"NOT_STARTED","tasks":[
+      {"id":"E17.1","title":"Run exact-candidate security, authorization, concurrency/load/soak/provider-negative certification","dependencies":["E15.2","E16.2"],"priority":"P0","status":"NOT_STARTED","deliverable":"Final non-functional certification evidence","acceptance":"Known security/load/realtime/job/provider failure cases pass on one exact candidate."},
+      {"id":"E17.2","title":"Run restore/rollback/migration rehearsal and freeze exact artifacts/evidence","dependencies":["E17.1"],"priority":"P0","status":"NOT_STARTED","deliverable":"SOFTWARE_READY_FOR_DEPLOYMENT decision package or named blockers","acceptance":"One exact artifact set is reproducible and all remaining live/deployment dependencies are explicitly registered."}
+    ]}
   ],
-  "initialTasks": [
-    {
-      "id": "E00.1",
-      "title": "Reverify planning/candidate heads and create or recover completion integration branch",
-      "status": "NOT_STARTED",
-      "dependencies": []
-    },
-    {
-      "id": "E00.2",
-      "title": "Validate controls, expand implementation task ledger and record resume checkpoint",
-      "status": "NOT_STARTED",
-      "dependencies": [
-        "E00.1"
-      ]
-    },
-    {
-      "id": "E01.1",
-      "title": "Reproduce and repair direct-request tenant lifecycle enforcement",
-      "status": "NOT_STARTED",
-      "dependencies": [
-        "E00.2"
-      ]
-    }
-  ],
-  "deferredStage": {
-    "id": "DEPLOY-LIVE",
-    "status": "DEPLOYMENT_DEFERRED",
-    "reason": "User requires software and deployment-package completion before server deployment",
-    "deploymentAuthorized": false
-  }
+  "deferredStage":{"id":"DEPLOY-LIVE","status":"DEPLOYMENT_DEFERRED","reason":"Software and deployment package must be complete before separate user authorization","deploymentAuthorized":false}
 }
