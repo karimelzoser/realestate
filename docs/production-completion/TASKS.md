@@ -7,15 +7,15 @@ Statuses are evidence states, not estimates: `NOT_STARTED`, `IN_PROGRESS`, `IMPL
 ## Current checkpoint
 
 - E00.1 — **INTEGRATED** — planning/candidate/demo heads reverified; canonical completion branch created from the verified planning head.
-- E00.2 — **IN_PROGRESS** — dependency-aware execution ledger and resume controls are being persisted on the canonical branch.
-- E01.1 — **NOT_STARTED** — central tenant/membership/project lifecycle enforcement is the first product-code task after E00.2.
+- E00.2 — **INTEGRATED** — dependency-aware execution ledger and resume controls persisted on the canonical branch.
+- E01.1 — **IN_PROGRESS** — central tenant/membership/project lifecycle enforcement is the first product-code task.
 
 ## Epic ledger
 
 | Epic | Scope | Dependencies | Status |
 |---|---|---|---|
-| E00 | Repository authority and interruption-safe execution | none | IN_PROGRESS |
-| E01 | Security, release and testing defect closure | E00 | NOT_STARTED |
+| E00 | Repository authority and interruption-safe execution | none | INTEGRATED |
+| E01 | Security, release and testing defect closure | E00 | IN_PROGRESS |
 | E02 | Egypt identity and Arabic/English foundations | E01 | NOT_STARTED |
 | E03 | Developer/brokerage onboarding | E01, E02 | NOT_STARTED |
 | E04 | Catalog, exact physical inventory, assets and pricing | E03 | NOT_STARTED |
