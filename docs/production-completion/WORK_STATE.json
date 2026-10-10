@@ -4,45 +4,44 @@
   "stage": "IMPLEMENTATION_STARTED",
   "planningBranch": "plan/egypt-platform-completion",
   "integrationBranch": "completion/egypt-full-platform",
-  "taskBranch": "task/e01-tenant-lifecycle",
-  "taskPr": 86,
-  "observedHeadBeforeCheckpoint": "23cba476f37b9b53d461e30503f9fdfef2198282",
+  "taskBranch": "task/e01-session-stream-revocation",
+  "parentTaskBranch": "task/e01-tenant-lifecycle",
+  "parentTaskPr": 86,
+  "observedHeadBeforeCheckpoint": "4a9aa771d8759c261c6bc5d010ec3a91d8e95a25",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "taskImplementationHead": "4a9aa771d8759c261c6bc5d010ec3a91d8e95a25",
-  "activeTaskId": "E01.1",
-  "activeTaskStatus": "IMPLEMENTED",
-  "completedCheckpoint": "E00 integrated; E01.1 lifecycle policy, workspace lifecycle filtering and emitted-stack regression implemented; prior CI harness/strict-TS defects fixed; exact-head validation rerunning",
-  "nextAction": "Inspect PR #86 workflows for 4a9aa771; require Production Platform Foundation, Full Stack Acceptance, Gate 5 Full Role Parity and Gate 5 Broker Roles to pass before marking E01.1 TESTED; fix only concrete failures",
-  "changedFiles": [
-    "platform/apps/api/src/access/access-lifecycle.service.ts",
-    "platform/apps/api/src/access/access.service.ts",
-    "platform/apps/api/src/access/access.module.ts",
-    "platform/apps/api/src/access/access.repository.ts",
-    "platform/packages/database/tests/full_stack_acceptance.mjs"
-  ],
+  "testedTask": {
+    "taskId": "E01.1",
+    "head": "4a9aa771d8759c261c6bc5d010ec3a91d8e95a25",
+    "status": "TESTED",
+    "pr": 86,
+    "requiredChecks": [
+      "Production Platform Foundation: success",
+      "Full Stack Acceptance Certification: success",
+      "Gate 5 Full Role Parity Certification: success",
+      "Gate 5 Broker Roles Certification: success"
+    ]
+  },
+  "activeTaskId": "E01.2",
+  "activeTaskStatus": "IN_PROGRESS",
+  "completedCheckpoint": "E01.1 is TESTED on 4a9aa771 and pending independent review; E01.2 audit confirmed long-lived SSE streams do not currently revalidate session/access after opening",
+  "nextAction": "Create task/e01-session-stream-revocation from 4a9aa771; add reusable active-session lookup and periodic stream authorization checks for project, broker and user-notification SSE; add emitted revocation/expiry tests",
+  "changedFiles": [],
   "commandsAndResults": [
-    {"action":"verify planning/candidate/demo authority","result":"planning 446cfe4 parent c2746523; main 1a6e61c"},
-    {"action":"create integration branch","result":"completion/egypt-full-platform created and control ledger persisted"},
-    {"action":"inspect access path","result":"direct AccessService decisions did not enforce tenant membership, tenant status, broker-company status or project lifecycle"},
-    {"action":"implement lifecycle guard","result":"central AccessLifecycleService now gates normal assignments and platform support reads"},
-    {"action":"align workspace context","result":"suspended tenant memberships and inactive broker-company assignments are removed from /me/workspace"},
-    {"action":"first PR CI","result":"foundation initially passed on 9281d020; Gate 5 scripts failed because manual AccessService construction omitted lifecycle dependency"},
-    {"action":"certification compatibility fix","result":"PostgresAccessRepository binds the same lifecycle evaluator; AccessService uses injected or repository-bound policy and fails closed otherwise"},
-    {"action":"strict TypeScript fix","result":"added required override modifier; exact head 4a9aa771 queued for full validation"}
+    {"action":"E01.1 exact-head validation","result":"foundation, emitted full stack lifecycle regression, broker role and full role parity passed on 4a9aa771"},
+    {"action":"E01.2 initial audit","result":"SessionAuthGuard and AccessService are evaluated at SSE request creation, but RealtimeService/NotificationService heartbeats and event delivery do not revalidate session, role, support-session or tenant lifecycle"}
   ],
   "evidencePaths": [
-    "platform/apps/api/src/access/access-lifecycle.service.ts",
-    "platform/apps/api/src/access/access.service.ts",
-    "platform/apps/api/src/access/access.repository.ts",
-    "platform/packages/database/tests/full_stack_acceptance.mjs",
-    "https://github.com/karimelzoser/realestate/pull/86"
+    "https://github.com/karimelzoser/realestate/pull/86",
+    "platform/apps/api/src/realtime/realtime.service.ts",
+    "platform/apps/api/src/notifications/notification.service.ts",
+    "platform/apps/api/src/auth/session-auth.guard.ts"
   ],
   "remainingTests": [
-    "Production Platform Foundation on 4a9aa771",
-    "Full Stack Acceptance Certification on 4a9aa771",
-    "Gate 5 Full Role Parity Certification on 4a9aa771",
-    "Gate 5 Broker Roles Certification on 4a9aa771"
+    "E01.2 project SSE closes after role/tenant/project access loss",
+    "E01.2 broker SSE closes after broker role/access loss",
+    "E01.2 notification SSE closes after session revocation/expiry",
+    "E01.2 support SSE closes after support-session expiry/revocation"
   ],
   "externalBlockerIds": [
     "DEPLOYMENT_DEFERRED",
