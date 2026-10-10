@@ -106,16 +106,19 @@ SQL
 
 start_worker() {
   local log_file="$1"
-  NODE_ENV=test \
-  DATABASE_URL="$DB_URL" \
-  INVENTORY_LOCK_EXPIRY_SCAN_MS=100 \
-  INVENTORY_LOCK_EXPIRY_BATCH_SIZE=25 \
-  OUTBOX_POLL_MS=10000 \
-  NOTIFICATION_POLL_MS=10000 \
-  SLA_SCAN_MS=60000 \
-  INSTALLMENT_REMINDER_SCAN_MS=60000 \
-  COMMISSION_DUE_SCAN_MS=60000 \
-    node --import @preneura/observability/register apps/worker/dist/main.js >"$log_file" 2>&1 &
+  (
+    cd apps/worker
+    NODE_ENV=test \
+    DATABASE_URL="$DB_URL" \
+    INVENTORY_LOCK_EXPIRY_SCAN_MS=100 \
+    INVENTORY_LOCK_EXPIRY_BATCH_SIZE=25 \
+    OUTBOX_POLL_MS=10000 \
+    NOTIFICATION_POLL_MS=10000 \
+    SLA_SCAN_MS=60000 \
+    INSTALLMENT_REMINDER_SCAN_MS=60000 \
+    COMMISSION_DUE_SCAN_MS=60000 \
+      node --import @preneura/observability/register dist/main.js
+  ) >"$log_file" 2>&1 &
   WORKER_PID=$!
 }
 
