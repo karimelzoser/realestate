@@ -1,28 +1,53 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "repository": "karimelzoser/realestate",
-  "stage": "PLAN_PREPARED_IMPLEMENTATION_NOT_STARTED",
+  "stage": "IMPLEMENTATION_STARTED",
   "planningBranch": "plan/egypt-platform-completion",
-  "integrationBranch": null,
-  "intendedIntegrationBranch": "completion/egypt-full-platform",
+  "integrationBranch": "completion/egypt-full-platform",
   "taskBranch": null,
+  "observedHeadBeforeCheckpoint": "446cfe4803bedc9868ee28799ff4b376277c0d91",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
-  "activeTaskId": "E00.1",
-  "activeTaskStatus": "NOT_STARTED",
-  "completedCheckpoint": "Full plan, prompt and initial control files prepared; source implementation not changed",
-  "nextAction": "Read planning branch docs and verify actual heads; create/recover completion/egypt-full-platform from the verified planning branch",
-  "changedFiles": [],
-  "commandsAndResults": [],
+  "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
+  "activeTaskId": "E01.1",
+  "activeTaskStatus": "IN_PROGRESS",
+  "completedCheckpoint": "E00.1/E00.2 repository authority and resumable execution controls established on canonical integration branch",
+  "nextAction": "Create focused E01.1 branch from the canonical checkpoint; inspect central access lifecycle checks and negative tests; reproduce suspended-tenant direct-request authorization gap",
+  "changedFiles": [
+    "docs/production-completion/TASKS.json",
+    "docs/production-completion/TASKS.md",
+    "docs/production-completion/PROGRESS.md",
+    "docs/production-completion/WORK_STATE.json",
+    "docs/production-completion/CONTINUE.md",
+    "docs/production-completion/SERVICE_READINESS.md"
+  ],
+  "commandsAndResults": [
+    {"action":"verify planning branch","result":"plan/egypt-platform-completion = 446cfe4803bedc9868ee28799ff4b376277c0d91; parent c2746523eb434898cbb4c46cf5df452d122ba78f"},
+    {"action":"verify PR #81 candidate","result":"head remains c2746523eb434898cbb4c46cf5df452d122ba78f"},
+    {"action":"verify main/demo","result":"main remains 1a6e61c891e040221f09c773e6de589928a9a0b7"},
+    {"action":"create integration branch","result":"completion/egypt-full-platform created from planning head"}
+  ],
   "evidencePaths": [
-    "PLAN.md",
-    "FEATURE_COMPLETION.md"
+    "docs/production-completion/PLAN.md",
+    "docs/production-completion/TASKS.json",
+    "docs/production-completion/PROGRESS.md"
   ],
   "remainingTests": [
-    "Implementation-stage baseline and task-specific checks"
+    "E01.1 reproduction and task-specific API/database negative tests"
   ],
   "externalBlockerIds": [
     "DEPLOYMENT_DEFERRED",
-    "PROVIDER_SETUP_PENDING"
+    "PROVIDER_SETUP_PENDING",
+    "INDEPENDENT_REVIEW_PENDING"
   ],
-  "deploymentAuthorized": false
+  "deploymentAuthorized": false,
+  "acceptedDecisions": {
+    "market": "Egypt: developers and brokerages",
+    "eoiSelection": "apartment type",
+    "allocationSelection": "exact eligible available apartment",
+    "uiLanguages": ["ar", "en"],
+    "initialVoiceLanguages": ["en"],
+    "demoHosting": "GitHub Pages, synthetic only",
+    "laterProductionHosting": "existing self-hosted server, Docker, CLI/SSH",
+    "railwayRequired": false
+  }
 }
