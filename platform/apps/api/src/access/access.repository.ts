@@ -100,11 +100,13 @@ export class PostgresAccessRepository extends AccessRepository {
     const activeMembershipRows = scopedTenantIds.length === 0
       ? []
       : await this.db
-        .selectFrom('tenant_memberships')
-        .select('tenant_id')
-        .where('user_id', '=', userId)
-        .where('tenant_id', 'in', scopedTenantIds)
-        .where('status', '=', 'ACTIVE')
+        .selectFrom('tenant_memberships as tm')
+        .innerJoin('tenants as t', 't.id', 'tm.tenant_id')
+        .select('tm.tenant_id')
+        .where('tm.user_id', '=', userId)
+        .where('tm.tenant_id', 'in', scopedTenantIds)
+        .where('tm.status', '=', 'ACTIVE')
+        .where('t.status', '=', 'ACTIVE')
         .execute();
     const activeMembershipTenantIds = new Set(activeMembershipRows.map((row) => row.tenant_id));
 
