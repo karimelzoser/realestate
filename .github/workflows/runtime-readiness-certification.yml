@@ -92,21 +92,34 @@ jobs:
         working-directory: platform
         run: |
           set -euo pipefail
-          set +e
-          NODE_ENV=production \
-          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
-          OBJECT_STORAGE_BUCKET=production-test \
-            pnpm --filter @preneura/api start >/tmp/api-invalid-config.log 2>&1
-          API_RC=$?
-          NODE_ENV=production \
-          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
-            pnpm --filter @preneura/worker start >/tmp/worker-invalid-config.log 2>&1
-          WORKER_RC=$?
-          set -e
-          test "$API_RC" -ne 0
-          test "$WORKER_RC" -ne 0
-          grep -q 'Invalid production configuration' /tmp/api-invalid-config.log
-          grep -q 'Invalid production worker configuration' /tmp/worker-invalid-config.log
+
+          assert_exits_before_startup() {
+            local package="$1"
+            local log_file="$2"
+            shift 2
+            set +e
+            env "$@" pnpm --filter "$package" start >"$log_file" 2>&1
+            local rc=$?
+            set -e
+            if [[ "$rc" -eq 0 ]]; then
+              cat "$log_file"
+              echo "$package unexpectedly started with incomplete production configuration." >&2
+              exit 1
+            fi
+          }
+
+          assert_exits_before_startup '@preneura/api' /tmp/api-invalid-config.log \
+            NODE_ENV=production \
+            DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
+            OBJECT_STORAGE_BUCKET=production-test
+
+          assert_exits_before_startup '@preneura/worker' /tmp/worker-invalid-config.log \
+            NODE_ENV=production \
+            DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres
+
+          # Exact validator/error contracts are owned by Production Configuration
+          # Certification. This workflow only proves runtime processes fail closed
+          # before readiness/worker loops when production configuration is incomplete.
 
       - name: Certify current, stale and rolling-compatible runtime states
         working-directory: platform
@@ -124,7 +137,8 @@ jobs:
           COMMON_DB=postgresql://postgres:postgres@127.0.0.1:5432/preneura_current
           COMMON_TOKEN=0123456789abcdef0123456789abcdef
           CONTACT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-          EXPECTED_SCHEMA_VERSION=40
+          COMMON_OTEL=https://otel.preneura.invalid
+          EXPECTED_SCHEMA_VERSION=41
 
           NODE_ENV=production \
           PORT=4120 \
@@ -150,6 +164,10 @@ jobs:
           DOCUMENT_SCANNER_URL=http://document-scanner.internal/v1/scan \
           DOCUMENT_SCANNER_TOKEN=0123456789abcdef \
           SETTLEMENT_PROVIDER_INGRESS_TOKEN="$COMMON_TOKEN" \
+          OTEL_EXPORTER_OTLP_ENDPOINT="$COMMON_OTEL" \
+          OTEL_TRACES_EXPORTER=none \
+          OTEL_METRICS_EXPORTER=none \
+          PRENEURA_SERVICE_NAME=runtime-readiness-api \
             pnpm --filter @preneura/api start >/tmp/api-valid-config.log 2>&1 &
           API_PID=$!
           trap 'kill "$API_PID" 2>/dev/null || true' EXIT
@@ -173,11 +191,17 @@ jobs:
           DATABASE_URL="$COMMON_DB" \
           NOTIFICATION_GATEWAY_URL=http://notification-gateway.internal/v1/notifications \
           NOTIFICATION_GATEWAY_TOKEN="$COMMON_TOKEN" \
+          INVENTORY_LOCK_EXPIRY_SCAN_MS=1000 \
+          INVENTORY_LOCK_EXPIRY_BATCH_SIZE=500 \
           OUTBOX_POLL_MS=300 \
           NOTIFICATION_POLL_MS=1000 \
           SLA_SCAN_MS=30000 \
           INSTALLMENT_REMINDER_SCAN_MS=30000 \
           COMMISSION_DUE_SCAN_MS=30000 \
+          OTEL_EXPORTER_OTLP_ENDPOINT="$COMMON_OTEL" \
+          OTEL_TRACES_EXPORTER=none \
+          OTEL_METRICS_EXPORTER=none \
+          PRENEURA_SERVICE_NAME=runtime-readiness-worker \
             pnpm --filter @preneura/worker start >/tmp/worker-valid-config.log 2>&1 &
           WORKER_PID=$!
           trap 'kill "$WORKER_PID" 2>/dev/null || true' EXIT
