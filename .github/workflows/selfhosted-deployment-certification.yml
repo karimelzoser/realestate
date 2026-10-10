@@ -1,0 +1,125 @@
+name: Self-Hosted Deployment Certification
+
+on:
+  workflow_call:
+  pull_request:
+    paths:
+      - "platform/deploy/**"
+      - "platform/docs/selfhosted-deployment-bundle.md"
+      - "platform/apps/**"
+      - "platform/packages/database/**"
+      - "platform/packages/observability/**"
+      - "platform/packages/security/**"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/selfhosted-deployment-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/deploy/**"
+      - "platform/docs/selfhosted-deployment-bundle.md"
+      - "platform/apps/**"
+      - "platform/packages/database/**"
+      - "platform/packages/observability/**"
+      - "platform/packages/security/**"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/selfhosted-deployment-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  compose-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: platform/deploy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Compose model
+        run: docker compose --env-file .env.certification -f docker-compose.production.yml -f docker-compose.certification.yml config --quiet
+
+      - name: Build immutable application targets
+        run: docker compose --env-file .env.certification -f docker-compose.production.yml -f docker-compose.certification.yml build --pull
+
+      - name: Start certified deployment topology
+        run: docker compose --env-file .env.certification -f docker-compose.production.yml -f docker-compose.certification.yml up -d
+
+      - name: Wait for public edge readiness
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 90); do
+            if curl --silent --fail http://127.0.0.1:18080/healthz >/tmp/edge-health.json; then
+              cat /tmp/edge-health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose --env-file .env.certification -f docker-compose.production.yml -f docker-compose.certification.yml ps -a
+          exit 1
+
+      - name: Certify migration, routing, isolation and runtime immutability
+        run: |
+          set -euo pipefail
+          compose=(docker compose --env-file .env.certification -f docker-compose.production.yml -f docker-compose.certification.yml)
+
+          fail() {
+            echo "SELF-HOSTED CERTIFICATION FAILED: $*" >&2
+            "${compose[@]}" ps -a >&2 || true
+            exit 1
+          }
+
+          migrate_id="$("${compose[@]}" ps --all -q migrate)"
+          [[ -n "$migrate_id" ]] || fail 'migration container is missing'
+          migrate_exit="$(docker inspect --format '{{.State.ExitCode}}' "$migrate_id")"
+          [[ "$migrate_exit" == "0" ]] || fail "migration exited with code $migrate_exit"
+
+          curl --silent --fail http://127.0.0.1:18080/livez >/dev/null || fail 'edge liveness route failed'
+          curl --silent --fail http://127.0.0.1:18080/api/v1/health/ready >/tmp/api-ready.json || fail 'proxied API readiness failed'
+          curl --silent --fail http://127.0.0.1:18080/login >/tmp/login.html || fail 'proxied web login route failed'
+          grep -q '"status":"ready"' /tmp/api-ready.json || fail 'API readiness payload is not ready'
+          grep -qi '<html' /tmp/login.html || fail 'web login response is not HTML'
+
+          for service in api worker notification-gateway web migrate; do
+            container_id="$("${compose[@]}" ps --all -q "$service")"
+            [[ -n "$container_id" ]] || fail "$service container is missing"
+
+            container_user="$(docker inspect --format '{{.Config.User}}' "$container_id")"
+            [[ "$container_user" == "node" ]] || fail "$service container user is '$container_user', expected 'node'"
+
+            case "$service" in
+              api|web|notification-gateway)
+                port_bindings="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$container_id")"
+                [[ "$port_bindings" == "null" || "$port_bindings" == "{}" ]] || fail "$service has host port bindings: $port_bindings"
+                ;;
+            esac
+          done
+
+          edge_id="$("${compose[@]}" ps --all -q edge)"
+          [[ -n "$edge_id" ]] || fail 'edge container is missing'
+          edge_bindings="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$edge_id")"
+          grep -q '8080/tcp' <<<"$edge_bindings" || fail "edge 8080/tcp is not host-published: $edge_bindings"
+
+          worker_logs="$("${compose[@]}" logs --no-color worker)"
+          grep -q 'worker.ready' <<<"$worker_logs" || fail 'worker never reached worker.ready'
+
+          runtime_logs="$("${compose[@]}" logs --no-color api worker notification-gateway web migrate)"
+          if grep -q 'Corepack is about to download' <<<"$runtime_logs"; then
+            fail 'runtime container attempted to download package-manager tooling'
+          fi
+
+          echo 'Self-hosted deployment certification passed.'
+
+      - name: Dump deployment logs on failure
+        if: failure()
+        run: |
+          docker compose --env-file .env.certification -f docker-compose.production.yml -f docker-compose.certification.yml ps -a || true
+          docker compose --env-file .env.certification -f docker-compose.production.yml -f docker-compose.certification.yml logs --no-color || true
+
+      - name: Tear down certification stack
+        if: always()
+        run: docker compose --env-file .env.certification -f docker-compose.production.yml -f docker-compose.certification.yml down -v --remove-orphans || true
