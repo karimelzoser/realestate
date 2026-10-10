@@ -5,8 +5,8 @@
   "release": {
     "applicationRuntimeSha": "c2746523eb434898cbb4c46cf5df452d122ba78f",
     "applicationRuntimeSource": "PR #81 emitted full-stack acceptance",
-    "deploymentBundleSha": "8750f94180b89cf58a1963f739c24aa0a56babbd",
-    "deploymentBundleSource": "PR #82 self-hosted deployment bundle",
+    "deploymentBundleSha": "4da4a83f7c5ca17ed7033237b9aca74186b912ce",
+    "deploymentBundleSource": "PR #85 self-hosted bundle with verifiable container provenance",
     "runtimeSchemaVersion": 41,
     "migrationMarker": "0041_inventory_lock_expiry_durability.sql"
   },
