@@ -20,8 +20,12 @@ RUN pnpm install --frozen-lockfile
 
 COPY platform/ ./
 ARG NEXT_PUBLIC_API_URL
-ARG GITHUB_ACTIONS=false
+ARG PRENEURA_SOURCE_SHA
+ARG PRENEURA_APPLICATION_RUNTIME_SHA
+RUN printf '%s' "${PRENEURA_SOURCE_SHA}" | grep -Eq '^[0-9a-f]{40}$' \
+ && printf '%s' "${PRENEURA_APPLICATION_RUNTIME_SHA}" | grep -Eq '^[0-9a-f]{40}$'
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ARG GITHUB_ACTIONS=false
 ENV GITHUB_ACTIONS=${GITHUB_ACTIONS}
 RUN pnpm --filter @preneura/api... build \
  && pnpm --filter @preneura/worker... build \
@@ -29,6 +33,12 @@ RUN pnpm --filter @preneura/api... build \
  && pnpm --filter @preneura/web... build
 
 FROM workspace AS runtime-base
+ARG PRENEURA_SOURCE_SHA
+ARG PRENEURA_APPLICATION_RUNTIME_SHA
+LABEL org.opencontainers.image.source="https://github.com/karimelzoser/realestate" \
+      org.opencontainers.image.revision="${PRENEURA_SOURCE_SHA}" \
+      com.preneura.application-runtime-sha="${PRENEURA_APPLICATION_RUNTIME_SHA}" \
+      com.preneura.runtime-schema-version="41"
 ENV NODE_ENV=production
 ENV GITHUB_ACTIONS=false
 RUN chown -R node:node /srv/preneura
