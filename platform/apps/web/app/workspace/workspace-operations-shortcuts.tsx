@@ -16,6 +16,7 @@ export default function WorkspaceOperationsShortcuts() {
   const [showSales, setShowSales] = useState(false);
   const [showAllocation, setShowAllocation] = useState(false);
   const [showBroker, setShowBroker] = useState(false);
+  const [showTransactionOps, setShowTransactionOps] = useState(false);
   const [showRefunds, setShowRefunds] = useState(false);
   const [showSettlements, setShowSettlements] = useState(false);
   const [showDocumentPolicy, setShowDocumentPolicy] = useState(false);
@@ -50,6 +51,9 @@ export default function WorkspaceOperationsShortcuts() {
         setShowBroker(workspace.projects.some((project) => project.roles.some((role) =>
           role === 'BROKER_MANAGER' || role === 'BROKER_FINANCE' || role === 'BROKER_AGENT',
         )));
+        setShowTransactionOps(workspace.projects.some((project) => project.roles.some((role) =>
+          roleHasPermission(role, 'transaction.manage'),
+        )));
         setShowRefunds(workspace.projects.some((project) => project.roles.some((role) =>
           roleHasPermission(role, 'refund.read') || roleHasPermission(role, 'refund.request'),
         )));
@@ -79,7 +83,7 @@ export default function WorkspaceOperationsShortcuts() {
     };
   }, []);
 
-  if (!showAdmin && !showProjectSetup && !showAccounts && !showProperty && !showSales && !showAllocation && !showBroker && !showRefunds && !showSettlements && !showDocumentPolicy && !showDocumentTemplates && !showCommissions && !showReminders && !showAi) return null;
+  if (!showAdmin && !showProjectSetup && !showAccounts && !showProperty && !showSales && !showAllocation && !showBroker && !showTransactionOps && !showRefunds && !showSettlements && !showDocumentPolicy && !showDocumentTemplates && !showCommissions && !showReminders && !showAi) return null;
 
   return (
     <nav className={styles.shortcuts} aria-label="Additional operations">
@@ -89,6 +93,7 @@ export default function WorkspaceOperationsShortcuts() {
       {showSales ? <a href="/workspace/sales">Buyers & EOIs</a> : null}
       {showAllocation ? <a href="/workspace/allocation">Reception & Allocation</a> : null}
       {showBroker ? <a href="/workspace/broker">Broker Operations</a> : null}
+      {showTransactionOps ? <a href="/workspace/transaction-operations">Transaction Operations</a> : null}
       {showProjectSetup ? <a href="/workspace/project-setup">Project Setup</a> : null}
       {showAi ? <a href="/workspace/ai">AI Workspace</a> : null}
       {showAccounts ? <a href="/workspace/accounts">Accounts</a> : null}
