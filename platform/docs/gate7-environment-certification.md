@@ -212,7 +212,7 @@ Do not repurpose unrelated PRENEURA preview infrastructure as proof for this sys
 
 On 10 October 2026 the connected legacy preview environment was observed to contain a different application (`platform-core`), PostgreSQL 16/pgvector, NATS, Temporal and Keycloak, with no Real Estate split web/API/worker/gateway topology or document bucket. It is therefore **not** Gate 7 evidence for this repository.
 
-A separate Railway staging project was created for this certification effort. PostgreSQL 18 and the private document bucket were staged, but Railway then returned a workspace resource-provision limit when the application service shells were added. No staged changes were committed/deployed. Gate 7 remains blocked until sufficient Railway capacity is available or a different approved staging account/environment is provided.
+A separate Railway staging project was created for this certification effort. A private document bucket is present only as a **staged, undeployed** change. A PostgreSQL 18 template staging request was issued, but it did not materialize into the environment inventory. When the first application service shell was then staged, Railway returned a workspace resource-provision limit. No application service, PostgreSQL service, bucket, or other staged resource has been deployed. Gate 7 remains blocked until sufficient Railway capacity is available or a different approved staging account/environment is provided.
 
 Do not delete the existing preview stack merely to make this certification fit within a plan limit without explicit infrastructure-owner approval.
 
