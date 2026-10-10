@@ -1,0 +1,91 @@
+name: Gate 5 Full Role Parity Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/packages/contracts/src/access.ts"
+      - "platform/apps/api/src/access/**"
+      - "platform/apps/api/src/platform-admin/**"
+      - "platform/apps/api/src/ai/**"
+      - "platform/apps/api/src/management/**"
+      - "platform/apps/web/app/admin/**"
+      - "platform/apps/web/app/workspace/**"
+      - "platform/packages/database/migrations/**"
+      - "platform/scripts/certify-gate5-full-role-parity.mjs"
+      - ".github/workflows/gate5-full-role-parity-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/packages/contracts/src/access.ts"
+      - "platform/apps/api/src/access/**"
+      - "platform/apps/api/src/platform-admin/**"
+      - "platform/apps/api/src/ai/**"
+      - "platform/apps/api/src/management/**"
+      - "platform/apps/web/app/admin/**"
+      - "platform/apps/web/app/workspace/**"
+      - "platform/packages/database/migrations/**"
+      - "platform/scripts/certify-gate5-full-role-parity.mjs"
+      - ".github/workflows/gate5-full-role-parity-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  full-role-parity:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura_gate5_full_parity
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura_gate5_full_parity"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    defaults:
+      run:
+        working-directory: platform
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_gate5_full_parity
+      PGPASSWORD: postgres
+      NODE_ENV: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build full production authority surface
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4100
+        run: |
+          set -euo pipefail
+          pnpm --filter @preneura/api... build
+          pnpm --filter @preneura/web... build
+
+      - name: Apply canonical migrations
+        run: MIGRATION_ACTOR=gate5-full-role-parity pnpm --filter @preneura/database migrate
+
+      - name: Certify full production role, support and AI parity
+        run: node scripts/certify-gate5-full-role-parity.mjs
