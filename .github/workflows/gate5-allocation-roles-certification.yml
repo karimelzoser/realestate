@@ -1,0 +1,115 @@
+name: Gate 5 Receptionist Allocator Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/packages/database/migrations/0040_allocator_assignment_authority.sql"
+      - "platform/packages/database/tests/gate5_reception_allocator_certification.sql"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/contracts/src/allocation.ts"
+      - "platform/packages/contracts/package.json"
+      - "platform/apps/api/src/sales/allocation-role.*"
+      - "platform/apps/api/src/sales/sales.module.ts"
+      - "platform/apps/api/src/sales/sales.repository.ts"
+      - "platform/apps/api/src/catalog/**"
+      - "platform/apps/web/app/workspace/allocation/**"
+      - ".github/workflows/gate5-allocation-roles-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+    paths:
+      - "platform/packages/database/migrations/0040_allocator_assignment_authority.sql"
+      - "platform/packages/database/tests/gate5_reception_allocator_certification.sql"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/contracts/src/allocation.ts"
+      - "platform/packages/contracts/package.json"
+      - "platform/apps/api/src/sales/allocation-role.*"
+      - "platform/apps/api/src/sales/sales.module.ts"
+      - "platform/apps/api/src/sales/sales.repository.ts"
+      - "platform/apps/api/src/catalog/**"
+      - "platform/apps/web/app/workspace/allocation/**"
+      - ".github/workflows/gate5-allocation-roles-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  certify-allocation-roles:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen install
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        working-directory: platform
+        run: pnpm typecheck
+      - name: Apply production migrations
+        working-directory: platform
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
+          MIGRATION_ACTOR: gate5-receptionist-allocator-certification
+        run: pnpm --filter @preneura/database migrate
+      - name: Verify allocation authority structures
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM platform_schema_migrations
+              WHERE version=40 AND filename='0040_allocator_assignment_authority.sql'
+            ) THEN RAISE EXCEPTION 'allocator authority migration 0040 missing'; END IF;
+            IF to_regprocedure('public.preneura_claim_called_queue_entry(uuid,uuid,uuid,timestamp with time zone)') IS NULL
+              THEN RAISE EXCEPTION 'allocator claim function missing'; END IF;
+            IF to_regprocedure('public.preneura_create_assigned_inventory_lock(uuid,uuid,uuid,uuid,integer,timestamp with time zone)') IS NULL
+              THEN RAISE EXCEPTION 'assigned allocator lock function missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_allocator_inventory_lock_guard' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'allocator lock guard missing'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_reservation_allocator_ownership' AND NOT tgisinternal)
+              THEN RAISE EXCEPTION 'allocator reservation ownership trigger missing'; END IF;
+            IF to_regclass('public.uq_queue_allocator_one_active_session') IS NULL
+              THEN RAISE EXCEPTION 'allocator active-session uniqueness index missing'; END IF;
+            IF NOT EXISTS (
+              SELECT 1 FROM platform_runtime_contract
+              WHERE singleton_key='production'
+                AND schema_version >= 40
+                AND minimum_runtime_version <= 40
+            ) THEN RAISE EXCEPTION 'runtime contract does not accept Gate 5 allocation schema'; END IF;
+          END $$;
+          SQL
+      - name: Execute Receptionist Allocator authority certification
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
+            -f platform/packages/database/tests/gate5_reception_allocator_certification.sql
