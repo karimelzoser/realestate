@@ -212,10 +212,10 @@ BEGIN
   WHERE b.id = v_queue.buyer_profile_id AND b.tenant_id = p_tenant_id AND b.status = 'ACTIVE';
   IF v_buyer_user_id IS NULL THEN RAISE EXCEPTION 'assigned buyer is not active'; END IF;
 
-  UPDATE inventory_locks
+  UPDATE inventory_locks AS il
   SET status = 'EXPIRED', released_at = p_now, release_reason = 'TTL expired', updated_at = p_now
-  WHERE tenant_id = p_tenant_id AND project_id = p_project_id
-    AND status = 'ACTIVE' AND expires_at <= p_now;
+  WHERE il.tenant_id = p_tenant_id AND il.project_id = p_project_id
+    AND il.status = 'ACTIVE' AND il.expires_at <= p_now;
 
   SELECT s.id INTO v_slot_id
   FROM inventory_slots s
