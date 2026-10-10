@@ -45,6 +45,8 @@ const workerBase: Env = {
   DATABASE_URL: 'postgresql://app:secret@db.internal:5432/preneura',
   NOTIFICATION_GATEWAY_URL: 'http://notification-gateway.railway.internal/deliver',
   NOTIFICATION_GATEWAY_TOKEN: longSecret,
+  INVENTORY_LOCK_EXPIRY_SCAN_MS: '1000',
+  INVENTORY_LOCK_EXPIRY_BATCH_SIZE: '500',
   OUTBOX_POLL_MS: '300',
   NOTIFICATION_POLL_MS: '1000',
   SLA_SCAN_MS: '30000',
@@ -97,6 +99,17 @@ expectFail('worker.localhost-gateway', 'localhost', () =>
 expectFail('worker.unsafe-poll', 'between', () =>
   assertWorkerRuntimeConfiguration({ ...workerBase, OUTBOX_POLL_MS: '1' }),
 );
+expectFail('worker.unsafe-lock-expiry-scan', 'INVENTORY_LOCK_EXPIRY_SCAN_MS', () =>
+  assertWorkerRuntimeConfiguration({ ...workerBase, INVENTORY_LOCK_EXPIRY_SCAN_MS: '10' }),
+);
+expectFail('worker.unsafe-lock-expiry-batch', 'INVENTORY_LOCK_EXPIRY_BATCH_SIZE', () =>
+  assertWorkerRuntimeConfiguration({ ...workerBase, INVENTORY_LOCK_EXPIRY_BATCH_SIZE: '5001' }),
+);
+expectFail('worker.missing-lock-expiry-scan', 'INVENTORY_LOCK_EXPIRY_SCAN_MS is required', () => {
+  const env = { ...workerBase };
+  delete env.INVENTORY_LOCK_EXPIRY_SCAN_MS;
+  assertWorkerRuntimeConfiguration(env);
+});
 
 expectPass('gateway.valid', () => assertNotificationGatewayRuntimeConfiguration({ ...gatewayBase }));
 expectFail('gateway.short-token', '32 characters', () =>
