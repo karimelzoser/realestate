@@ -204,7 +204,7 @@ certify_api_current() {
 certify_api_stale() {
   local log_file=/tmp/preneura-api-stale.log
   NODE_ENV=test PORT=4101 WEB_ORIGIN=http://localhost:3000 \
-  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_stale" \
+  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGPORT/preneura_stale" \
   OBJECT_STORAGE_BUCKET=readiness-test \
     pnpm --filter @preneura/api start >"$log_file" 2>&1 &
   local pid=$!
@@ -223,10 +223,23 @@ certify_api_stale() {
   trap - RETURN
 }
 
+run_worker_direct() {
+  local database_name="$1"
+  shift
+  (
+    cd apps/worker
+    NODE_ENV=test \
+    DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$database_name" \
+      "$@"
+  )
+}
+
 certify_worker() {
   set +e
-  NODE_ENV=test DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_stale" \
-    timeout --signal=TERM --kill-after=2s 8s pnpm --filter @preneura/worker start >/tmp/worker-stale.log 2>&1
+  run_worker_direct preneura_stale \
+    timeout --signal=TERM --kill-after=2s 8s \
+    node --import @preneura/observability/register dist/main.js \
+      >/tmp/worker-stale.log 2>&1
   local stale_rc=$?
   set -e
   if [[ "$stale_rc" -eq 0 || "$stale_rc" -eq 124 || "$stale_rc" -eq 137 ]]; then
@@ -238,8 +251,10 @@ certify_worker() {
   grep -q 'Runtime schema contract is not available' /tmp/worker-stale.log
 
   set +e
-  NODE_ENV=test DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_current" \
-    timeout --signal=TERM --kill-after=2s 5s pnpm --filter @preneura/worker start >/tmp/worker-current.log 2>&1
+  run_worker_direct preneura_current \
+    timeout --signal=TERM --kill-after=2s 5s \
+    node --import @preneura/observability/register dist/main.js \
+      >/tmp/worker-current.log 2>&1
   local current_rc=$?
   set -e
   if [[ "$current_rc" -ne 124 && "$current_rc" -ne 137 && "$current_rc" -ne 143 ]]; then
