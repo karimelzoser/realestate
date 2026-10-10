@@ -7,6 +7,7 @@ import { CatalogModule } from './catalog/catalog.module.js';
 import { CommissionModule } from './commissions/commission.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { DocumentModule } from './documents/document.module.js';
+import { ExportModule } from './exports/export.module.js';
 import { FinanceModule } from './finance/finance.module.js';
 import { HealthController } from './health/health.controller.js';
 import { NotificationModule } from './notifications/notification.module.js';
@@ -33,6 +34,7 @@ import { StorageModule } from './storage/storage.module.js';
     FinanceModule,
     RealtimeModule,
     NotificationModule,
+    ExportModule,
   ],
   controllers: [HealthController],
 })
