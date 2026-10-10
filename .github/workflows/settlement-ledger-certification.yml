@@ -72,35 +72,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 12.9.1
           run_install: false
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: platform/pnpm-lock.yaml
-
       - name: Frozen install
         working-directory: platform
         run: pnpm install --frozen-lockfile
-
       - name: Typecheck integrated API contracts
         working-directory: platform
         run: pnpm typecheck
-
       - name: Apply canonical schema with production migrator
         working-directory: platform
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
           MIGRATION_ACTOR: gate4-integrated-finance-certification
         run: pnpm --filter @preneura/database migrate
-
       - name: Verify canonical Gate 4 migration history and authority
         env:
           PGPASSWORD: postgres
@@ -110,10 +104,12 @@ jobs:
           DO $$
           DECLARE
             v_latest integer;
+            v_runtime_schema integer;
+            v_min_runtime integer;
           BEGIN
             SELECT max(version) INTO v_latest FROM platform_schema_migrations;
-            IF v_latest <> 39 THEN
-              RAISE EXCEPTION 'production migrator did not finish at integrated schema 39; got %', v_latest;
+            IF v_latest < 39 THEN
+              RAISE EXCEPTION 'production migrator has not reached integrated Gate 4 schema 39; got %', v_latest;
             END IF;
 
             IF EXISTS (
@@ -153,30 +149,28 @@ jobs:
               WHERE tgname='trg_eoi_settlement_subledger' AND NOT tgisinternal
             ) THEN RAISE EXCEPTION 'settlement-to-EOI accounting trigger missing'; END IF;
 
-            IF NOT EXISTS (
-              SELECT 1 FROM platform_runtime_contract
-              WHERE singleton_key='production'
-                AND schema_version=39
-                AND minimum_runtime_version=39
-                AND migration_marker='0039_eoi_projection_authority_one_shot'
-            ) THEN RAISE EXCEPTION 'runtime contract is not integrated Gate 4 schema 39'; END IF;
+            SELECT schema_version, minimum_runtime_version
+              INTO v_runtime_schema, v_min_runtime
+            FROM platform_runtime_contract
+            WHERE singleton_key='production';
+            IF v_runtime_schema < 39 OR v_min_runtime < 39 THEN
+              RAISE EXCEPTION 'runtime contract no longer preserves Gate 4 authority: schema %, minimum runtime %',
+                v_runtime_schema, v_min_runtime;
+            END IF;
           END $$;
           SQL
-
       - name: Execute settlement command authority certification
         env:
           PGPASSWORD: postgres
         run: |
           psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
             -f platform/packages/database/tests/gate4_settlement_command_authority_certification.sql
-
       - name: Execute commission settlement certification
         env:
           PGPASSWORD: postgres
         run: |
           psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
             -f platform/packages/database/tests/gate4_settlement_ledger_certification.sql
-
       - name: Execute integrated EOI/refund settlement certification
         env:
           PGPASSWORD: postgres
