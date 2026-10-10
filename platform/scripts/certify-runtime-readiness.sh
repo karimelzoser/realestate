@@ -10,8 +10,8 @@ export PGPASSWORD
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-CURRENT_SCHEMA_VERSION=40
-FUTURE_SCHEMA_VERSION=41
+CURRENT_SCHEMA_VERSION=41
+FUTURE_SCHEMA_VERSION=42
 
 create_test_databases() {
   local db
@@ -35,22 +35,22 @@ create_test_databases() {
     done
   done
 
-  # Simulate the next additive migration: newer schema remains compatible with runtime 40.
+  # Simulate the next additive migration: newer schema remains compatible with runtime 41.
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_compatible -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 UPDATE platform_runtime_contract
-SET schema_version = 41,
-    minimum_runtime_version = 40,
-    migration_marker = '0041_additive_future',
+SET schema_version = 42,
+    minimum_runtime_version = 41,
+    migration_marker = '0042_additive_future',
     updated_at = now()
 WHERE singleton_key = 'production';
 SQL
 
-  # Simulate a future breaking migration that explicitly requires runtime 41.
+  # Simulate a future breaking migration that explicitly requires runtime 42.
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_incompatible -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
 UPDATE platform_runtime_contract
-SET schema_version = 41,
-    minimum_runtime_version = 41,
-    migration_marker = '0041_breaking_future',
+SET schema_version = 42,
+    minimum_runtime_version = 42,
+    migration_marker = '0042_breaking_future',
     updated_at = now()
 WHERE singleton_key = 'production';
 SQL
@@ -62,7 +62,7 @@ DO $$
 BEGIN
   BEGIN
     UPDATE platform_runtime_contract
-    SET schema_version = 39
+    SET schema_version = 40
     WHERE singleton_key = 'production';
     RAISE EXCEPTION 'schema downgrade unexpectedly succeeded';
   EXCEPTION WHEN OTHERS THEN
@@ -171,7 +171,7 @@ certify_api_current() {
   curl --fail --silent http://127.0.0.1:4100/v1/health/live | grep -q '"status":"ok"'
   curl --fail --silent http://127.0.0.1:4100/v1/health/ready >/tmp/ready.json
   grep -q '"status":"ready"' /tmp/ready.json
-  grep -q '"databaseSchemaVersion":40' /tmp/ready.json
+  grep -q '"databaseSchemaVersion":41' /tmp/ready.json
 
   kill "$pid"
   wait "$pid" || true
@@ -225,7 +225,7 @@ certify_worker() {
     return 1
   fi
   grep -q 'worker.ready' /tmp/worker-current.log
-  grep -q '"databaseSchemaVersion":40' /tmp/worker-current.log
+  grep -q '"databaseSchemaVersion":41' /tmp/worker-current.log
 }
 
 create_test_databases
