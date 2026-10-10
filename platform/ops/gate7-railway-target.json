@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "provider": "railway",
+  "application": "PRENEURA Real Estate OS",
+  "sourceRepository": "karimelzoser/realestate",
+  "sourceRoot": "platform",
+  "nodeMajor": 24,
+  "packageManager": "pnpm@12.9.1",
+  "deploymentPolicy": {
+    "singlePrimaryRegion": true,
+    "requireHttpsForPublicServices": true,
+    "databasePublicTcpAllowed": false,
+    "objectStoragePublicAllowed": false,
+    "migrationAuthority": "api-predeploy",
+    "migrationCommand": "MIGRATION_ACTOR=railway-release pnpm --filter @preneura/database migrate",
+    "productionMinimumReplicas": {
+      "web": 2,
+      "api": 2,
+      "worker": 1,
+      "notification-gateway": 1
+    }
+  },
+  "services": [
+    {
+      "role": "web",
+      "name": "preneura-web",
+      "public": true,
+      "rootDirectory": "platform",
+      "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/web build",
+      "startCommand": "pnpm --filter @preneura/web start",
+      "healthcheckPath": "/",
+      "restartPolicy": "ON_FAILURE",
+      "requiredVariables": [
+        "NODE_ENV",
+        "NEXT_PUBLIC_API_URL"
+      ]
+    },
+    {
+      "role": "api",
+      "name": "preneura-api",
+      "public": true,
+      "rootDirectory": "platform",
+      "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/api build",
+      "preDeployCommand": "MIGRATION_ACTOR=railway-release pnpm --filter @preneura/database migrate",
+      "startCommand": "pnpm --filter @preneura/api start",
+      "healthcheckPath": "/v1/health/ready",
+      "restartPolicy": "ON_FAILURE",
+      "requiredVariables": [
+        "NODE_ENV",
+        "DATABASE_URL",
+        "WEB_ORIGIN",
+        "TRUST_PROXY_HOPS",
+        "API_BODY_LIMIT_BYTES",
+        "AUTH_IDENTIFIER_HMAC_KEY",
+        "AUTH_OTP_PEPPER",
+        "COOKIE_SIGNING_SECRET",
+        "CONTACT_ENCRYPTION_KEY_BASE64",
+        "CONTACT_HMAC_KEY",
+        "CONTACT_VERIFICATION_PEPPER",
+        "OIDC_ISSUER",
+        "OIDC_CLIENT_ID",
+        "OIDC_CLIENT_SECRET",
+        "OIDC_REDIRECT_URI",
+        "OTP_PROVIDER",
+        "AUTH_OTP_GATEWAY_URL",
+        "CONTACT_VERIFICATION_GATEWAY_URL",
+        "OBJECT_STORAGE_BUCKET",
+        "OBJECT_STORAGE_REGION",
+        "OBJECT_STORAGE_ENDPOINT",
+        "OBJECT_STORAGE_ACCESS_KEY_ID",
+        "OBJECT_STORAGE_SECRET_ACCESS_KEY",
+        "DOCUMENT_SCANNER_URL",
+        "DOCUMENT_SCANNER_TOKEN",
+        "FINANCE_PROVIDER_INGRESS_TOKEN",
+        "SETTLEMENT_PROVIDER_INGRESS_TOKEN"
+      ]
+    },
+    {
+      "role": "worker",
+      "name": "preneura-worker",
+      "public": false,
+      "rootDirectory": "platform",
+      "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/worker build",
+      "startCommand": "pnpm --filter @preneura/worker start",
+      "healthcheckPath": null,
+      "restartPolicy": "ON_FAILURE",
+      "requiredVariables": [
+        "NODE_ENV",
+        "DATABASE_URL",
+        "WORKER_ID",
+        "OUTBOX_POLL_MS",
+        "NOTIFICATION_POLL_MS",
+        "SLA_SCAN_MS",
+        "INSTALLMENT_REMINDER_SCAN_MS",
+        "COMMISSION_DUE_SCAN_MS",
+        "NOTIFICATION_GATEWAY_URL",
+        "NOTIFICATION_GATEWAY_TOKEN"
+      ]
+    },
+    {
+      "role": "notification-gateway",
+      "name": "preneura-notification-gateway",
+      "public": false,
+      "rootDirectory": "platform",
+      "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/notification-gateway build",
+      "startCommand": "pnpm --filter @preneura/notification-gateway start",
+      "healthcheckPath": "/health",
+      "restartPolicy": "ON_FAILURE",
+      "requiredVariables": [
+        "NODE_ENV",
+        "DATABASE_URL",
+        "CONTACT_ENCRYPTION_KEY_BASE64",
+        "NOTIFICATION_GATEWAY_TOKEN",
+        "META_GRAPH_API_VERSION",
+        "META_WHATSAPP_PHONE_NUMBER_ID",
+        "META_WHATSAPP_ACCESS_TOKEN",
+        "WHATSAPP_TEMPLATE_BINDINGS_JSON"
+      ]
+    },
+    {
+      "role": "keycloak",
+      "name": "preneura-keycloak",
+      "public": true,
+      "healthcheckPath": "/health/ready",
+      "restartPolicy": "ON_FAILURE",
+      "requiredVariables": []
+    },
+    {
+      "role": "postgres",
+      "name": "preneura-postgres",
+      "public": false,
+      "majorVersion": 18,
+      "persistentVolumeRequired": true,
+      "pitrRequired": true,
+      "requiredVariables": []
+    },
+    {
+      "role": "object-storage",
+      "name": "preneura-documents",
+      "public": false,
+      "versioningRequired": true,
+      "serverSideEncryptionRequired": true,
+      "requiredVariables": []
+    }
+  ],
+  "liveCertification": {
+    "requiredPublicRoles": ["web", "api", "keycloak"],
+    "forbiddenPublicRoles": ["worker", "notification-gateway", "postgres", "object-storage"],
+    "apiLivenessPath": "/v1/health/live",
+    "apiReadinessPath": "/v1/health/ready",
+    "expectedApiSecurityHeaders": {
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "referrer-policy": "no-referrer",
+      "cache-control": "no-store"
+    },
+    "requireHsts": true,
+    "requireRequestId": true,
+    "requireCredentialedCors": true,
+    "postgresRpoMinutesMaximum": 5,
+    "postgresRtoMinutesMaximum": 60,
+    "objectRestoreRtoMinutesMaximum": 60
+  }
+}
