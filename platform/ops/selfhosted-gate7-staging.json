@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "product": "PRENEURA Real Estate OS",
+  "repository": "karimelzoser/realestate",
+  "releaseSha": "288f4afba3b87dbc123eff6b198e1720075edc7d",
+  "releaseSource": "PR #77 canonical production candidate",
+  "deployment": {
+    "mode": "self-hosted",
+    "environmentName": "staging",
+    "operatingSystem": "Linux",
+    "reverseProxy": "Nginx or HAProxy",
+    "database": {
+      "engine": "PostgreSQL",
+      "majorVersion": 18,
+      "public": false
+    },
+    "objectStorage": {
+      "protocol": "S3-compatible",
+      "public": false,
+      "requiredVariables": [
+        "OBJECT_STORAGE_ENDPOINT",
+        "OBJECT_STORAGE_BUCKET",
+        "OBJECT_STORAGE_REGION",
+        "OBJECT_STORAGE_ACCESS_KEY_ID",
+        "OBJECT_STORAGE_SECRET_ACCESS_KEY"
+      ]
+    },
+    "services": [
+      {
+        "name": "re-web",
+        "rootDirectory": "platform",
+        "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/web build",
+        "startCommand": "pnpm --filter @preneura/web start",
+        "public": true,
+        "healthcheckPath": "/api/health",
+        "requiredVariables": ["NODE_ENV", "NEXT_PUBLIC_API_URL"]
+      },
+      {
+        "name": "re-api",
+        "rootDirectory": "platform",
+        "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/api build",
+        "startCommand": "pnpm --filter @preneura/api start",
+        "public": true,
+        "healthcheckPath": "/v1/health/ready",
+        "requiredVariables": [
+          "NODE_ENV", "DATABASE_URL", "WEB_ORIGIN", "TRUST_PROXY_HOPS", "API_BODY_LIMIT_BYTES",
+          "AUTH_IDENTIFIER_HMAC_KEY", "AUTH_OTP_PEPPER", "COOKIE_SIGNING_SECRET",
+          "CONTACT_ENCRYPTION_KEY_BASE64", "CONTACT_HMAC_KEY", "CONTACT_VERIFICATION_PEPPER",
+          "OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET", "OIDC_REDIRECT_URI",
+          "OTP_PROVIDER", "AUTH_OTP_GATEWAY_URL", "CONTACT_VERIFICATION_GATEWAY_URL",
+          "NOTIFICATION_GATEWAY_TOKEN",
+          "OBJECT_STORAGE_BUCKET", "OBJECT_STORAGE_REGION", "OBJECT_STORAGE_ENDPOINT",
+          "OBJECT_STORAGE_ACCESS_KEY_ID", "OBJECT_STORAGE_SECRET_ACCESS_KEY", "OBJECT_STORAGE_FORCE_PATH_STYLE",
+          "DOCUMENT_SCANNER_URL", "DOCUMENT_SCANNER_TOKEN",
+          "FINANCE_PROVIDER_INGRESS_TOKEN", "SETTLEMENT_PROVIDER_INGRESS_TOKEN",
+          "OTEL_EXPORTER_OTLP_ENDPOINT"
+        ]
+      },
+      {
+        "name": "re-worker",
+        "rootDirectory": "platform",
+        "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/worker build",
+        "startCommand": "pnpm --filter @preneura/worker start",
+        "public": false,
+        "requiredVariables": [
+          "NODE_ENV", "DATABASE_URL", "NOTIFICATION_GATEWAY_URL", "NOTIFICATION_GATEWAY_TOKEN",
+          "OUTBOX_POLL_MS", "NOTIFICATION_POLL_MS", "SLA_SCAN_MS", "INSTALLMENT_REMINDER_SCAN_MS",
+          "COMMISSION_DUE_SCAN_MS", "INVENTORY_LOCK_EXPIRY_SCAN_MS", "INVENTORY_LOCK_EXPIRY_BATCH_SIZE",
+          "OTEL_EXPORTER_OTLP_ENDPOINT"
+        ]
+      },
+      {
+        "name": "re-notification-gateway",
+        "rootDirectory": "platform",
+        "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/notification-gateway build",
+        "startCommand": "pnpm --filter @preneura/notification-gateway start",
+        "public": false,
+        "healthcheckPath": "/health",
+        "requiredVariables": [
+          "NODE_ENV", "DATABASE_URL", "NOTIFICATION_GATEWAY_TOKEN", "CONTACT_ENCRYPTION_KEY_BASE64",
+          "META_GRAPH_API_VERSION", "META_WHATSAPP_PHONE_NUMBER_ID", "META_WHATSAPP_ACCESS_TOKEN",
+          "WHATSAPP_TEMPLATE_BINDINGS_JSON", "OTEL_EXPORTER_OTLP_ENDPOINT"
+        ]
+      }
+    ],
+    "migration": {
+      "command": "MIGRATION_ACTOR=<release-id> pnpm --filter @preneura/database migrate",
+      "runBeforeApplicationRestart": true,
+      "autoMigrateOnApplicationStartup": false
+    }
+  },
+  "gate7": {
+    "deployOnlyWhen": [
+      "a Linux staging host or cluster with sufficient CPU, RAM, storage and network capacity is available",
+      "PostgreSQL 18 and S3-compatible object storage are configured with backups",
+      "real OIDC, messaging, scanner, finance/settlement and observability endpoints/secrets are configured",
+      "TLS and reverse-proxy routing are configured",
+      "named operational owner and cutover window are assigned",
+      "all application processes are pinned to releaseSha",
+      "migration, backup/restore, monitoring and rollback rehearsals are complete"
+    ]
+  }
+}
