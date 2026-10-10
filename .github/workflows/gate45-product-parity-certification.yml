@@ -5,6 +5,7 @@ on:
     paths:
       - "platform/apps/**"
       - "platform/packages/contracts/**"
+      - "platform/packages/database/**"
       - "platform/scripts/certify-role-parity.mjs"
       - ".github/workflows/gate45-product-parity-certification.yml"
   push:
@@ -14,6 +15,7 @@ on:
     paths:
       - "platform/apps/**"
       - "platform/packages/contracts/**"
+      - "platform/packages/database/**"
       - "platform/scripts/certify-role-parity.mjs"
       - ".github/workflows/gate45-product-parity-certification.yml"
 
@@ -50,3 +52,30 @@ jobs:
           pnpm typecheck
           pnpm --filter @preneura/api build
           pnpm --filter @preneura/web build
+
+  export-projections:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: preneura
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply production migrations
+        run: |
+          for migration in platform/packages/database/migrations/*.sql; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+          done
+      - name: Certify every export projection against PostgreSQL
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f platform/packages/database/tests/gate45_export_projection_certification.sql
