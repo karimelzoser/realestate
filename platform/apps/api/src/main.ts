@@ -1,9 +1,15 @@
 import 'reflect-metadata';
 import cookie from '@fastify/cookie';
+import { randomUUID } from 'node:crypto';
+import type { IncomingMessage } from 'node:http';
+import type { Http2ServerRequest } from 'node:http2';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import type { FastifyInstance } from 'fastify';
 import { AppModule } from './app.module.js';
 import { validateApiRuntimeConfig } from './config/runtime-config.js';
+
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 
 async function bootstrap(): Promise<void> {
   validateApiRuntimeConfig();
@@ -11,10 +17,20 @@ async function bootstrap(): Promise<void> {
   const adapter = new FastifyAdapter({
     logger: process.env.NODE_ENV !== 'test',
     trustProxy: true,
+    genReqId: (request: IncomingMessage | Http2ServerRequest) => {
+      const incoming = request.headers['x-request-id'];
+      if (typeof incoming === 'string' && REQUEST_ID_PATTERN.test(incoming)) return incoming;
+      return randomUUID();
+    },
   });
 
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter);
+  const fastify = app.getHttpAdapter().getInstance() as FastifyInstance;
   const cookieSigningSecret = process.env.COOKIE_SIGNING_SECRET;
+
+  fastify.addHook('onRequest', async (request, reply) => {
+    reply.header('x-request-id', request.id);
+  });
 
   await app.register(cookie, cookieSigningSecret ? { secret: cookieSigningSecret } : {});
 
