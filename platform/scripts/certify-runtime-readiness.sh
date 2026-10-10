@@ -10,8 +10,13 @@ export PGPASSWORD
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-CURRENT_SCHEMA_VERSION=40
-FUTURE_SCHEMA_VERSION=41
+CURRENT_SCHEMA_VERSION="$(sed -nE 's/^export const RUNTIME_SCHEMA_VERSION = ([0-9]+);$/\1/p' packages/database/src/runtime-readiness.ts)"
+CURRENT_MIGRATION_MARKER="$(sed -nE "s/^export const RUNTIME_MIGRATION_MARKER = '([^']+)';$/\1/p" packages/database/src/runtime-readiness.ts)"
+if [[ -z "$CURRENT_SCHEMA_VERSION" || -z "$CURRENT_MIGRATION_MARKER" ]]; then
+  echo 'Could not derive runtime schema contract from runtime-readiness.ts.' >&2
+  exit 1
+fi
+FUTURE_SCHEMA_VERSION=$((CURRENT_SCHEMA_VERSION + 1))
 
 create_test_databases() {
   local db
@@ -35,22 +40,22 @@ create_test_databases() {
     done
   done
 
-  # Simulate the next additive migration: newer schema remains compatible with runtime 40.
-  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_compatible -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
+  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_compatible -v ON_ERROR_STOP=1 \
+    -v future="$FUTURE_SCHEMA_VERSION" -v current="$CURRENT_SCHEMA_VERSION" <<'SQL' >/dev/null
 UPDATE platform_runtime_contract
-SET schema_version = 41,
-    minimum_runtime_version = 40,
-    migration_marker = '0041_additive_future',
+SET schema_version = :'future'::integer,
+    minimum_runtime_version = :'current'::integer,
+    migration_marker = 'future_additive_certification',
     updated_at = now()
 WHERE singleton_key = 'production';
 SQL
 
-  # Simulate a future breaking migration that explicitly requires runtime 41.
-  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_incompatible -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
+  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_incompatible -v ON_ERROR_STOP=1 \
+    -v future="$FUTURE_SCHEMA_VERSION" <<'SQL' >/dev/null
 UPDATE platform_runtime_contract
-SET schema_version = 41,
-    minimum_runtime_version = 41,
-    migration_marker = '0041_breaking_future',
+SET schema_version = :'future'::integer,
+    minimum_runtime_version = :'future'::integer,
+    migration_marker = 'future_breaking_certification',
     updated_at = now()
 WHERE singleton_key = 'production';
 SQL
@@ -62,7 +67,7 @@ DO $$
 BEGIN
   BEGIN
     UPDATE platform_runtime_contract
-    SET schema_version = 39
+    SET schema_version = 1
     WHERE singleton_key = 'production';
     RAISE EXCEPTION 'schema downgrade unexpectedly succeeded';
   EXCEPTION WHEN OTHERS THEN
@@ -71,11 +76,20 @@ BEGIN
 
   BEGIN
     UPDATE platform_runtime_contract
-    SET minimum_runtime_version = 38
+    SET minimum_runtime_version = 1
     WHERE singleton_key = 'production';
     RAISE EXCEPTION 'runtime compatibility downgrade unexpectedly succeeded';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM = 'runtime compatibility downgrade unexpectedly succeeded' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    UPDATE platform_runtime_contract
+    SET migration_marker = 'same_version_mutation'
+    WHERE singleton_key = 'production';
+    RAISE EXCEPTION 'same-version marker mutation unexpectedly succeeded';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM = 'same-version marker mutation unexpectedly succeeded' THEN RAISE; END IF;
   END;
 
   BEGIN
@@ -107,14 +121,23 @@ const db = createDatabase(databaseUrl);
 
 try {
   const snapshot = await assertRuntimeReadiness(db);
-  if (expectedCode) throw new Error(`Expected readiness failure ${expectedCode}, but readiness passed.`);
-  if (expectedDatabaseSchemaVersion && snapshot.databaseSchemaVersion !== Number(expectedDatabaseSchemaVersion)) {
-    throw new Error(`Expected database schema ${expectedDatabaseSchemaVersion}, got ${snapshot.databaseSchemaVersion}.`);
+  if (expectedCode) {
+    throw new Error(`Expected readiness failure ${expectedCode}, but readiness passed.`);
+  }
+  if (
+    expectedDatabaseSchemaVersion &&
+    snapshot.databaseSchemaVersion !== Number(expectedDatabaseSchemaVersion)
+  ) {
+    throw new Error(
+      `Expected database schema ${expectedDatabaseSchemaVersion}, got ${snapshot.databaseSchemaVersion}.`,
+    );
   }
   console.log(JSON.stringify({ result: 'ready', ...snapshot }));
 } catch (error) {
   if (!expectedCode) throw error;
-  if (!(error instanceof RuntimeReadinessError) || error.code !== expectedCode) throw error;
+  if (!(error instanceof RuntimeReadinessError) || error.code !== expectedCode) {
+    throw error;
+  }
   console.log(JSON.stringify({ result: 'not_ready', code: error.code }));
 } finally {
   await db.destroy();
@@ -171,7 +194,7 @@ certify_api_current() {
   curl --fail --silent http://127.0.0.1:4100/v1/health/live | grep -q '"status":"ok"'
   curl --fail --silent http://127.0.0.1:4100/v1/health/ready >/tmp/ready.json
   grep -q '"status":"ready"' /tmp/ready.json
-  grep -q '"databaseSchemaVersion":40' /tmp/ready.json
+  grep -q "\"databaseSchemaVersion\":$CURRENT_SCHEMA_VERSION" /tmp/ready.json
 
   kill "$pid"
   wait "$pid" || true
@@ -202,7 +225,7 @@ certify_api_stale() {
 
 certify_worker() {
   set +e
-  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_stale" \
+  NODE_ENV=test DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_stale" \
     timeout --signal=TERM --kill-after=2s 8s pnpm --filter @preneura/worker start >/tmp/worker-stale.log 2>&1
   local stale_rc=$?
   set -e
@@ -215,17 +238,17 @@ certify_worker() {
   grep -q 'Runtime schema contract is not available' /tmp/worker-stale.log
 
   set +e
-  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_current" \
+  NODE_ENV=test DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_current" \
     timeout --signal=TERM --kill-after=2s 5s pnpm --filter @preneura/worker start >/tmp/worker-current.log 2>&1
   local current_rc=$?
   set -e
-  if [[ "$current_rc" -ne 124 && "$current_rc" -ne 137 ]]; then
+  if [[ "$current_rc" -ne 124 && "$current_rc" -ne 137 && "$current_rc" -ne 143 ]]; then
     cat /tmp/worker-current.log
     echo 'Current-schema worker exited unexpectedly.' >&2
     return 1
   fi
   grep -q 'worker.ready' /tmp/worker-current.log
-  grep -q '"databaseSchemaVersion":40' /tmp/worker-current.log
+  grep -q "\"databaseSchemaVersion\":$CURRENT_SCHEMA_VERSION" /tmp/worker-current.log
 }
 
 create_test_databases
@@ -235,4 +258,4 @@ certify_api_current
 certify_api_stale
 certify_worker
 
-echo 'Runtime readiness certification: PASS'
+echo "Runtime readiness certification: PASS (schema $CURRENT_SCHEMA_VERSION / $CURRENT_MIGRATION_MARKER)"
