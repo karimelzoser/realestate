@@ -6,6 +6,7 @@ on:
     paths:
       - "platform/deploy/**"
       - "platform/docs/selfhosted-deployment-bundle.md"
+      - "platform/docs/deployment-provenance.md"
       - "platform/apps/**"
       - "platform/packages/database/**"
       - "platform/packages/observability/**"
@@ -19,6 +20,7 @@ on:
     paths:
       - "platform/deploy/**"
       - "platform/docs/selfhosted-deployment-bundle.md"
+      - "platform/docs/deployment-provenance.md"
       - "platform/apps/**"
       - "platform/packages/database/**"
       - "platform/packages/observability/**"
