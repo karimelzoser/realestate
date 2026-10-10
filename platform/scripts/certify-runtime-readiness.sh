@@ -204,7 +204,7 @@ certify_api_current() {
 certify_api_stale() {
   local log_file=/tmp/preneura-api-stale.log
   NODE_ENV=test PORT=4101 WEB_ORIGIN=http://localhost:3000 \
-  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGPORT/preneura_stale" \
+  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_stale" \
   OBJECT_STORAGE_BUCKET=readiness-test \
     pnpm --filter @preneura/api start >"$log_file" 2>&1 &
   local pid=$!
