@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
 import { AccessController } from './access.controller.js';
+import { AccessLifecycleService } from './access-lifecycle.service.js';
 import { AccessRepository, PostgresAccessRepository } from './access.repository.js';
 import { AccessService } from './access.service.js';
 
@@ -10,6 +11,7 @@ import { AccessService } from './access.service.js';
   providers: [
     PostgresAccessRepository,
     { provide: AccessRepository, useExisting: PostgresAccessRepository },
+    AccessLifecycleService,
     AccessService,
   ],
   exports: [AccessService],
