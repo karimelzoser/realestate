@@ -1,6 +1,7 @@
 const MIN_SECRET_LENGTH = 32;
 const MIN_API_BODY_LIMIT_BYTES = 64 * 1024;
 const MAX_API_BODY_LIMIT_BYTES = 16 * 1024 * 1024;
+const PLACEHOLDER_PATTERN = /(replace|change[-_ ]?me|placeholder|example-secret|your[-_ ]|dummy)/i;
 
 export function validateApiRuntimeConfig(env: NodeJS.ProcessEnv = process.env): void {
   if (env.NODE_ENV !== 'production') return;
@@ -160,13 +161,5 @@ function requireHttpsOrigins(env: NodeJS.ProcessEnv, name: string, failures: str
 }
 
 function isPlaceholder(value: string): boolean {
-  const normalized = value.toLowerCase();
-  return (
-    normalized.includes('replace-me') ||
-    normalized.includes('changeme') ||
-    normalized.includes('change-me') ||
-    normalized.includes('placeholder') ||
-    normalized.includes('your-secret') ||
-    normalized === 'secret'
-  );
+  return PLACEHOLDER_PATTERN.test(value) || value.trim().toLowerCase() === 'secret';
 }

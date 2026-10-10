@@ -1,0 +1,238 @@
+name: Gate 6 Non-Functional Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/**"
+      - ".github/workflows/gate6-nonfunctional-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/**"
+      - ".github/workflows/gate6-nonfunctional-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lock-concurrency:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: preneura
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply production migrations
+        run: |
+          for migration in platform/packages/database/migrations/*.sql; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+          done
+      - name: Certify atomic lock contention
+        env:
+          CONTENDERS: "200"
+          PARALLELISM: "32"
+        run: bash platform/scripts/certify-lock-concurrency.sh
+
+  backup-restore:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: preneura
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
+      RESTORE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_restore
+      PG_CLIENT_DOCKER: "1"
+      PG_CLIENT_IMAGE: postgres:18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply production migrations
+        run: |
+          for migration in platform/packages/database/migrations/*.sql; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+          done
+      - name: Seed restore witness records
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO users(id, display_name, status)
+          VALUES ('61000000-0000-0000-0000-000000000001','Gate 6 Restore Witness','ACTIVE');
+          INSERT INTO tenants(id, code, name, status)
+          VALUES ('61000000-0000-0000-0000-000000000002','GATE6-TENANT','Gate 6 Tenant','ACTIVE');
+          INSERT INTO projects(id, tenant_id, code, name, status)
+          VALUES ('61000000-0000-0000-0000-000000000003','61000000-0000-0000-0000-000000000002','GATE6-PROJECT','Gate 6 Project','ACTIVE');
+          SQL
+          psql postgresql://postgres:postgres@127.0.0.1:5432/postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE preneura_restore" >/dev/null
+      - name: Certify backup and restore
+        run: bash platform/scripts/certify-backup-restore.sh
+
+  security-baseline:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen dependency install
+        run: pnpm install --frozen-lockfile
+      - name: Critical dependency audit
+        run: pnpm audit --prod --audit-level critical
+      - name: Reject tracked secret files and obvious credential material
+        working-directory: .
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '(^|/)\.env($|\.production$|\.prod$)' | grep -v '\.env\.example$'; then
+            echo "Tracked environment secret file detected." >&2
+            exit 1
+          fi
+          if git grep -nE 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{36,255}' -- ':!*.lock' ':!platform/pnpm-lock.yaml'; then
+            echo "Potential credential material detected in tracked source." >&2
+            exit 1
+          fi
+
+  observability-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: preneura
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen install and API build
+        working-directory: platform
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @preneura/api build
+      - name: Apply migrations
+        run: |
+          for migration in platform/packages/database/migrations/*.sql; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+          done
+      - name: Start API
+        working-directory: platform
+        env:
+          NODE_ENV: test
+          PORT: "4110"
+          OBJECT_STORAGE_BUCKET: gate6-test-bucket
+        run: |
+          pnpm --filter @preneura/api start > /tmp/preneura-api.log 2>&1 &
+          echo $! > /tmp/preneura-api.pid
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:4110/v1/health/ready >/dev/null; then exit 0; fi
+            sleep 0.5
+          done
+          cat /tmp/preneura-api.log
+          exit 1
+      - name: Certify server-owned request correlation and readiness load smoke
+        run: |
+          set -euo pipefail
+          spoofed_id='gate6-correlation-123'
+          uuid_re='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+
+          first_headers="$(mktemp)"
+          curl -fsS -D "$first_headers" -o /dev/null -H "x-request-id: $spoofed_id" http://127.0.0.1:4110/v1/health/live
+          first_id="$(awk 'BEGIN{IGNORECASE=1} /^x-request-id:/ {gsub("\r", "", $2); print $2; exit}' "$first_headers")"
+          if [[ -z "$first_id" || "$first_id" == "$spoofed_id" || ! "$first_id" =~ $uuid_re ]]; then
+            echo "API did not replace caller request ID with a server-generated UUID: '$first_id'" >&2
+            exit 1
+          fi
+
+          second_headers="$(mktemp)"
+          curl -fsS -D "$second_headers" -o /dev/null -H "x-request-id: $spoofed_id" http://127.0.0.1:4110/v1/health/live
+          second_id="$(awk 'BEGIN{IGNORECASE=1} /^x-request-id:/ {gsub("\r", "", $2); print $2; exit}' "$second_headers")"
+          if [[ -z "$second_id" || "$second_id" == "$spoofed_id" || ! "$second_id" =~ $uuid_re || "$second_id" == "$first_id" ]]; then
+            echo "API request IDs are not independently server-generated: first='$first_id' second='$second_id'" >&2
+            exit 1
+          fi
+
+          invalid_headers="$(mktemp)"
+          curl -fsS -D "$invalid_headers" -o /dev/null -H 'x-request-id: invalid request id' http://127.0.0.1:4110/v1/health/live
+          invalid_id="$(awk 'BEGIN{IGNORECASE=1} /^x-request-id:/ {gsub("\r", "", $2); print $2; exit}' "$invalid_headers")"
+          if [[ -z "$invalid_id" || "$invalid_id" == 'invalid request id' || ! "$invalid_id" =~ $uuid_re ]]; then
+            echo "Invalid caller request ID affected server correlation: '$invalid_id'" >&2
+            exit 1
+          fi
+
+          node <<'NODE'
+          const samples = [];
+          const total = 100;
+          const concurrency = 20;
+          async function one() {
+            const started = performance.now();
+            const response = await fetch('http://127.0.0.1:4110/v1/health/ready');
+            if (!response.ok) throw new Error(`readiness status ${response.status}`);
+            samples.push(performance.now() - started);
+          }
+          for (let i = 0; i < total; i += concurrency) {
+            await Promise.all(Array.from({ length: Math.min(concurrency, total - i) }, () => one()));
+          }
+          samples.sort((a,b) => a-b);
+          const p95 = samples[Math.ceil(samples.length * 0.95) - 1];
+          console.log(`readiness smoke p95=${p95.toFixed(1)}ms requests=${samples.length}`);
+          if (p95 > 1500) throw new Error(`readiness smoke p95 exceeded 1500ms: ${p95}`);
+          NODE
+      - name: Validate alert policy contract
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const policy = JSON.parse(fs.readFileSync('platform/ops/alert-policy.json','utf8'));
+          if (policy.version !== 1 || !Array.isArray(policy.alerts) || policy.alerts.length < 8) throw new Error('Incomplete alert policy');
+          for (const alert of policy.alerts) {
+            for (const key of ['code','severity','condition','for','owner']) if (!alert[key]) throw new Error(`Alert missing ${key}`);
+          }
+          NODE
+      - name: Stop API
+        if: always()
+        run: |
+          if [[ -f /tmp/preneura-api.pid ]]; then kill "$(cat /tmp/preneura-api.pid)" 2>/dev/null || true; fi

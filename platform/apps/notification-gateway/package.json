@@ -4,16 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
+    "dev": "tsx watch src/bootstrap.ts",
     "build": "pnpm run build:deps && tsc -p tsconfig.json",
-    "build:deps": "pnpm --filter @preneura/database build && pnpm --filter @preneura/security build",
-    "start": "node dist/main.js",
+    "build:deps": "pnpm --filter @preneura/database build && pnpm --filter @preneura/security build && pnpm --filter @preneura/observability build",
+    "start": "node --import @preneura/observability/register dist/bootstrap.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --test",
     "lint": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@preneura/database": "workspace:*",
+    "@preneura/observability": "workspace:*",
     "@preneura/security": "workspace:*",
     "kysely": "^0.28.8"
   },

@@ -213,14 +213,21 @@ BEGIN
     RAISE EXCEPTION 'reversed settlement was rewound to SUBMITTED';
   END IF;
 
+  -- Gate 4 authority remains certified even after later additive schemas advance
+  -- the runtime marker. A later schema must not regress below the Gate 4 contract.
   IF NOT EXISTS (
     SELECT 1 FROM platform_runtime_contract
     WHERE singleton_key = 'production'
-      AND schema_version = 39
-      AND minimum_runtime_version = 39
-      AND migration_marker = '0039_eoi_projection_authority_one_shot'
+      AND schema_version >= 39
+      AND minimum_runtime_version >= 39
   ) THEN
-    RAISE EXCEPTION 'runtime contract is not integrated Gate 4 schema 39';
+    RAISE EXCEPTION 'runtime contract regressed below integrated Gate 4 schema 39';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM platform_schema_migrations
+    WHERE version = 39 AND filename = '0039_eoi_projection_authority_one_shot.sql'
+  ) THEN
+    RAISE EXCEPTION 'integrated Gate 4 migration 0039 is missing from canonical history';
   END IF;
 END;
 $$;

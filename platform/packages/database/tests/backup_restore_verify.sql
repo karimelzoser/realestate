@@ -4,18 +4,35 @@ DO $$
 DECLARE
   v_balance numeric(18,2);
   v_manifest_hash text;
+  v_migration_count integer;
+  v_latest_version integer;
+  v_latest_filename text;
+  v_runtime_version integer;
+  v_runtime_marker text;
 BEGIN
-  IF (SELECT count(*) FROM platform_schema_migrations) <> 35 THEN
-    RAISE EXCEPTION 'restored migration ledger does not contain all 35 migrations';
+  SELECT count(*)::int, max(version)::int
+    INTO v_migration_count, v_latest_version
+  FROM platform_schema_migrations;
+
+  SELECT filename INTO v_latest_filename
+  FROM platform_schema_migrations
+  WHERE version = v_latest_version;
+
+  SELECT schema_version, migration_marker
+    INTO v_runtime_version, v_runtime_marker
+  FROM platform_runtime_contract
+  WHERE singleton_key='production';
+
+  IF v_migration_count IS NULL OR v_latest_version IS NULL OR v_migration_count <> v_latest_version THEN
+    RAISE EXCEPTION 'restored migration ledger is not contiguous/current: count %, latest %', v_migration_count, v_latest_version;
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM platform_runtime_contract
-    WHERE singleton_key='production'
-      AND schema_version=35
-      AND migration_marker='0035_settlement_state_authority'
-  ) THEN
-    RAISE EXCEPTION 'restored runtime contract is not current';
+  IF v_runtime_version IS DISTINCT FROM v_latest_version THEN
+    RAISE EXCEPTION 'restored runtime schema version % does not match migration tip %', v_runtime_version, v_latest_version;
+  END IF;
+
+  IF v_latest_filename IS NULL OR v_runtime_marker IS DISTINCT FROM regexp_replace(v_latest_filename, '\.sql$', '') THEN
+    RAISE EXCEPTION 'restored runtime marker % does not match migration tip %', v_runtime_marker, v_latest_filename;
   END IF;
 
   IF (SELECT quoted_total FROM reservations WHERE id='00000000-0000-0000-0000-000000012000') <> 232500 THEN
