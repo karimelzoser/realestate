@@ -9,14 +9,13 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  IF OLD.status <> NEW.status THEN
-    IF OLD.status <> 'ACTIVE' THEN
-      RAISE EXCEPTION 'inventory lock % is terminal in status %', OLD.id, OLD.status;
-    END IF;
+  IF OLD.status <> 'ACTIVE' THEN
+    RAISE EXCEPTION 'inventory lock % is terminal in status %', OLD.id, OLD.status;
+  END IF;
 
-    IF NEW.status NOT IN ('RELEASED', 'EXPIRED', 'CONVERTED') THEN
-      RAISE EXCEPTION 'invalid inventory lock transition % -> % for %', OLD.status, NEW.status, OLD.id;
-    END IF;
+  IF OLD.status <> NEW.status
+     AND NEW.status NOT IN ('RELEASED', 'EXPIRED', 'CONVERTED') THEN
+    RAISE EXCEPTION 'invalid inventory lock transition % -> % for %', OLD.status, NEW.status, OLD.id;
   END IF;
 
   IF NEW.status = 'EXPIRED' THEN
@@ -32,7 +31,7 @@ $$;
 
 DROP TRIGGER IF EXISTS inventory_locks_transition_guard ON inventory_locks;
 CREATE TRIGGER inventory_locks_transition_guard
-BEFORE UPDATE OF status, released_at, converted_at ON inventory_locks
+BEFORE UPDATE ON inventory_locks
 FOR EACH ROW
 EXECUTE FUNCTION preneura_guard_inventory_lock_transition();
 
