@@ -5,6 +5,7 @@ import { AuthRepository, PostgresAuthRepository } from './auth.repository.js';
 import { GoogleAuthController } from './google-auth.controller.js';
 import { GoogleOidcService } from './google-oidc.service.js';
 import { DevelopmentOtpDelivery, GatewayOtpDelivery, OtpDeliveryPort } from './otp-delivery.js';
+import { SessionActivityService } from './session-activity.service.js';
 import { SessionAuthGuard } from './session-auth.guard.js';
 
 const otpDeliveryProvider: Provider = {
@@ -30,8 +31,9 @@ const otpDeliveryProvider: Provider = {
     otpDeliveryProvider,
     AuthService,
     GoogleOidcService,
+    SessionActivityService,
     SessionAuthGuard,
   ],
-  exports: [AuthService, SessionAuthGuard],
+  exports: [AuthService, SessionActivityService, SessionAuthGuard],
 })
 export class AuthModule {}
