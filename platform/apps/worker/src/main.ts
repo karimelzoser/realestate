@@ -1,6 +1,12 @@
 import { hostname } from 'node:os';
 import { createDatabase } from '@preneura/database';
 import { assertRuntimeReadiness } from '@preneura/database/runtime-readiness';
+import {
+  createLogger,
+  recordWorkerLoop,
+  safeErrorType,
+  withRuntimeSpan,
+} from '@preneura/observability';
 import { refreshCommissionDueStates } from './commissions.js';
 import { scheduleInstallmentReminders } from './installment-reminders.js';
 import { scheduleMilestoneReminders } from './milestone-reminders.js';
@@ -15,11 +21,8 @@ if (!connectionString) throw new Error('DATABASE_URL is required');
 
 const db = createDatabase(connectionString);
 const workerId = process.env.WORKER_ID ?? `${hostname()}:${process.pid}`;
+const logger = createLogger('preneura-worker', { workerId });
 let stopping = false;
-
-function log(level: 'info' | 'error', event: string, details: Record<string, unknown> = {}): void {
-  console.log(JSON.stringify({ level, event, workerId, at: new Date().toISOString(), ...details }));
-}
 
 async function runLoop(
   name: string,
@@ -27,12 +30,31 @@ async function runLoop(
   task: () => Promise<number>,
 ): Promise<void> {
   while (!stopping) {
+    const startedAt = performance.now();
     try {
-      const processed = await task();
-      if (processed > 0) log('info', `${name}.processed`, { processed });
+      const processed = await withRuntimeSpan(
+        `worker.${name}`,
+        { 'preneura.worker.loop': name },
+        task,
+      );
+      const durationMs = Math.max(0, performance.now() - startedAt);
+      recordWorkerLoop({ loop: name, durationMs, processed, success: true });
+      if (processed > 0) {
+        logger.info({
+          event: 'worker.loop.processed',
+          loop: name,
+          processed,
+          durationMs: Math.round(durationMs),
+        });
+      }
     } catch (error) {
-      log('error', `${name}.failed`, {
-        error: error instanceof Error ? error.message : String(error),
+      const durationMs = Math.max(0, performance.now() - startedAt);
+      recordWorkerLoop({ loop: name, durationMs, processed: 0, success: false });
+      logger.error({
+        event: 'worker.loop.failed',
+        loop: name,
+        errorType: safeErrorType(error),
+        durationMs: Math.round(durationMs),
       });
     }
     if (stopping) break;
@@ -41,9 +63,10 @@ async function runLoop(
 }
 
 async function main(): Promise<void> {
-  log('info', 'worker.starting');
+  logger.info({ event: 'worker.starting' });
   const readiness = await assertRuntimeReadiness(db);
-  log('info', 'worker.ready', {
+  logger.info({
+    event: 'worker.ready',
     runtimeSchemaVersion: readiness.runtimeSchemaVersion,
     databaseSchemaVersion: readiness.databaseSchemaVersion,
     minimumRuntimeVersion: readiness.minimumRuntimeVersion,
@@ -69,20 +92,20 @@ async function main(): Promise<void> {
 
   await Promise.all(loops);
   await db.destroy();
-  log('info', 'worker.stopped');
+  logger.info({ event: 'worker.stopped' });
 }
 
 async function shutdown(signal: string): Promise<void> {
   if (stopping) return;
   stopping = true;
-  log('info', 'worker.shutdown_requested', { signal });
+  logger.info({ event: 'worker.shutdown_requested', signal });
 }
 
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));
 
 void main().catch(async (error) => {
-  log('error', 'worker.fatal', { error: error instanceof Error ? error.message : String(error) });
+  logger.error({ event: 'worker.fatal', errorType: safeErrorType(error) });
   await db.destroy().catch(() => undefined);
   process.exitCode = 1;
 });
