@@ -12,6 +12,10 @@ x-runtime-hardening: &runtime-hardening
   networks:
     - backend
 
+x-build-identity: &build-identity
+  PRENEURA_SOURCE_SHA: ${PRENEURA_SOURCE_SHA:?PRENEURA_SOURCE_SHA is required}
+  PRENEURA_APPLICATION_RUNTIME_SHA: ${PRENEURA_APPLICATION_RUNTIME_SHA:?PRENEURA_APPLICATION_RUNTIME_SHA is required}
+
 x-observability: &observability
   OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:?OTEL_EXPORTER_OTLP_ENDPOINT is required}
   OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}
@@ -28,6 +32,7 @@ services:
       dockerfile: platform/deploy/Dockerfile
       target: migrate
       args:
+        <<: *build-identity
         NEXT_PUBLIC_API_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}/api
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
@@ -50,6 +55,7 @@ services:
       dockerfile: platform/deploy/Dockerfile
       target: notification-gateway
       args:
+        <<: *build-identity
         NEXT_PUBLIC_API_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}/api
     depends_on:
       migrate:
@@ -86,6 +92,7 @@ services:
       dockerfile: platform/deploy/Dockerfile
       target: api
       args:
+        <<: *build-identity
         NEXT_PUBLIC_API_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}/api
     depends_on:
       migrate:
@@ -155,6 +162,7 @@ services:
       dockerfile: platform/deploy/Dockerfile
       target: worker
       args:
+        <<: *build-identity
         NEXT_PUBLIC_API_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}/api
     depends_on:
       migrate:
@@ -184,6 +192,7 @@ services:
       dockerfile: platform/deploy/Dockerfile
       target: web
       args:
+        <<: *build-identity
         NEXT_PUBLIC_API_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}/api
     depends_on:
       api:
