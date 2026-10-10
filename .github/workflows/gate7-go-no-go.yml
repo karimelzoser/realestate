@@ -90,7 +90,7 @@ jobs:
           cache-dependency-path: platform/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - name: Structural Gate 7 preflight
-        run: node --import tsx scripts/certify-gate7-preflight.mts
+        run: node scripts/certify-gate7-preflight.mjs
       - name: Reject open P0/P1 launch defects
         env:
           GH_TOKEN: ${{ github.token }}
