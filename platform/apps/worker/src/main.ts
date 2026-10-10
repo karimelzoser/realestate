@@ -7,6 +7,7 @@ import {
   safeErrorType,
   withRuntimeSpan,
 } from '@preneura/observability';
+import { shutdownObservability } from '@preneura/observability/register';
 import { refreshCommissionDueStates } from './commissions.js';
 import { scheduleInstallmentReminders } from './installment-reminders.js';
 import { scheduleMilestoneReminders } from './milestone-reminders.js';
@@ -93,6 +94,7 @@ async function main(): Promise<void> {
   await Promise.all(loops);
   await db.destroy();
   logger.info({ event: 'worker.stopped' });
+  await shutdownObservability();
 }
 
 async function shutdown(signal: string): Promise<void> {
@@ -107,6 +109,7 @@ process.on('SIGINT', () => void shutdown('SIGINT'));
 void main().catch(async (error) => {
   logger.error({ event: 'worker.fatal', errorType: safeErrorType(error) });
   await db.destroy().catch(() => undefined);
+  await shutdownObservability().catch(() => undefined);
   process.exitCode = 1;
 });
 
