@@ -5,6 +5,7 @@ import {
   RuntimeReadinessError,
   type RuntimeReadinessErrorCode,
 } from '@preneura/database/runtime-readiness';
+import { recordReadinessFailure } from '@preneura/observability';
 import type { Kysely } from 'kysely';
 import { DATABASE } from '../database/database.module.js';
 
@@ -55,6 +56,7 @@ export class HealthController {
     } catch (error) {
       const code: RuntimeReadinessErrorCode =
         error instanceof RuntimeReadinessError ? error.code : 'DATABASE_UNAVAILABLE';
+      recordReadinessFailure(code);
       this.logger.warn(`Readiness check failed: ${code}`);
       throw new ServiceUnavailableException({
         status: 'not_ready',
