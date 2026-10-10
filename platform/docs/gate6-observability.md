@@ -152,3 +152,7 @@ The following cannot be honestly fixed from CI alone and must be measured in sta
 - production applications still typecheck/build.
 
 Gate 6 certification does **not** claim that a production collector, dashboard or paging destination exists. Creating and exercising those deployed resources belongs to Gate 7 environment go-live.
+
+## Release evidence rule
+
+The one-time lockfile bootstrap used while introducing the observability workspace package is not part of the release surface. The final candidate must contain only the permanent frozen lockfile, telemetry integration, runbook and read-only certification workflow, and must pass that certification on the same SHA used for the stacked PR.
