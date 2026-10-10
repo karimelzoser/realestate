@@ -23,7 +23,7 @@ BEGIN
     IF NEW.released_at IS NULL OR NEW.converted_at IS NOT NULL THEN
       RAISE EXCEPTION 'expired inventory lock % requires released_at and no converted_at', OLD.id;
     END IF;
-    NEW.release_reason := COALESCE(NULLIF(NEW.release_reason, ''), 'TTL_EXPIRED');
+    NEW.release_reason := 'TTL_EXPIRED';
   END IF;
 
   RETURN NEW;
