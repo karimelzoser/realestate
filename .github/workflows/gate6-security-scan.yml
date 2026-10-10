@@ -1,0 +1,132 @@
+name: Gate 6 Security Scan
+
+on:
+  pull_request:
+    paths:
+      - "platform/**"
+      - ".github/workflows/gate6-security-scan.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/**"
+      - ".github/workflows/gate6-security-scan.yml"
+
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+
+jobs:
+  dependency-audit:
+    name: Production dependency audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen production install
+        run: pnpm install --frozen-lockfile
+      - name: Audit production dependencies at high severity
+        run: pnpm audit --prod --audit-level=high
+      - name: Prove lockfile remains immutable
+        run: git diff --exit-code -- pnpm-lock.yaml
+
+  codeql:
+    name: CodeQL security-extended
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+          config: |
+            paths:
+              - platform
+            paths-ignore:
+              - platform/node_modules
+              - platform/**/dist
+
+      - name: Analyze production TypeScript/JavaScript
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:javascript-typescript/gate6-production
+          output: ${{ runner.temp }}/preneura-codeql
+          upload: never
+
+      - name: Preserve CodeQL SARIF evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate6-codeql-sarif
+          path: ${{ runner.temp }}/preneura-codeql
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Fail on CodeQL security findings
+        env:
+          CODEQL_RESULTS_DIR: ${{ runner.temp }}/preneura-codeql
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readdir, readFile } from 'node:fs/promises';
+          import { join } from 'node:path';
+
+          const root = process.env.CODEQL_RESULTS_DIR;
+          if (!root) throw new Error('CODEQL_RESULTS_DIR is required');
+
+          async function collect(dir) {
+            const entries = await readdir(dir, { withFileTypes: true });
+            const files = [];
+            for (const entry of entries) {
+              const path = join(dir, entry.name);
+              if (entry.isDirectory()) files.push(...await collect(path));
+              else if (entry.name.endsWith('.sarif')) files.push(path);
+            }
+            return files;
+          }
+
+          const files = await collect(root);
+          if (files.length === 0) throw new Error('CodeQL did not emit SARIF evidence.');
+
+          const findings = [];
+          for (const file of files) {
+            const sarif = JSON.parse(await readFile(file, 'utf8'));
+            for (const run of sarif.runs ?? []) {
+              for (const result of run.results ?? []) {
+                if ((result.suppressions ?? []).some((item) => item.status === 'accepted')) continue;
+                const location = result.locations?.[0]?.physicalLocation;
+                findings.push({
+                  ruleId: result.ruleId ?? 'unknown-rule',
+                  level: result.level ?? 'warning',
+                  path: location?.artifactLocation?.uri ?? 'unknown-path',
+                  line: location?.region?.startLine ?? null,
+                  message: result.message?.text ?? 'CodeQL finding',
+                });
+              }
+            }
+          }
+
+          console.log(JSON.stringify({ sarifFiles: files.length, findings }, null, 2));
+          if (findings.length > 0) {
+            throw new Error(`Gate 6 CodeQL returned ${findings.length} unsuppressed security finding(s).`);
+          }
+          NODE
