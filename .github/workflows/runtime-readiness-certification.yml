@@ -124,6 +124,7 @@ jobs:
           COMMON_DB=postgresql://postgres:postgres@127.0.0.1:5432/preneura_current
           COMMON_TOKEN=0123456789abcdef0123456789abcdef
           CONTACT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          EXPECTED_SCHEMA_VERSION=40
 
           NODE_ENV=production \
           PORT=4120 \
@@ -163,7 +164,7 @@ jobs:
             sleep 1
           done
           grep -q '"status":"ready"' /tmp/api-valid-ready.json
-          grep -q '"databaseSchemaVersion":39' /tmp/api-valid-ready.json
+          grep -q "\"databaseSchemaVersion\":$EXPECTED_SCHEMA_VERSION" /tmp/api-valid-ready.json
           kill "$API_PID"
           wait "$API_PID" || true
           trap - EXIT
@@ -172,6 +173,11 @@ jobs:
           DATABASE_URL="$COMMON_DB" \
           NOTIFICATION_GATEWAY_URL=http://notification-gateway.internal/v1/notifications \
           NOTIFICATION_GATEWAY_TOKEN="$COMMON_TOKEN" \
+          OUTBOX_POLL_MS=300 \
+          NOTIFICATION_POLL_MS=1000 \
+          SLA_SCAN_MS=30000 \
+          INSTALLMENT_REMINDER_SCAN_MS=30000 \
+          COMMISSION_DUE_SCAN_MS=30000 \
             pnpm --filter @preneura/worker start >/tmp/worker-valid-config.log 2>&1 &
           WORKER_PID=$!
           trap 'kill "$WORKER_PID" 2>/dev/null || true' EXIT
@@ -186,7 +192,7 @@ jobs:
             sleep 1
           done
           grep -q '"event":"worker.ready"' /tmp/worker-valid-config.log
-          grep -q '"databaseSchemaVersion":39' /tmp/worker-valid-config.log
+          grep -q "\"databaseSchemaVersion\":$EXPECTED_SCHEMA_VERSION" /tmp/worker-valid-config.log
           kill "$WORKER_PID"
           wait "$WORKER_PID" || true
           trap - EXIT
