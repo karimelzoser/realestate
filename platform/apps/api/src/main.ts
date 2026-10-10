@@ -1,13 +1,12 @@
 import 'reflect-metadata';
-import type { IncomingMessage } from 'node:http';
 import cookie from '@fastify/cookie';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import {
   annotateActiveSpan,
   createLogger,
+  createRequestId,
   recordHttpRequest,
-  resolveCorrelationId,
 } from '@preneura/observability';
 import { AppModule } from './app.module.js';
 import { validateApiRuntimeConfig } from './config/runtime-config.js';
@@ -28,7 +27,7 @@ async function bootstrap(): Promise<void> {
     trustProxy: resolveTrustProxy(),
     bodyLimit: resolveApiBodyLimit(),
     requestIdHeader: false,
-    genReqId: (request: IncomingMessage) => resolveCorrelationId(request.headers['x-request-id']),
+    genReqId: () => createRequestId(),
   });
   const fastify = adapter.getInstance();
 
