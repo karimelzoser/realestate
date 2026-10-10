@@ -33,6 +33,7 @@ export function validateApiRuntimeConfig(env: NodeJS.ProcessEnv = process.env): 
 
   requireAbsoluteUrl(env, 'DOCUMENT_SCANNER_URL', failures);
   requireSecret(env, 'DOCUMENT_SCANNER_TOKEN', failures, 16);
+  requireSecret(env, 'FINANCE_PROVIDER_INGRESS_TOKEN', failures);
 
   if (failures.length > 0) {
     throw new Error(`Invalid production configuration:\n- ${failures.join('\n- ')}`);
