@@ -8,7 +8,8 @@ Statuses are evidence states, not estimates: `NOT_STARTED`, `IN_PROGRESS`, `IMPL
 
 - E00.1 — **INTEGRATED** — planning/candidate/demo heads reverified; canonical completion branch created from the verified planning head.
 - E00.2 — **INTEGRATED** — dependency-aware execution ledger and resume controls persisted on the canonical branch.
-- E01.1 — **IN_PROGRESS** — central tenant/membership/project lifecycle enforcement is the first product-code task.
+- E01.1 — **TESTED** — direct tenant/membership/project lifecycle authorization is centrally enforced; PR #86 remains pending review/integration.
+- E01.2 — **IN_PROGRESS** — long-lived SSE/session/support authorization must be revalidated after revocation, expiry or suspension.
 
 ## Epic ledger
 
