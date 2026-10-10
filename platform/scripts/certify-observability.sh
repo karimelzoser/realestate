@@ -19,6 +19,10 @@ WORKER_LOG=/tmp/preneura-observability-worker.log
 LOGGER_LOG=/tmp/preneura-observability-logger.log
 HEADERS=/tmp/preneura-observability-headers.txt
 
+stage() {
+  printf '\n[observability-cert] %s\n' "$1"
+}
+
 cleanup() {
   for pid in "${API_PID:-}" "${WORKER_PID:-}" "${CAPTURE_PID:-}"; do
     if [[ -n "$pid" ]]; then kill "$pid" 2>/dev/null || true; fi
@@ -57,6 +61,7 @@ wait_for_pattern() {
 }
 
 prepare_database() {
+  stage 'prepare database'
   dropdb --if-exists -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$DB_NAME"
   createdb -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$DB_NAME"
   local migration
@@ -66,6 +71,7 @@ prepare_database() {
 }
 
 start_capture() {
+  stage 'start OTLP capture endpoint'
   : >"$CAPTURE_LOG"
   cat >"$CAPTURE_SCRIPT" <<'JS'
 import { createServer } from 'node:http';
@@ -91,6 +97,7 @@ JS
 }
 
 certify_preload_policy() {
+  stage 'certify production telemetry preload policy'
   set +e
   NODE_ENV=production \
     PRENEURA_SERVICE_NAME=preneura-cert \
@@ -127,6 +134,7 @@ certify_preload_policy() {
 }
 
 certify_logger_redaction() {
+  stage 'certify structured log redaction'
   : >"$LOGGER_LOG"
   pnpm --filter @preneura/observability exec node --input-type=module - <<'JS' >"$LOGGER_LOG"
 import { createLogger } from '@preneura/observability';
@@ -140,6 +148,7 @@ JS
 }
 
 certify_api() {
+  stage 'certify API request correlation and trace export'
   : >"$API_LOG"
   NODE_ENV=test \
   PORT=4190 \
@@ -173,19 +182,25 @@ certify_api() {
 }
 
 certify_worker() {
+  stage 'certify worker metrics/traces including inventory expiry loop'
   : >"$WORKER_LOG"
-  NODE_ENV=test \
-  DATABASE_URL="$DATABASE_URL" \
-  PRENEURA_SERVICE_NAME=preneura-worker-cert \
-  OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318 \
-  OTEL_METRIC_EXPORT_INTERVAL=500 \
-  OTEL_BSP_SCHEDULE_DELAY=100 \
-  OUTBOX_POLL_MS=100 \
-  NOTIFICATION_POLL_MS=200 \
-  SLA_SCAN_MS=1000 \
-  INSTALLMENT_REMINDER_SCAN_MS=1000 \
-  COMMISSION_DUE_SCAN_MS=1000 \
-    pnpm --filter @preneura/worker start >"$WORKER_LOG" 2>&1 &
+  (
+    cd apps/worker
+    NODE_ENV=test \
+    DATABASE_URL="$DATABASE_URL" \
+    PRENEURA_SERVICE_NAME=preneura-worker-cert \
+    OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318 \
+    OTEL_METRIC_EXPORT_INTERVAL=500 \
+    OTEL_BSP_SCHEDULE_DELAY=100 \
+    INVENTORY_LOCK_EXPIRY_SCAN_MS=100 \
+    INVENTORY_LOCK_EXPIRY_BATCH_SIZE=25 \
+    OUTBOX_POLL_MS=100 \
+    NOTIFICATION_POLL_MS=200 \
+    SLA_SCAN_MS=1000 \
+    INSTALLMENT_REMINDER_SCAN_MS=1000 \
+    COMMISSION_DUE_SCAN_MS=1000 \
+      node --import @preneura/observability/register dist/main.js
+  ) >"$WORKER_LOG" 2>&1 &
   WORKER_PID=$!
   wait_for_pattern '"event":"worker.ready"' "$WORKER_LOG" 15
   wait_for_pattern '/v1/metrics' "$CAPTURE_LOG" 20
@@ -201,6 +216,7 @@ start_capture
 certify_api
 certify_worker
 
+stage 'verify captured telemetry'
 grep -q '/v1/traces' "$CAPTURE_LOG"
 grep -q '/v1/metrics' "$CAPTURE_LOG"
 echo 'Observability certification: PASS'
