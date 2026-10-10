@@ -205,14 +205,21 @@ BEGIN
     RAISE EXCEPTION 'commission settlement reversal did not reopen obligation';
   END IF;
 
+  -- Later additive schemas may advance the runtime marker, but they may not
+  -- regress the settlement authority established by integrated Gate 4.
   IF NOT EXISTS (
     SELECT 1 FROM platform_runtime_contract
     WHERE singleton_key = 'production'
-      AND schema_version = 39
-      AND minimum_runtime_version = 39
-      AND migration_marker = '0039_eoi_projection_authority_one_shot'
+      AND schema_version >= 39
+      AND minimum_runtime_version >= 39
   ) THEN
-    RAISE EXCEPTION 'runtime contract is not integrated Gate 4 schema 39';
+    RAISE EXCEPTION 'runtime contract regressed below integrated Gate 4 schema 39';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM platform_schema_migrations
+    WHERE version = 39 AND filename = '0039_eoi_projection_authority_one_shot.sql'
+  ) THEN
+    RAISE EXCEPTION 'integrated Gate 4 migration 0039 is missing from canonical history';
   END IF;
 END $$;
 
