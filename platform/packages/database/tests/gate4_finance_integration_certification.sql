@@ -53,7 +53,6 @@ BEGIN
     10000, 'EGP', 'PAYMENT_PENDING', v_user
   ) RETURNING id INTO v_eoi;
 
-  -- Incoming EOI cash is owned by the EOI finance ledger.
   v_receipt := preneura_post_eoi_payment(
     v_tenant, v_project, v_eoi, 'G4-EOI-RECEIPT-001', v_user,
     '2026-02-01T09:00:00+00', 'MANUAL', NULL, NULL
@@ -89,7 +88,6 @@ BEGIN
       updated_at = '2026-02-03T09:00:00+00'
   WHERE id = v_eoi;
 
-  -- Sales/refund code must not retain a direct cash-out function.
   IF to_regprocedure('public.preneura_pay_eoi_refund(uuid,uuid,uuid,text,uuid,timestamp with time zone)') IS NOT NULL THEN
     RAISE EXCEPTION 'obsolete direct EOI refund payout function still exists';
   END IF;
@@ -161,7 +159,6 @@ BEGIN
   WHERE eoi_id = v_eoi AND account = 'EOI_FEE_REVENUE';
   IF v_sum <> -2500 THEN RAISE EXCEPTION 'retained EOI revenue is %, expected -2500', v_sum; END IF;
 
-  -- Reversal is also settlement-owned and must compensate both subledgers.
   v_event := preneura_apply_settlement_outcome(
     v_settlement, 'REVERSED', NULL, 'BANK', 'G4-BANK-EVENT-002',
     'G4-BANK-REF-001', '2026-02-05T09:00:00+00', '{}'::jsonb
@@ -215,11 +212,16 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM platform_runtime_contract
     WHERE singleton_key = 'production'
-      AND schema_version = 39
-      AND minimum_runtime_version = 39
-      AND migration_marker = '0039_eoi_projection_authority_one_shot'
+      AND schema_version >= 39
+      AND minimum_runtime_version >= 39
   ) THEN
-    RAISE EXCEPTION 'runtime contract is not integrated Gate 4 schema 39';
+    RAISE EXCEPTION 'runtime contract regressed below integrated Gate 4 schema 39';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM platform_schema_migrations
+    WHERE version = 39 AND filename = '0039_eoi_projection_authority_one_shot.sql'
+  ) THEN
+    RAISE EXCEPTION 'integrated Gate 4 migration 0039 is missing from canonical history';
   END IF;
 END $$;
 
