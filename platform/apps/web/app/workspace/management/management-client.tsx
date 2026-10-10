@@ -213,7 +213,7 @@ export default function ManagementClient() {
           <section className={styles.actions}>
             <p className={styles.eyebrow}>OPERATE</p>
             <div>
-              {can('queue.manage') || can('allocation.manage') ? <a href="/workspace/allocation">Live allocation</a> : null}
+              {can('queue.manage') || can('allocation.assist') ? <a href="/workspace/allocation">Live allocation</a> : null}
               {can('transaction.manage') ? <a href="/workspace/transaction-operations">Transaction operations</a> : null}
               {can('buyers.read') ? <a href="/workspace/sales">Buyers & EOIs</a> : null}
               {can('commission.status.read') ? <a href="/workspace/commissions">Commissions</a> : null}
