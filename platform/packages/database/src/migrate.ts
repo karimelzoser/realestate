@@ -51,6 +51,9 @@ async function main(): Promise<void> {
 
     const applied = await loadAppliedMigrations(client);
     verifyAppliedHistory(files, applied);
+    if (mode === 'migrate' && applied.size === 0) {
+      await assertFreshOrTrackedSchema(client);
+    }
     const pending = files.filter((migration) => !applied.has(migration.version));
 
     if (mode === 'check') {
@@ -156,6 +159,21 @@ function verifyAppliedHistory(files: readonly MigrationFile[], applied: Readonly
   }
 }
 
+async function assertFreshOrTrackedSchema(client: PoolClient): Promise<void> {
+  const result = await client.query<{ has_schema: boolean }>(`
+    SELECT (
+      to_regclass('public.users') IS NOT NULL
+      OR to_regclass('public.tenants') IS NOT NULL
+      OR to_regclass('public.platform_runtime_contract') IS NOT NULL
+    ) AS has_schema
+  `);
+  if (result.rows[0]?.has_schema) {
+    throw new Error(
+      'Database contains PRENEURA schema objects but migration history is empty. Use migrate:baseline only after certifying the existing schema contract.',
+    );
+  }
+}
+
 async function applyMigration(client: PoolClient, migration: MigrationFile): Promise<void> {
   if (/^\s*--\s*preneura:no-transaction\b/im.test(migration.sql)) {
     throw new Error(
@@ -163,10 +181,11 @@ async function applyMigration(client: PoolClient, migration: MigrationFile): Pro
     );
   }
 
+  const executableSql = stripLegacyOuterTransaction(migration.sql, migration.filename);
   log('migration.applying', { version: migration.version, name: migration.name });
   await client.query('BEGIN');
   try {
-    await client.query(migration.sql);
+    await client.query(executableSql);
     await client.query(
       `INSERT INTO platform_schema_migrations (version, name, checksum_sha256) VALUES ($1, $2, $3)`,
       [migration.version, migration.name, migration.checksum],
@@ -176,6 +195,20 @@ async function applyMigration(client: PoolClient, migration: MigrationFile): Pro
     await client.query('ROLLBACK').catch(() => undefined);
     throw error;
   }
+}
+
+function stripLegacyOuterTransaction(sql: string, filename: string): string {
+  const trimmed = sql.trim();
+  const begins = /^BEGIN\s*;/i.test(trimmed);
+  const commits = /COMMIT\s*;\s*$/i.test(trimmed);
+  if (begins !== commits) {
+    throw new Error(`${filename} has an incomplete outer transaction wrapper.`);
+  }
+  if (!begins) return sql;
+
+  const withoutBegin = trimmed.replace(/^BEGIN\s*;/i, '');
+  const withoutCommit = withoutBegin.replace(/COMMIT\s*;\s*$/i, '');
+  return withoutCommit.trim();
 }
 
 async function baselineExistingSchema(client: PoolClient, files: readonly MigrationFile[]): Promise<void> {
