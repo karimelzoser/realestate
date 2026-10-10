@@ -35,20 +35,25 @@ RUN chown -R node:node /srv/preneura
 USER node
 
 FROM runtime-base AS api
+WORKDIR /srv/preneura/apps/api
 EXPOSE 4100
-CMD ["pnpm", "--filter", "@preneura/api", "start"]
+CMD ["node", "--import", "@preneura/observability/register", "dist/main.js"]
 
 FROM runtime-base AS worker
-CMD ["pnpm", "--filter", "@preneura/worker", "start"]
+WORKDIR /srv/preneura/apps/worker
+CMD ["node", "--import", "@preneura/observability/register", "dist/main.js"]
 
 FROM runtime-base AS notification-gateway
+WORKDIR /srv/preneura/apps/notification-gateway
 EXPOSE 4300
-CMD ["pnpm", "--filter", "@preneura/notification-gateway", "start"]
+CMD ["node", "--import", "@preneura/observability/register", "dist/bootstrap.js"]
 
 FROM runtime-base AS web
+WORKDIR /srv/preneura/apps/web
 ENV PORT=3000
 EXPOSE 3000
-CMD ["pnpm", "--filter", "@preneura/web", "start"]
+CMD ["sh", "-c", "exec node node_modules/next/dist/bin/next start -p ${PORT:-3000}"]
 
 FROM runtime-base AS migrate
-ENTRYPOINT ["sh", "-c", "node packages/database/scripts/wait-for-database.mjs && exec pnpm --filter @preneura/database migrate"]
+WORKDIR /srv/preneura/packages/database
+ENTRYPOINT ["sh", "-c", "node scripts/wait-for-database.mjs && exec node scripts/migrate.mjs"]
