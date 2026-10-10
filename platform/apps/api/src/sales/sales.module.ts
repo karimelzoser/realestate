@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { AccessModule } from '../access/access.module.js';
 import { AccountVerificationDelivery } from '../accounts/account-verification-delivery.js';
 import { AuthModule } from '../auth/auth.module.js';
+import { AllocationRoleController } from './allocation-role.controller.js';
+import { AllocationRoleRepository } from './allocation-role.repository.js';
+import { AllocationRoleService } from './allocation-role.service.js';
 import { EoiFinanceRepository } from './eoi-finance.repository.js';
 import { EoiFinanceService } from './eoi-finance.service.js';
 import { EoiListController } from './eoi-list.controller.js';
@@ -40,6 +43,7 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
     EoiListController,
     EoiRefundController,
     QueueDispatchController,
+    AllocationRoleController,
     TransactionListController,
     TransactionPriceController,
     TransactionTimelineController,
@@ -61,6 +65,8 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
     EoiRefundService,
     QueueDispatchRepository,
     QueueDispatchService,
+    AllocationRoleRepository,
+    AllocationRoleService,
     TransactionListRepository,
     TransactionListService,
     TransactionPriceRepository,
@@ -73,6 +79,7 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
     EoiFinanceService,
     EoiListService,
     EoiRefundService,
+    AllocationRoleService,
     TransactionListService,
     TransactionTimelineService,
   ],
