@@ -1,0 +1,84 @@
+name: Gate 7 Environment Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/ops/gate7-railway-target.json"
+      - "platform/scripts/certify-gate7-environment.mjs"
+      - "platform/package.json"
+      - "platform/.env.example"
+      - "platform/apps/api/**"
+      - "platform/docs/gate7-environment-certification.md"
+      - ".github/workflows/gate7-environment-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/ops/gate7-railway-target.json"
+      - "platform/scripts/certify-gate7-environment.mjs"
+      - "platform/package.json"
+      - "platform/.env.example"
+      - "platform/apps/api/**"
+      - "platform/docs/gate7-environment-certification.md"
+      - ".github/workflows/gate7-environment-certification.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Certify Gate 7 topology contract
+        run: pnpm certify:gate7
+      - name: Verify lockfile immutability
+        run: git diff --exit-code -- pnpm-lock.yaml
+
+  live-edge:
+    if: ${{ vars.GATE7_API_URL != '' && vars.GATE7_WEB_URL != '' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    env:
+      GATE7_API_URL: ${{ vars.GATE7_API_URL }}
+      GATE7_WEB_URL: ${{ vars.GATE7_WEB_URL }}
+      GATE7_HTTP_TIMEOUT_MS: "10000"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Probe deployed Gate 7 edge
+        run: pnpm certify:gate7
