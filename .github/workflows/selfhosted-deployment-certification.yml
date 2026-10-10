@@ -136,6 +136,29 @@ jobs:
           echo "Certified application runtime SHA: $PRENEURA_APPLICATION_RUNTIME_SHA"
           echo 'Self-hosted deployment certification passed.'
 
+      - name: Wait for Docker health states used by host evidence
+        run: |
+          set -euo pipefail
+          compose=(docker compose --env-file .env.certification -f docker-compose.production.yml -f docker-compose.certification.yml)
+          for service in api notification-gateway web edge; do
+            container_id="$("${compose[@]}" ps --all -q "$service")"
+            [[ -n "$container_id" ]] || { echo "Missing container for $service" >&2; exit 1; }
+            healthy=false
+            for _ in $(seq 1 45); do
+              health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id")"
+              if [[ "$health" == "healthy" ]]; then
+                healthy=true
+                break
+              fi
+              if [[ "$health" == "unhealthy" ]]; then
+                echo "$service became unhealthy" >&2
+                exit 1
+              fi
+              sleep 2
+            done
+            [[ "$healthy" == "true" ]] || { echo "$service did not reach Docker health=healthy" >&2; exit 1; }
+          done
+
       - name: Certify sanitized Gate 7 host evidence collector
         env:
           GATE7_COLLECTOR_ALLOW_SHA_OVERRIDE: "true"
@@ -143,7 +166,7 @@ jobs:
           GATE7_COMPOSE_ENV_FILE: deploy/.env.certification
           GATE7_COMPOSE_FILE: deploy/docker-compose.production.yml
           GATE7_LOCAL_EDGE_URL: http://127.0.0.1:18080
-          GATE7_HOST_EVIDENCE_PATH: /tmp/gate7-host-evidence.json
+          GATE7_HOST_EVIDENCE_PATH: deploy/gate7-host-evidence-ci.json
           GATE7_MIN_FREE_DISK_GB: "1"
           GATE7_MIN_FREE_MEMORY_MB: "256"
           GATE7_MIN_CPU_COUNT: "1"
@@ -152,7 +175,7 @@ jobs:
           node ../scripts/collect-gate7-host-evidence.mjs
           node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
-          const report = JSON.parse(readFileSync('/tmp/gate7-host-evidence.json', 'utf8'));
+          const report = JSON.parse(readFileSync('gate7-host-evidence-ci.json', 'utf8'));
           if (report.decision !== 'PASS') throw new Error(`collector decision was ${report.decision}`);
           if (report.release.expectedDeploymentSha !== process.env.GITHUB_SHA) throw new Error('collector did not bind to workflow SHA');
           if (report.release.ciOverride !== true) throw new Error('collector CI override was not explicitly recorded');
@@ -160,6 +183,27 @@ jobs:
           if (report.failures.length !== 0) throw new Error('collector reported failures');
           console.log(`Certified sanitized host evidence digest: ${report.evidenceDigestSha256}`);
           NODE
+
+      - name: Publish sanitized collector diagnostics on failure
+        if: failure()
+        run: |
+          if [[ -f gate7-host-evidence-ci.json ]]; then
+            node --input-type=module <<'NODE'
+            import { readFileSync } from 'node:fs';
+            const report = JSON.parse(readFileSync('gate7-host-evidence-ci.json', 'utf8'));
+            console.error(`Gate 7 host collector decision: ${report.decision}`);
+            for (const failure of report.failures ?? []) console.error(`- ${failure}`);
+            NODE
+          fi
+
+      - name: Upload sanitized collector evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate7-host-evidence-ci-${{ github.run_id }}
+          path: platform/deploy/gate7-host-evidence-ci.json
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Dump deployment logs on failure
         if: failure()
