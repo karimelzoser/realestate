@@ -1,0 +1,121 @@
+name: Runtime Readiness Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/api/src/health/**"
+      - "platform/apps/api/src/main.ts"
+      - "platform/apps/worker/src/**"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
+      - "platform/scripts/certify-runtime-readiness.sh"
+      - ".github/workflows/runtime-readiness-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/apps/api/src/health/**"
+      - "platform/apps/api/src/main.ts"
+      - "platform/apps/worker/src/**"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/scripts/migrate.mjs"
+      - "platform/scripts/certify-runtime-readiness.sh"
+      - ".github/workflows/runtime-readiness-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-readiness:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build API and worker runtime
+        run: |
+          set -euo pipefail
+          pnpm --filter @preneura/database typecheck
+          pnpm --filter @preneura/api typecheck
+          pnpm --filter @preneura/worker typecheck
+          pnpm --filter @preneura/api build
+          pnpm --filter @preneura/worker build
+
+      - name: Certify runtime compatibility matrix
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bash scripts/certify-runtime-readiness.sh
+
+      - name: Certify migration authority
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: |
+          set -Eeuo pipefail
+          export PGPASSWORD
+          EXPECTED="$(find packages/database/migrations -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]_*.sql' | wc -l | tr -d ' ')"
+          FRESH="runtime_migrate_fresh_${GITHUB_RUN_ID}"
+          CONCURRENT="runtime_migrate_concurrent_${GITHUB_RUN_ID}"
+          createdb -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$FRESH"
+          createdb -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$CONCURRENT"
+          FRESH_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$FRESH"
+          CONCURRENT_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$CONCURRENT"
+
+          DATABASE_URL="$FRESH_URL" MIGRATION_ACTOR=runtime-certification \
+            pnpm --filter @preneura/database migrate
+          test "$(psql "$FRESH_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = "$EXPECTED"
+
+          DATABASE_URL="$FRESH_URL" MIGRATION_ACTOR=runtime-certification-rerun \
+            pnpm --filter @preneura/database migrate
+          test "$(psql "$FRESH_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = "$EXPECTED"
+
+          DATABASE_URL="$CONCURRENT_URL" MIGRATION_ACTOR=runtime-concurrent-a \
+            pnpm --filter @preneura/database migrate >/tmp/runtime-migrate-a.log 2>&1 &
+          A_PID=$!
+          DATABASE_URL="$CONCURRENT_URL" MIGRATION_ACTOR=runtime-concurrent-b \
+            pnpm --filter @preneura/database migrate >/tmp/runtime-migrate-b.log 2>&1 &
+          B_PID=$!
+          wait "$A_PID" || { cat /tmp/runtime-migrate-a.log; exit 1; }
+          wait "$B_PID" || { cat /tmp/runtime-migrate-b.log; exit 1; }
+          test "$(psql "$CONCURRENT_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = "$EXPECTED"
