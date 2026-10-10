@@ -91,8 +91,8 @@ expectPass('worker.valid', () => assertWorkerRuntimeConfiguration({ ...workerBas
 expectFail('worker.short-gateway-token', '32 characters', () =>
   assertWorkerRuntimeConfiguration({ ...workerBase, NOTIFICATION_GATEWAY_TOKEN: 'too-short' }),
 );
-expectFail('worker.invalid-gateway-url', 'valid absolute URL', () =>
-  assertWorkerRuntimeConfiguration({ ...workerBase, NOTIFICATION_GATEWAY_URL: 'not-a-url' }),
+expectFail('worker.localhost-gateway', 'localhost', () =>
+  assertWorkerRuntimeConfiguration({ ...workerBase, NOTIFICATION_GATEWAY_URL: 'http://localhost:4300/deliver' }),
 );
 expectFail('worker.unsafe-poll', 'between', () =>
   assertWorkerRuntimeConfiguration({ ...workerBase, OUTBOX_POLL_MS: '1' }),
