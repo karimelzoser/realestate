@@ -1,6 +1,7 @@
 name: Full Stack Acceptance Certification
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - "platform/apps/api/**"
