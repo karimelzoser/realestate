@@ -94,7 +94,7 @@ async function main(): Promise<void> {
   await Promise.all(loops);
   await db.destroy();
   logger.info({ event: 'worker.stopped' });
-  await shutdownObservability();
+  await shutdownObservabilityWithin(5_000);
 }
 
 async function shutdown(signal: string): Promise<void> {
@@ -109,9 +109,25 @@ process.on('SIGINT', () => void shutdown('SIGINT'));
 void main().catch(async (error) => {
   logger.error({ event: 'worker.fatal', errorType: safeErrorType(error) });
   await db.destroy().catch(() => undefined);
-  await shutdownObservability().catch(() => undefined);
-  process.exitCode = 1;
+  await shutdownObservabilityWithin(1_500);
+  // Startup/readiness failure is unrecoverable. Do not let an unreachable telemetry exporter
+  // keep a stale-schema worker alive after best-effort telemetry drain.
+  process.exit(1);
 });
+
+async function shutdownObservabilityWithin(timeoutMs: number): Promise<void> {
+  let timeout: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([
+      shutdownObservability().catch(() => undefined),
+      new Promise<void>((resolve) => {
+        timeout = setTimeout(resolve, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, Math.max(10, ms)));
