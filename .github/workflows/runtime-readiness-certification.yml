@@ -1,0 +1,220 @@
+name: Runtime Readiness Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/api/src/health/**"
+      - "platform/apps/worker/src/main.ts"
+      - "platform/packages/database/src/migrate.ts"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/package.json"
+      - "platform/docs/runtime-readiness.md"
+      - ".github/workflows/runtime-readiness-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+    paths:
+      - "platform/apps/api/src/health/**"
+      - "platform/apps/worker/src/main.ts"
+      - "platform/packages/database/src/migrate.ts"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/package.json"
+      - "platform/docs/runtime-readiness.md"
+      - ".github/workflows/runtime-readiness-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-readiness:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    defaults:
+      run:
+        working-directory: platform
+    env:
+      CURRENT_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
+      STALE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_stale
+      BASELINE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_baseline
+      PGPASSWORD: postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Build runtime applications
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4100
+        run: |
+          pnpm --filter @preneura/database build
+          pnpm --filter @preneura/api build
+          pnpm --filter @preneura/worker build
+      - name: Apply production migrations through audited runner
+        env:
+          DATABASE_URL: ${{ env.CURRENT_DATABASE_URL }}
+        run: |
+          pnpm --filter @preneura/database migrate
+          pnpm --filter @preneura/database migrate:check
+      - name: Verify migration history and runtime contract
+        run: |
+          set -euo pipefail
+          expected="$(find packages/database/migrations -maxdepth 1 -name '*.sql' | wc -l | tr -d ' ')"
+          applied="$(psql "$CURRENT_DATABASE_URL" -Atc 'select count(*) from platform_schema_migrations')"
+          test "$expected" = "$applied"
+          test "$(psql "$CURRENT_DATABASE_URL" -Atc "select schema_version || ':' || migration_marker from platform_runtime_contract where singleton_key='production'")" = "33:0033_runtime_readiness_contract"
+          if psql "$CURRENT_DATABASE_URL" -v ON_ERROR_STOP=1 -c "update platform_runtime_contract set schema_version=32 where singleton_key='production'"; then
+            echo 'Runtime contract downgrade unexpectedly succeeded.' >&2
+            exit 1
+          fi
+      - name: Certify baseline adoption for a pre-runner schema
+        run: |
+          set -euo pipefail
+          createdb -h 127.0.0.1 -U postgres preneura_baseline
+          for migration in packages/database/migrations/*.sql; do
+            psql "$BASELINE_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+          done
+          DATABASE_URL="$BASELINE_DATABASE_URL" pnpm --filter @preneura/database migrate:baseline
+          DATABASE_URL="$BASELINE_DATABASE_URL" pnpm --filter @preneura/database migrate:check
+          psql "$BASELINE_DATABASE_URL" -v ON_ERROR_STOP=1 -c "update platform_schema_migrations set checksum_sha256 = repeat('0', 64) where version=1"
+          if DATABASE_URL="$BASELINE_DATABASE_URL" pnpm --filter @preneura/database migrate:check; then
+            echo 'Migration checksum tampering unexpectedly passed.' >&2
+            exit 1
+          fi
+      - name: Build deliberately stale database
+        run: |
+          set -euo pipefail
+          createdb -h 127.0.0.1 -U postgres preneura_stale
+          for migration in packages/database/migrations/*.sql; do
+            case "$(basename "$migration")" in
+              0033_*) break ;;
+            esac
+            psql "$STALE_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+          done
+      - name: Certify API live and ready probes
+        env:
+          DATABASE_URL: ${{ env.CURRENT_DATABASE_URL }}
+          PORT: "4100"
+          NODE_ENV: test
+          WEB_ORIGIN: http://127.0.0.1:3000
+          OBJECT_STORAGE_BUCKET: ci-bucket
+          OBJECT_STORAGE_REGION: us-east-1
+          OBJECT_STORAGE_ACCESS_KEY_ID: ci
+          OBJECT_STORAGE_SECRET_ACCESS_KEY: ci
+          AUTH_IDENTIFIER_HMAC_KEY: 01234567890123456789012345678901
+          AUTH_OTP_PEPPER: 01234567890123456789012345678901
+          COOKIE_SIGNING_SECRET: 01234567890123456789012345678901
+          CONTACT_ENCRYPTION_KEY_BASE64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          CONTACT_HMAC_KEY: 01234567890123456789012345678901
+          CONTACT_VERIFICATION_PEPPER: 01234567890123456789012345678901
+          OIDC_ISSUER: http://localhost:8080/realms/preneura
+          OIDC_CLIENT_ID: preneura-web
+          OIDC_CLIENT_SECRET: ci-secret
+          OIDC_REDIRECT_URI: http://127.0.0.1:4100/v1/auth/google/callback
+          OTP_PROVIDER: console
+        run: |
+          set -euo pipefail
+          pnpm --filter @preneura/api start >/tmp/preneura-api.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4100/v1/health/live >/tmp/live.json; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4100/v1/health/live | grep -q '"status":"ok"'
+          curl -fsS http://127.0.0.1:4100/v1/health/ready | grep -q '"schemaVersion":33'
+          kill "$api_pid"
+          wait "$api_pid" || true
+          trap - EXIT
+      - name: Certify stale API is live but not ready
+        env:
+          DATABASE_URL: ${{ env.STALE_DATABASE_URL }}
+          PORT: "4101"
+          NODE_ENV: test
+          WEB_ORIGIN: http://127.0.0.1:3000
+          OBJECT_STORAGE_BUCKET: ci-bucket
+          OBJECT_STORAGE_REGION: us-east-1
+          OBJECT_STORAGE_ACCESS_KEY_ID: ci
+          OBJECT_STORAGE_SECRET_ACCESS_KEY: ci
+          AUTH_IDENTIFIER_HMAC_KEY: 01234567890123456789012345678901
+          AUTH_OTP_PEPPER: 01234567890123456789012345678901
+          COOKIE_SIGNING_SECRET: 01234567890123456789012345678901
+          CONTACT_ENCRYPTION_KEY_BASE64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          CONTACT_HMAC_KEY: 01234567890123456789012345678901
+          CONTACT_VERIFICATION_PEPPER: 01234567890123456789012345678901
+          OIDC_ISSUER: http://localhost:8080/realms/preneura
+          OIDC_CLIENT_ID: preneura-web
+          OIDC_CLIENT_SECRET: ci-secret
+          OIDC_REDIRECT_URI: http://127.0.0.1:4101/v1/auth/google/callback
+          OTP_PROVIDER: console
+        run: |
+          set -euo pipefail
+          pnpm --filter @preneura/api start >/tmp/preneura-api-stale.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4101/v1/health/live >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4101/v1/health/live | grep -q '"status":"ok"'
+          status="$(curl -sS -o /tmp/stale-ready.json -w '%{http_code}' http://127.0.0.1:4101/v1/health/ready)"
+          test "$status" = "503"
+          grep -Eq 'SCHEMA_CONTRACT_(MISSING|MISMATCH)' /tmp/stale-ready.json
+          kill "$api_pid"
+          wait "$api_pid" || true
+          trap - EXIT
+      - name: Certify worker refuses stale schema and starts on current schema
+        run: |
+          set -euo pipefail
+          set +e
+          DATABASE_URL="$STALE_DATABASE_URL" timeout 10s pnpm --filter @preneura/worker start >/tmp/worker-stale.log 2>&1
+          stale_rc=$?
+          set -e
+          if [ "$stale_rc" -eq 0 ] || [ "$stale_rc" -eq 124 ]; then
+            cat /tmp/worker-stale.log
+            echo 'Worker did not fail closed on stale schema.' >&2
+            exit 1
+          fi
+          grep -q 'worker.fatal' /tmp/worker-stale.log
+
+          DATABASE_URL="$CURRENT_DATABASE_URL" WORKER_ID=ci-worker pnpm --filter @preneura/worker start >/tmp/worker-current.log 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            if grep -q 'worker.ready' /tmp/worker-current.log; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/worker-current.log
+            exit 1
+          fi
+          grep -q '"schemaVersion":33' /tmp/worker-current.log
+          kill "$worker_pid"
+          wait "$worker_pid" || true
+          trap - EXIT
