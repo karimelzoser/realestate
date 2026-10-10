@@ -13,7 +13,15 @@ cd "$ROOT_DIR"
 DB_NAME="preneura_lock_cert_${GITHUB_RUN_ID:-local}_$$"
 DB_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$DB_NAME"
 cleanup() {
-  if [[ -n "${WORKER_PID:-}" ]]; then kill "$WORKER_PID" 2>/dev/null || true; fi
+  if [[ -n "${WORKER_PID:-}" ]]; then
+    kill "$WORKER_PID" 2>/dev/null || true
+    wait "$WORKER_PID" 2>/dev/null || true
+  fi
+  # Last-resort cleanup only. The certification explicitly proves zero worker
+  # sessions before PASS; this prevents a failed test from leaking its database.
+  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -Atqc \
+    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='$DB_NAME' AND pid <> pg_backend_pid()" \
+    >/dev/null 2>&1 || true
   dropdb --if-exists -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$DB_NAME" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -104,7 +112,7 @@ start_worker() {
   SLA_SCAN_MS=60000 \
   INSTALLMENT_REMINDER_SCAN_MS=60000 \
   COMMISSION_DUE_SCAN_MS=60000 \
-    pnpm --filter @preneura/worker start >"$log_file" 2>&1 &
+    node apps/worker/dist/main.js >"$log_file" 2>&1 &
   WORKER_PID=$!
 }
 
@@ -125,20 +133,36 @@ wait_expired() {
   exit 1
 }
 
+stop_worker_and_assert_clean() {
+  local log_file="$1"
+  kill "$WORKER_PID"
+  wait "$WORKER_PID"
+  unset WORKER_PID
+
+  grep -q '"event":"worker.shutdown_requested"' "$log_file"
+  grep -q '"event":"worker.stopped"' "$log_file"
+
+  local remaining
+  remaining="$(psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -Atqc \
+    "SELECT count(*) FROM pg_stat_activity WHERE datname='$DB_NAME'")"
+  if [[ "$remaining" != "0" ]]; then
+    psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -x -c \
+      "SELECT pid, application_name, state, wait_event_type, wait_event FROM pg_stat_activity WHERE datname='$DB_NAME'" >&2
+    echo "Worker shutdown left $remaining PostgreSQL session(s) open." >&2
+    exit 1
+  fi
+}
+
 # Restart durability: no request traffic is required before or after worker restart.
 seed_restart_lock RESTART-1
 start_worker /tmp/lock-worker-first.log
 wait_expired RESTART-1 /tmp/lock-worker-first.log
-kill "$WORKER_PID"
-wait "$WORKER_PID" || true
-unset WORKER_PID
+stop_worker_and_assert_clean /tmp/lock-worker-first.log
 
 seed_restart_lock RESTART-2
 start_worker /tmp/lock-worker-second.log
 wait_expired RESTART-2 /tmp/lock-worker-second.log
-kill "$WORKER_PID"
-wait "$WORKER_PID" || true
-unset WORKER_PID
+stop_worker_and_assert_clean /tmp/lock-worker-second.log
 
 grep -q '"event":"worker.ready"' /tmp/lock-worker-first.log
 grep -q '"event":"inventory_lock_expiry.processed"' /tmp/lock-worker-first.log
