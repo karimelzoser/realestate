@@ -9,6 +9,7 @@ import type { ManagementProjectOverviewSnapshot } from '@preneura/contracts/mana
 import type { RealtimeSignal } from '@preneura/contracts/realtime';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError, apiFetch, eventStreamUrl } from '../../lib/api';
+import DirectorPortfolio from './director-portfolio';
 import styles from './management.module.css';
 
 export default function ManagementClient() {
@@ -26,7 +27,8 @@ export default function ManagementClient() {
     [workspace],
   );
   const project = projects.find((item) => item.projectId === projectId) ?? null;
-  const mode = project?.roles.includes('OPERATIONS_DIRECTOR') ? 'Operations Director' : 'Manager';
+  const isOperationsDirector = Boolean(project?.roles.includes('OPERATIONS_DIRECTOR'));
+  const mode = isOperationsDirector ? 'Operations Director' : 'Manager';
 
   const load = useCallback(async (selected: WorkspaceProjectSnapshot) => {
     setLoading(true);
@@ -140,6 +142,15 @@ export default function ManagementClient() {
 
       {error ? <div className={styles.error}>{error}</div> : null}
       {loading && !overview ? <div className={styles.loading}>Loading management control room…</div> : null}
+
+      {project ? (
+        <DirectorPortfolio
+          tenantId={project.tenantId}
+          activeProjectId={project.projectId}
+          enabled={isOperationsDirector}
+          onSelectProject={setProjectId}
+        />
+      ) : null}
 
       {overview ? (
         <>
