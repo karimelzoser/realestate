@@ -45,6 +45,9 @@ permissions:
 jobs:
   runtime-readiness:
     runs-on: ubuntu-latest
+    env:
+      OTEL_EXPORTER_OTLP_ENDPOINT: https://collector.example.invalid
+      OTEL_SDK_DISABLED: "false"
     services:
       postgres:
         image: postgres:18
