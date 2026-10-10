@@ -17,6 +17,7 @@ if (!connectionString) throw new Error('DATABASE_URL is required');
 const db = createDatabase(connectionString);
 const workerId = process.env.WORKER_ID ?? `${hostname()}:${process.pid}`;
 let stopping = false;
+const shutdownWakeups = new Set<() => void>();
 
 function log(level: 'info' | 'error', event: string, details: Record<string, unknown> = {}): void {
   console.log(JSON.stringify({ level, event, workerId, at: new Date().toISOString(), ...details }));
@@ -79,6 +80,7 @@ async function main(): Promise<void> {
 async function shutdown(signal: string): Promise<void> {
   if (stopping) return;
   stopping = true;
+  for (const wake of [...shutdownWakeups]) wake();
   log('info', 'worker.shutdown_requested', { signal });
 }
 
@@ -92,5 +94,17 @@ void main().catch(async (error) => {
 });
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, Math.max(10, ms)));
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      shutdownWakeups.delete(finish);
+      resolve();
+    };
+    const timer = setTimeout(finish, Math.max(10, ms));
+    shutdownWakeups.add(finish);
+    if (stopping) finish();
+  });
 }
