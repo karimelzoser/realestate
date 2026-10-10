@@ -8,11 +8,13 @@ on:
     paths:
       - 'platform/**'
       - 'docs/PRODUCTION_DELIVERY_GATES.md'
+      - '.github/workflows/full-stack-acceptance-certification.yml'
       - '.github/workflows/gate7-go-no-go.yml'
   pull_request:
     paths:
       - 'platform/**'
       - 'docs/PRODUCTION_DELIVERY_GATES.md'
+      - '.github/workflows/full-stack-acceptance-certification.yml'
       - '.github/workflows/gate7-go-no-go.yml'
   workflow_dispatch:
     inputs:
@@ -81,7 +83,11 @@ env:
   PNPM_VERSION: '12.9.1'
 
 jobs:
+  full-stack-acceptance:
+    uses: ./.github/workflows/full-stack-acceptance-certification.yml
+
   structural-preflight:
+    needs: full-stack-acceptance
     runs-on: ubuntu-latest
     defaults:
       run:
