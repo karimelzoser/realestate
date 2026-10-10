@@ -1,10 +1,20 @@
-# Initial completion task ledger
+# Production completion task ledger
 
-Status: planning prepared; implementation not started by this planning handover. Expand tasks within each epic using PLAN.md acceptance requirements. Preserve the distinction between baseline code and completed new tasks.
+Canonical integration branch: `completion/egypt-full-platform`
 
-| ID | Epic | Dependencies | Status |
+Statuses are evidence states, not estimates: `NOT_STARTED`, `IN_PROGRESS`, `IMPLEMENTED`, `TESTED`, `REVIEWED`, `INTEGRATED`, `EXTERNALLY_BLOCKED`, `DEPLOYMENT_DEFERRED`.
+
+## Current checkpoint
+
+- E00.1 — **INTEGRATED** — planning/candidate/demo heads reverified; canonical completion branch created from the verified planning head.
+- E00.2 — **IN_PROGRESS** — dependency-aware execution ledger and resume controls are being persisted on the canonical branch.
+- E01.1 — **NOT_STARTED** — central tenant/membership/project lifecycle enforcement is the first product-code task after E00.2.
+
+## Epic ledger
+
+| Epic | Scope | Dependencies | Status |
 |---|---|---|---|
-| E00 | Repository authority and interruption-safe execution | none | NOT_STARTED |
+| E00 | Repository authority and interruption-safe execution | none | IN_PROGRESS |
 | E01 | Security, release and testing defect closure | E00 | NOT_STARTED |
 | E02 | Egypt identity and Arabic/English foundations | E01 | NOT_STARTED |
 | E03 | Developer/brokerage onboarding | E01, E02 | NOT_STARTED |
@@ -23,4 +33,8 @@ Status: planning prepared; implementation not started by this planning handover.
 | E16 | Containers, operations and deployment package | E00, E01 | NOT_STARTED |
 | E17 | Final security/load/recovery/software readiness | E15, E16 | NOT_STARTED |
 
-First task: E00.1 reverify heads and create/recover the integration branch. Deployment is deferred until separate authorization.
+## Executable tasks
+
+The authoritative machine-readable task graph is `TASKS.json`. Stable task IDs are retained across sessions and PRs. Every task records dependencies and is updated only when code/evidence supports the state change.
+
+Deployment remains `DEPLOYMENT_DEFERRED`; the target server must not be touched until the software/deployment package is complete and deployment is separately authorized.
