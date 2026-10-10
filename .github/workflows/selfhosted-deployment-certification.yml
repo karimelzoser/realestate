@@ -33,6 +33,10 @@ jobs:
   compose-stack:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      PRENEURA_SOURCE_SHA: ${{ github.sha }}
+      PRENEURA_APPLICATION_RUNTIME_SHA: c2746523eb434898cbb4c46cf5df452d122ba78f
+      OTEL_SERVICE_VERSION: ${{ github.sha }}
     defaults:
       run:
         working-directory: platform/deploy
@@ -62,7 +66,7 @@ jobs:
           docker compose --env-file .env.certification -f docker-compose.production.yml -f docker-compose.certification.yml ps -a
           exit 1
 
-      - name: Certify migration, routing, isolation and runtime immutability
+      - name: Certify migration, routing, isolation, provenance and runtime immutability
         run: |
           set -euo pipefail
           compose=(docker compose --env-file .env.certification -f docker-compose.production.yml -f docker-compose.certification.yml)
@@ -91,6 +95,16 @@ jobs:
             container_user="$(docker inspect --format '{{.Config.User}}' "$container_id")"
             [[ "$container_user" == "node" ]] || fail "$service container user is '$container_user', expected 'node'"
 
+            source_sha="$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$container_id")"
+            runtime_sha="$(docker inspect --format '{{ index .Config.Labels "com.preneura.application-runtime-sha" }}' "$container_id")"
+            runtime_schema="$(docker inspect --format '{{ index .Config.Labels "com.preneura.runtime-schema-version" }}' "$container_id")"
+            source_repo="$(docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.source" }}' "$container_id")"
+
+            [[ "$source_sha" == "$PRENEURA_SOURCE_SHA" ]] || fail "$service image source SHA '$source_sha' does not match '$PRENEURA_SOURCE_SHA'"
+            [[ "$runtime_sha" == "$PRENEURA_APPLICATION_RUNTIME_SHA" ]] || fail "$service application runtime SHA '$runtime_sha' does not match '$PRENEURA_APPLICATION_RUNTIME_SHA'"
+            [[ "$runtime_schema" == "41" ]] || fail "$service runtime schema label is '$runtime_schema', expected '41'"
+            [[ "$source_repo" == "https://github.com/karimelzoser/realestate" ]] || fail "$service source repository label is unexpected: '$source_repo'"
+
             case "$service" in
               api|web|notification-gateway)
                 port_bindings="$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$container_id")"
@@ -112,6 +126,8 @@ jobs:
             fail 'runtime container attempted to download package-manager tooling'
           fi
 
+          echo "Certified PRENEURA source SHA: $PRENEURA_SOURCE_SHA"
+          echo "Certified application runtime SHA: $PRENEURA_APPLICATION_RUNTIME_SHA"
           echo 'Self-hosted deployment certification passed.'
 
       - name: Dump deployment logs on failure
