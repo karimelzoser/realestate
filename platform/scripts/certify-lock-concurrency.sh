@@ -27,14 +27,25 @@ DELETE FROM inventory_locks WHERE inventory_slot_id='$SLOT_ID';
 SQL
 
 attempt_lock() {
-  psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 \
-    -v tenant="$TENANT_ID" \
-    -v project="$PROJECT_ID" \
-    -v unit_type="$TYPE_ID" \
-    -v slot="$SLOT_ID" \
-    -v actor="$USER_ID" \
-    -c "INSERT INTO inventory_locks(tenant_id,project_id,unit_type_id,inventory_slot_id,locked_by_user_id,status,expires_at) VALUES (:'tenant',:'project',:'unit_type',:'slot',:'actor','ACTIVE',now()+interval '15 minutes');" \
-    >/dev/null 2>&1
+  psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -c "
+    INSERT INTO inventory_locks(
+      tenant_id,
+      project_id,
+      unit_type_id,
+      inventory_slot_id,
+      locked_by_user_id,
+      status,
+      expires_at
+    ) VALUES (
+      '$TENANT_ID',
+      '$PROJECT_ID',
+      '$TYPE_ID',
+      '$SLOT_ID',
+      '$USER_ID',
+      'ACTIVE',
+      now() + interval '15 minutes'
+    );
+  " >/dev/null 2>&1
 }
 export -f attempt_lock
 export DATABASE_URL TENANT_ID PROJECT_ID USER_ID TYPE_ID SLOT_ID
