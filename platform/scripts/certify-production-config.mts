@@ -1,5 +1,5 @@
-import { assertApiRuntimeConfiguration } from '../apps/api/src/runtime-config.ts';
-import { assertWorkerRuntimeConfiguration } from '../apps/worker/src/runtime-config.ts';
+import { validateApiRuntimeConfig as assertApiRuntimeConfiguration } from '../apps/api/src/config/runtime-config.ts';
+import { validateWorkerRuntimeConfig as assertWorkerRuntimeConfiguration } from '../apps/worker/src/runtime-config.ts';
 import { assertNotificationGatewayRuntimeConfiguration } from '../apps/notification-gateway/src/runtime-config.ts';
 
 type Env = NodeJS.ProcessEnv;
@@ -11,6 +11,8 @@ const apiBase: Env = {
   NODE_ENV: 'production',
   DATABASE_URL: 'postgresql://app:secret@db.internal:5432/preneura',
   WEB_ORIGIN: 'https://app.preneura.example',
+  TRUST_PROXY_HOPS: '1',
+  API_BODY_LIMIT_BYTES: '8388608',
   AUTH_IDENTIFIER_HMAC_KEY: longSecret,
   AUTH_OTP_PEPPER: longSecret,
   COOKIE_SIGNING_SECRET: longSecret,
@@ -30,6 +32,7 @@ const apiBase: Env = {
   DOCUMENT_SCANNER_URL: 'http://document-scanner.railway.internal/scan',
   DOCUMENT_SCANNER_TOKEN: longSecret,
   FINANCE_PROVIDER_INGRESS_TOKEN: longSecret,
+  SETTLEMENT_PROVIDER_INGRESS_TOKEN: longSecret,
   AUTH_OTP_TTL_SECONDS: '300',
   AUTH_OTP_MAX_ATTEMPTS: '5',
   AUTH_OTP_RESEND_SECONDS: '60',
@@ -88,8 +91,8 @@ expectPass('worker.valid', () => assertWorkerRuntimeConfiguration({ ...workerBas
 expectFail('worker.short-gateway-token', '32 characters', () =>
   assertWorkerRuntimeConfiguration({ ...workerBase, NOTIFICATION_GATEWAY_TOKEN: 'too-short' }),
 );
-expectFail('worker.localhost-gateway', 'localhost', () =>
-  assertWorkerRuntimeConfiguration({ ...workerBase, NOTIFICATION_GATEWAY_URL: 'http://localhost:4300/deliver' }),
+expectFail('worker.invalid-gateway-url', 'valid absolute URL', () =>
+  assertWorkerRuntimeConfiguration({ ...workerBase, NOTIFICATION_GATEWAY_URL: 'not-a-url' }),
 );
 expectFail('worker.unsafe-poll', 'between', () =>
   assertWorkerRuntimeConfiguration({ ...workerBase, OUTBOX_POLL_MS: '1' }),
