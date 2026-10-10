@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - "platform/deploy/**"
+      - "platform/docs/selfhosted-deployment-bundle.md"
       - "platform/apps/**"
       - "platform/packages/database/**"
       - "platform/packages/observability/**"
@@ -17,6 +18,7 @@ on:
       - "release/**"
     paths:
       - "platform/deploy/**"
+      - "platform/docs/selfhosted-deployment-bundle.md"
       - "platform/apps/**"
       - "platform/packages/database/**"
       - "platform/packages/observability/**"
@@ -97,25 +99,40 @@ jobs:
           docker compose -f platform/deploy/docker-compose.production.yml -f platform/deploy/docker-compose.certification.yml ps -a
           exit 1
 
-      - name: Certify migration, routing and private service exposure
+      - name: Certify migration, routing, isolation and runtime immutability
         working-directory: platform/deploy
         run: |
           set -euo pipefail
-          migrate_id="$(docker compose -f docker-compose.production.yml -f docker-compose.certification.yml ps -aq migrate)"
+          compose=(docker compose -f docker-compose.production.yml -f docker-compose.certification.yml)
+
+          migrate_id="$(${compose[@]} ps -aq migrate)"
           test -n "$migrate_id"
           test "$(docker inspect --format '{{.State.ExitCode}}' "$migrate_id")" = "0"
 
           curl --silent --fail http://127.0.0.1:18080/livez >/dev/null
           curl --silent --fail http://127.0.0.1:18080/api/v1/health/ready >/tmp/api-ready.json
           curl --silent --fail http://127.0.0.1:18080/login >/tmp/login.html
-          grep -q '"status":"ok"' /tmp/api-ready.json
+          grep -q '"status":"ready"' /tmp/api-ready.json
           grep -qi '<html' /tmp/login.html
 
-          test -z "$(docker compose -f docker-compose.production.yml -f docker-compose.certification.yml port api 4100 2>/dev/null || true)"
-          test -z "$(docker compose -f docker-compose.production.yml -f docker-compose.certification.yml port web 3000 2>/dev/null || true)"
-          test -z "$(docker compose -f docker-compose.production.yml -f docker-compose.certification.yml port notification-gateway 4300 2>/dev/null || true)"
+          test -z "$(${compose[@]} port api 4100 2>/dev/null || true)"
+          test -z "$(${compose[@]} port web 3000 2>/dev/null || true)"
+          test -z "$(${compose[@]} port notification-gateway 4300 2>/dev/null || true)"
+          test -n "$(${compose[@]} port edge 8080)"
 
-          docker compose -f docker-compose.production.yml -f docker-compose.certification.yml logs worker | grep -q 'worker.ready'
+          for service in api worker notification-gateway web migrate; do
+            container_id="$(${compose[@]} ps -aq "$service")"
+            test -n "$container_id"
+            test "$(docker inspect --format '{{.Config.User}}' "$container_id")" = "node"
+          done
+
+          ${compose[@]} logs worker | grep -q 'worker.ready'
+
+          runtime_logs="$(${compose[@]} logs api worker notification-gateway web migrate)"
+          if grep -q 'Corepack is about to download' <<<"$runtime_logs"; then
+            echo 'Runtime container attempted to download package-manager tooling.' >&2
+            exit 1
+          fi
 
       - name: Dump deployment logs on failure
         if: failure()
