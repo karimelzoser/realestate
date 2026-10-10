@@ -41,7 +41,7 @@ Do not reuse an old environment file after checking out another release: the ima
 
 ## Certification
 
-`Self-Hosted Deployment Certification` overrides the synthetic local source value with `${GITHUB_SHA}` and validates every PRENEURA-built running container using `docker inspect`.
+`Self-Hosted Deployment Certification` overrides the synthetic local source value with `${GITHUB_SHA}` and validates every PRENEURA-built running container using allow-listed `docker inspect --format` reads.
 
 For each service the workflow requires:
 
@@ -54,19 +54,61 @@ For each service the workflow requires:
 
 This means the deployment certification proves that the executable containers under test were built from the same commit that GitHub Actions is certifying.
 
-## Gate 7 host evidence
+## Gate 7 host evidence collector
 
-A production-host evidence collector should record, without dumping container environments or secrets:
+`platform/scripts/collect-gate7-host-evidence.mjs` is the production-safe target-host collector. It verifies the actual running Compose deployment and writes a bounded JSON evidence report without serializing container environment variables.
 
-- container ID and image ID/digest;
-- the four provenance labels above;
-- container user and health/status;
-- safe host-port bindings;
-- migration exit status;
-- worker readiness marker;
-- public edge health/readiness results;
-- Docker/Compose/OS versions and bounded capacity signals.
+From `platform/` on the deployed Linux host:
 
-The collector must never emit `docker inspect` wholesale because `.Config.Env` contains production secrets. Only explicitly allow-listed fields and labels may be written into evidence artifacts.
+```bash
+GATE7_COMPOSE_ENV_FILE=deploy/.env.production \
+GATE7_COMPOSE_FILE=deploy/docker-compose.production.yml \
+GATE7_LOCAL_EDGE_URL=http://127.0.0.1:8080 \
+GATE7_HOST_EVIDENCE_PATH=gate7-host-evidence.json \
+node scripts/collect-gate7-host-evidence.mjs
+```
 
-The final Gate 7 decision still requires independent live DNS/TLS/OIDC/provider/backup/monitoring/ownership evidence. Container provenance closes source identity; it does not replace those environment checks.
+In normal production use the expected deployment SHA is read from `ops/selfhosted-gate7-staging.json`. A caller cannot override that SHA. The only override path is deliberately restricted to GitHub Actions certification with both `GITHUB_ACTIONS=true` and `GATE7_COLLECTOR_ALLOW_SHA_OVERRIDE=true`.
+
+The collector records only allow-listed evidence such as:
+
+- Linux/CPU/memory/disk capacity signals;
+- Docker and Compose versions;
+- container ID and image ID/repository digest metadata;
+- image source/runtime/schema labels;
+- container user, privileged state, `no-new-privileges`, dropped capabilities;
+- running/health/exit state and restart count;
+- safe network names and host-port bindings;
+- one-shot migration exit status;
+- `worker.ready` presence without embedding worker log contents;
+- local edge liveness, readiness and login-page probes;
+- sanitized database/schema compatibility fields returned by readiness.
+
+It actively fails when, among other cases:
+
+- a PRENEURA image was built from a different source SHA;
+- the accepted application-runtime SHA or schema label does not match;
+- a private application service exposes a host port;
+- a long-running service is not running or a health-checked service is unhealthy;
+- a PRENEURA application container is privileged, runs as the wrong user, lacks `no-new-privileges`, or has not dropped all capabilities;
+- migration did not exit successfully;
+- edge is not the only host-published service;
+- worker readiness is missing;
+- local liveness/readiness/web probes fail;
+- the host does not meet the configured CPU/memory/disk floor.
+
+The JSON report is written mode `0600`, contains a SHA-256 evidence digest, and exits non-zero on any failed assertion. Store the resulting artifact in a controlled evidence location and reference it from Gate 7 using an `artifact:` or HTTPS evidence reference.
+
+### Secret-safety rule
+
+Never attach raw `docker inspect`, `docker compose config`, an env file, or unrestricted service logs to Gate 7 evidence. `.Config.Env` and rendered Compose configuration can contain production credentials.
+
+The collector intentionally reads individual fields and labels only. Its serialized output is also checked for known secret-variable markers before the evidence file is written.
+
+## Relationship to final Gate 7
+
+Host evidence proves **what is actually running on the Linux/Compose host** and whether that local deployment matches the certified image/topology policy.
+
+It does not replace the final live checks. `certify-gate7-live.mjs` still independently verifies public DNS, TLS, API/Web reachability and OIDC, while Gate 7 still requires traceable evidence for messaging, document scanning, finance/settlement, observability, backup/restore, migration/rollback rehearsal, security approval and operational ownership.
+
+Container provenance and host evidence close source/topology identity; they do not manufacture external production evidence.
