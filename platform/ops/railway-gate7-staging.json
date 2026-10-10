@@ -2,7 +2,8 @@
   "version": 1,
   "product": "PRENEURA Real Estate OS",
   "repository": "karimelzoser/realestate",
-  "releaseSha": "f5ab77b77d17275ef6f5249fd06cb235c4ca874d",
+  "releaseSha": "288f4afba3b87dbc123eff6b198e1720075edc7d",
+  "releaseSource": "PR #77 canonical production candidate",
   "railway": {
     "projectName": "preneura-re-gate7-staging",
     "environmentName": "staging",
