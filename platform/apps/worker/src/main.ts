@@ -2,6 +2,7 @@ import { hostname } from 'node:os';
 import { createDatabase } from '@preneura/database';
 import { assertRuntimeReadiness } from '@preneura/database/runtime-readiness';
 import { refreshCommissionDueStates } from './commissions.js';
+import { expireInventoryLocks } from './inventory-lock-expiry.js';
 import { scheduleInstallmentReminders } from './installment-reminders.js';
 import { scheduleMilestoneReminders } from './milestone-reminders.js';
 import { dispatchOutbox } from './outbox.js';
@@ -52,6 +53,9 @@ async function main(): Promise<void> {
   });
 
   const loops = [
+    runLoop('inventory_lock_expiry', Number(process.env.INVENTORY_LOCK_EXPIRY_SCAN_MS ?? 1000), () =>
+      expireInventoryLocks(db, Number(process.env.INVENTORY_LOCK_EXPIRY_BATCH_SIZE ?? 500)),
+    ),
     runLoop('outbox', Number(process.env.OUTBOX_POLL_MS ?? 300), () => dispatchOutbox(db, 100)),
     runLoop('notifications', Number(process.env.NOTIFICATION_POLL_MS ?? 1000), () =>
       dispatchNotifications(db, workerId, 25),
