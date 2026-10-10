@@ -20,6 +20,48 @@ export const createBuyerProfileSchema = z
   });
 export type CreateBuyerProfileInput = z.infer<typeof createBuyerProfileSchema>;
 
+export const inviteProjectBuyerSchema = z.object({
+  tenantId: z.uuid(),
+  projectId: z.uuid(),
+  displayName: z.string().trim().min(2).max(160),
+  phone: z.string().trim().min(6).max(32),
+  verificationChannel: z.enum(['WHATSAPP', 'SMS']).default('WHATSAPP'),
+  source: z.enum(['DIRECT', 'INTERNAL']).default('INTERNAL'),
+});
+export type InviteProjectBuyerInput = z.infer<typeof inviteProjectBuyerSchema>;
+
+export interface ProjectBuyerEoiSummary {
+  eoiId: string;
+  status: 'PAYMENT_PENDING' | 'PAID' | 'APPLIED' | 'REFUND_REQUESTED' | 'REFUNDED' | 'CANCELLED' | 'EXPIRED';
+  amount: string;
+  currency: string;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface ProjectBuyerSnapshot {
+  buyerProfileId: string;
+  userId: string;
+  displayName: string;
+  accountStatus: 'ACTIVE' | 'DISABLED' | 'PENDING';
+  membershipStatus: 'ACTIVE' | 'SUSPENDED' | 'INVITED';
+  source: BuyerSource;
+  contactDisplayHint: string | null;
+  contactVerified: boolean;
+  latestEoi: ProjectBuyerEoiSummary | null;
+  createdAt: string;
+}
+
+export interface InvitedProjectBuyerSnapshot {
+  userId: string;
+  buyerProfileId: string;
+  accountStatus: 'PENDING';
+  contactDisplayHint: string;
+  verificationRequired: true;
+  verificationChannel: 'WHATSAPP' | 'SMS';
+  verificationDispatched: boolean;
+}
+
 export const createEoiRefundPolicySchema = z.object({
   tenantId: z.uuid(),
   projectId: z.uuid(),
@@ -80,7 +122,6 @@ export const reviewEoiRefundSchema = z.object({
   note: z.string().trim().max(2000).optional(),
 });
 export type ReviewEoiRefundInput = z.infer<typeof reviewEoiRefundSchema>;
-
 
 export const queueChannelSchema = z.enum(['ONSITE', 'ONLINE', 'BROKER']);
 export const queuePriorityGroupSchema = z.enum(['STANDARD', 'VIP', 'RECOVERY']);

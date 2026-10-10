@@ -1,0 +1,95 @@
+name: Gate 5 Sales Buyer Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/api/src/sales/sales-buyer*.ts"
+      - "platform/apps/api/src/sales/sales.module.ts"
+      - "platform/apps/web/app/workspace/sales/**"
+      - "platform/apps/web/app/workspace/workspace-operations-shortcuts.tsx"
+      - "platform/packages/contracts/src/sales.ts"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/gate5_sales_buyers_fixture.sql"
+      - "platform/scripts/certify-gate5-sales-buyers.mjs"
+      - ".github/workflows/gate5-sales-buyer-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/apps/api/src/sales/sales-buyer*.ts"
+      - "platform/apps/api/src/sales/sales.module.ts"
+      - "platform/apps/web/app/workspace/sales/**"
+      - "platform/apps/web/app/workspace/workspace-operations-shortcuts.tsx"
+      - "platform/packages/contracts/src/sales.ts"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/gate5_sales_buyers_fixture.sql"
+      - "platform/scripts/certify-gate5-sales-buyers.mjs"
+      - ".github/workflows/gate5-sales-buyer-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  sales-buyers:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura_gate5_sales
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura_gate5_sales"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    defaults:
+      run:
+        working-directory: platform
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_gate5_sales
+      PGPASSWORD: postgres
+      NODE_ENV: test
+      AUTH_IDENTIFIER_HMAC_KEY: gate5-sales-auth-identifier-key-000000000001
+      CONTACT_HMAC_KEY: gate5-sales-contact-hmac-key-00000000000001
+      CONTACT_ENCRYPTION_KEY_BASE64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      CONTACT_VERIFICATION_PEPPER: gate5-sales-contact-verification-pepper-0001
+      CONTACT_VERIFICATION_TTL_SECONDS: 600
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Sales authority graph
+        run: |
+          set -euo pipefail
+          pnpm --filter @preneura/api... build
+          pnpm --filter @preneura/web... build
+
+      - name: Apply canonical migrations
+        run: MIGRATION_ACTOR=gate5-sales-buyers pnpm --filter @preneura/database migrate
+
+      - name: Seed Sales fixture
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/database/tests/gate5_sales_buyers_fixture.sql
+
+      - name: Certify onboarding EOI and finance separation
+        run: node scripts/certify-gate5-sales-buyers.mjs
