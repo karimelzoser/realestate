@@ -10,6 +10,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",
+    "migrate": "node dist/migrate.js",
+    "migrate:check": "node dist/migrate.js --check",
+    "migrate:baseline": "node dist/migrate.js --baseline-existing",
     "test": "node --test",
     "lint": "tsc --noEmit"
   },
