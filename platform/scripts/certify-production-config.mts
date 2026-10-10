@@ -79,8 +79,20 @@ expectFail('api.placeholder-secret', 'placeholder', () =>
 expectFail('api.console-otp', 'OTP_PROVIDER', () =>
   assertApiRuntimeConfiguration({ ...apiBase, OTP_PROVIDER: 'console' }),
 );
-expectFail('api.localhost-origin', 'localhost', () =>
+expectFail('api.localhost-origin', 'loopback', () =>
   assertApiRuntimeConfiguration({ ...apiBase, WEB_ORIGIN: 'https://localhost:3000' }),
+);
+expectFail('api.ipv4-loopback-origin', 'loopback', () =>
+  assertApiRuntimeConfiguration({ ...apiBase, WEB_ORIGIN: 'https://127.0.0.7:3000' }),
+);
+expectFail('api.ipv6-loopback-origin', 'loopback', () =>
+  assertApiRuntimeConfiguration({ ...apiBase, WEB_ORIGIN: 'https://[::1]:3000' }),
+);
+expectFail('api.credential-bearing-origin', 'embedded credentials', () =>
+  assertApiRuntimeConfiguration({ ...apiBase, WEB_ORIGIN: 'https://user:pass@app.preneura.example' }),
+);
+expectFail('api.origin-with-path', 'without path/query/fragment', () =>
+  assertApiRuntimeConfiguration({ ...apiBase, WEB_ORIGIN: 'https://app.preneura.example/workspace' }),
 );
 expectFail('api.invalid-contact-key', '32 bytes', () =>
   assertApiRuntimeConfiguration({ ...apiBase, CONTACT_ENCRYPTION_KEY_BASE64: Buffer.alloc(16, 1).toString('base64') }),
