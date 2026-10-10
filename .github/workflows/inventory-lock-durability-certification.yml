@@ -1,0 +1,86 @@
+name: Gate 2 Inventory Lock Durability Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/worker/src/inventory-lock-expiry.ts"
+      - "platform/apps/worker/src/main.ts"
+      - "platform/apps/worker/src/runtime-config.ts"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/database/tests/gate2_inventory_lock_durability_certification.sql"
+      - "platform/scripts/certify-inventory-lock-durability.sh"
+      - "platform/.env.example"
+      - ".github/workflows/inventory-lock-durability-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/apps/worker/src/inventory-lock-expiry.ts"
+      - "platform/apps/worker/src/main.ts"
+      - "platform/apps/worker/src/runtime-config.ts"
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/packages/database/tests/gate2_inventory_lock_durability_certification.sql"
+      - "platform/scripts/certify-inventory-lock-durability.sh"
+      - "platform/.env.example"
+      - ".github/workflows/inventory-lock-durability-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inventory-lock-durability:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and build worker/database dependencies
+        run: |
+          set -euo pipefail
+          pnpm --filter @preneura/database typecheck
+          pnpm --filter @preneura/worker typecheck
+          pnpm --filter @preneura/worker build
+
+      - name: Certify durable lock expiry
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bash scripts/certify-inventory-lock-durability.sh
