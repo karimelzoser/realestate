@@ -72,7 +72,24 @@ jobs:
           set -euo pipefail
           createdb preneura_backup_source
           DATABASE_URL="$SOURCE_DATABASE_URL" MIGRATION_ACTOR=backup-certification-source pnpm --filter @preneura/database migrate
-          test "$(psql "$SOURCE_DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '35'
+
+          mapfile -t migrations < <(printf '%s\n' packages/database/migrations/[0-9][0-9][0-9][0-9]_*.sql | sort)
+          expected_count="${#migrations[@]}"
+          latest_file="$(basename "${migrations[-1]}")"
+          latest_marker="${latest_file%.sql}"
+          latest_version=$((10#${latest_marker%%_*}))
+
+          actual_count="$(psql "$SOURCE_DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')"
+          actual_latest="$(psql "$SOURCE_DATABASE_URL" -Atqc 'SELECT max(version) FROM platform_schema_migrations')"
+          test "$actual_count" = "$expected_count"
+          test "$actual_latest" = "$latest_version"
+
+          psql "$SOURCE_DATABASE_URL" -Atqc \
+            "SELECT schema_version || ':' || minimum_runtime_version || ':' || migration_marker FROM platform_runtime_contract WHERE singleton_key='production'" \
+            > /tmp/source.runtime-contract
+          test -s /tmp/source.runtime-contract
+          printf '%s\n' "$actual_count" > /tmp/source.migration-count
+          printf '%s\n' "$actual_latest" > /tmp/source.latest-version
       - name: Seed persistent authoritative evidence
         run: |
           set -euo pipefail
@@ -119,8 +136,22 @@ jobs:
         run: |
           set -euo pipefail
           DATABASE_URL="$RESTORE_DATABASE_URL" MIGRATION_ACTOR=backup-certification-restored pnpm --filter @preneura/database migrate
-          test "$(psql "$RESTORE_DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')" = '35'
-          test "$(psql "$RESTORE_DATABASE_URL" -Atqc "SELECT schema_version || ':' || migration_marker FROM platform_runtime_contract WHERE singleton_key='production'")" = '35:0035_settlement_state_authority'
+
+          mapfile -t migrations < <(printf '%s\n' packages/database/migrations/[0-9][0-9][0-9][0-9]_*.sql | sort)
+          expected_count="${#migrations[@]}"
+          latest_file="$(basename "${migrations[-1]}")"
+          latest_marker="${latest_file%.sql}"
+          latest_version=$((10#${latest_marker%%_*}))
+
+          restored_count="$(psql "$RESTORE_DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')"
+          restored_latest="$(psql "$RESTORE_DATABASE_URL" -Atqc 'SELECT max(version) FROM platform_schema_migrations')"
+          restored_runtime="$(psql "$RESTORE_DATABASE_URL" -Atqc "SELECT schema_version || ':' || minimum_runtime_version || ':' || migration_marker FROM platform_runtime_contract WHERE singleton_key='production'")"
+
+          test "$restored_count" = "$expected_count"
+          test "$restored_latest" = "$latest_version"
+          test "$restored_count" = "$(cat /tmp/source.migration-count)"
+          test "$restored_latest" = "$(cat /tmp/source.latest-version)"
+          test "$restored_runtime" = "$(cat /tmp/source.runtime-contract)"
       - name: Record rehearsal evidence
         run: |
           set -euo pipefail
@@ -128,4 +159,5 @@ jobs:
           echo "restore_fingerprint=$(cat /tmp/restored.fingerprint)"
           echo "dump_sha256=$(cut -d' ' -f1 /tmp/preneura.dump.sha256)"
           echo "migration_count=$(psql "$RESTORE_DATABASE_URL" -Atqc 'SELECT count(*) FROM platform_schema_migrations')"
+          echo "runtime_contract=$(psql "$RESTORE_DATABASE_URL" -Atqc \"SELECT schema_version || ':' || minimum_runtime_version || ':' || migration_marker FROM platform_runtime_contract WHERE singleton_key='production'\")"
           echo 'object_storage_provider_restore=required_before_gate7'
