@@ -28,8 +28,8 @@ export default function BrokerOperationsClient() {
   const mode: BrokerMode = roles.includes('BROKER_MANAGER') ? 'MANAGER' : roles.includes('BROKER_FINANCE') ? 'FINANCE' : 'AGENT';
   const canManageUsers = roles.some((role) => roleHasPermission(role, 'broker.users.manage'));
   const canManagePayment = roles.some((role) => roleHasPermission(role, 'commission.payment.manage'));
-  const canSeeAmount = cases.some((item) => item.commissionAmount !== undefined);
-  const canSeeRate = cases.some((item) => item.ratePercent !== undefined);
+  const canSeeAmount = roles.some((role) => roleHasPermission(role, 'commission.amount.read'));
+  const canSeeRate = roles.some((role) => roleHasPermission(role, 'commission.rate.read'));
   const selectedBroker = brokers.find((item) => item.brokerCompanyId === brokerCompanyId) ?? null;
 
   const loadProject = useCallback(async (selected: WorkspaceProjectSnapshot) => {
