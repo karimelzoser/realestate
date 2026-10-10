@@ -8,6 +8,7 @@ import type {
   WorkspaceProjectSnapshot,
 } from '@preneura/contracts/access';
 import { DATABASE } from '../database/database.module.js';
+import { AccessLifecycleService } from './access-lifecycle.service.js';
 
 export interface RoleAssignment {
   id: string;
@@ -31,6 +32,7 @@ type ProjectRow = {
 };
 
 export abstract class AccessRepository {
+  readonly lifecycle?: AccessLifecycleService;
   abstract listActiveAssignments(userId: string): Promise<RoleAssignment[]>;
   abstract workspaceContext(userId: string, at: Date): Promise<WorkspaceContextSnapshot | null>;
   abstract brokerCompanyCanAccessProject(input: {
@@ -49,8 +51,11 @@ export abstract class AccessRepository {
 
 @Injectable()
 export class PostgresAccessRepository extends AccessRepository {
+  readonly lifecycle: AccessLifecycleService;
+
   constructor(@Inject(DATABASE) private readonly db: Kysely<Database>) {
     super();
+    this.lifecycle = new AccessLifecycleService(db);
   }
 
   async listActiveAssignments(userId: string): Promise<RoleAssignment[]> {
