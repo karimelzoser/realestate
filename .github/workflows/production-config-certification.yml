@@ -121,6 +121,7 @@ jobs:
           assert_fails_fast() {
             local package="$1"
             local log_file="$2"
+            local expected="$3"
             set +e
             NODE_ENV=production timeout --signal=TERM --kill-after=1s 5s pnpm --filter "$package" start >"$log_file" 2>&1
             local rc=$?
@@ -130,9 +131,13 @@ jobs:
               echo "$package did not fail fast on invalid production configuration." >&2
               exit 1
             fi
-            grep -q 'DATABASE_URL is required in production' "$log_file"
+            if ! grep -q "$expected" "$log_file"; then
+              cat "$log_file"
+              echo "$package failed, but not through its authoritative production configuration boundary." >&2
+              exit 1
+            fi
           }
 
-          assert_fails_fast '@preneura/api' /tmp/api-invalid-config.log
-          assert_fails_fast '@preneura/worker' /tmp/worker-invalid-config.log
-          assert_fails_fast '@preneura/notification-gateway' /tmp/gateway-invalid-config.log
+          assert_fails_fast '@preneura/api' /tmp/api-invalid-config.log 'Invalid production configuration'
+          assert_fails_fast '@preneura/worker' /tmp/worker-invalid-config.log 'Invalid production worker configuration'
+          assert_fails_fast '@preneura/notification-gateway' /tmp/gateway-invalid-config.log 'DATABASE_URL is required in production'
