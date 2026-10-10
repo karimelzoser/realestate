@@ -9,15 +9,20 @@ on:
       - "platform/apps/api/src/main.ts"
       - "platform/apps/worker/src/main.ts"
       - "platform/apps/worker/src/runtime-config.ts"
+      - "platform/apps/worker/src/inventory-lock-expiry.ts"
       - "platform/packages/contracts/package.json"
       - "platform/packages/security/package.json"
       - "platform/packages/database/src/runtime-readiness.ts"
       - "platform/packages/database/migrations/**"
       - "platform/packages/database/scripts/migrate.mjs"
       - "platform/packages/database/package.json"
+      - "platform/packages/database/tests/gate2_inventory_lock_durability_certification.sql"
       - "platform/scripts/certify-runtime-readiness.sh"
+      - "platform/scripts/certify-inventory-lock-durability.sh"
       - "platform/docs/runtime-readiness.md"
+      - "platform/docs/inventory-lock-durability.md"
       - ".github/workflows/runtime-readiness-certification.yml"
+      - ".github/workflows/inventory-lock-durability-certification.yml"
   push:
     branches:
       - "feature/production-*"
@@ -29,15 +34,20 @@ on:
       - "platform/apps/api/src/main.ts"
       - "platform/apps/worker/src/main.ts"
       - "platform/apps/worker/src/runtime-config.ts"
+      - "platform/apps/worker/src/inventory-lock-expiry.ts"
       - "platform/packages/contracts/package.json"
       - "platform/packages/security/package.json"
       - "platform/packages/database/src/runtime-readiness.ts"
       - "platform/packages/database/migrations/**"
       - "platform/packages/database/scripts/migrate.mjs"
       - "platform/packages/database/package.json"
+      - "platform/packages/database/tests/gate2_inventory_lock_durability_certification.sql"
       - "platform/scripts/certify-runtime-readiness.sh"
+      - "platform/scripts/certify-inventory-lock-durability.sh"
       - "platform/docs/runtime-readiness.md"
+      - "platform/docs/inventory-lock-durability.md"
       - ".github/workflows/runtime-readiness-certification.yml"
+      - ".github/workflows/inventory-lock-durability-certification.yml"
 
 permissions:
   contents: read
@@ -124,7 +134,8 @@ jobs:
           COMMON_DB=postgresql://postgres:postgres@127.0.0.1:5432/preneura_current
           COMMON_TOKEN=0123456789abcdef0123456789abcdef
           CONTACT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-          EXPECTED_SCHEMA_VERSION=40
+          EXPECTED_SCHEMA_VERSION="$(sed -nE 's/^export const RUNTIME_SCHEMA_VERSION = ([0-9]+);$/\1/p' packages/database/src/runtime-readiness.ts)"
+          test -n "$EXPECTED_SCHEMA_VERSION"
 
           NODE_ENV=production \
           PORT=4120 \
@@ -173,6 +184,8 @@ jobs:
           DATABASE_URL="$COMMON_DB" \
           NOTIFICATION_GATEWAY_URL=http://notification-gateway.internal/v1/notifications \
           NOTIFICATION_GATEWAY_TOKEN="$COMMON_TOKEN" \
+          INVENTORY_LOCK_EXPIRY_SCAN_MS=1000 \
+          INVENTORY_LOCK_EXPIRY_BATCH_SIZE=500 \
           OUTBOX_POLL_MS=300 \
           NOTIFICATION_POLL_MS=1000 \
           SLA_SCAN_MS=30000 \
