@@ -8,8 +8,8 @@ export function validateApiRuntimeConfig(env: NodeJS.ProcessEnv = process.env): 
   const failures: string[] = [];
   requirePostgresUrl(env, 'DATABASE_URL', failures);
   requireHttpsOrigins(env, 'WEB_ORIGIN', failures);
-  requireIntegerRange(env, 'TRUST_PROXY_HOPS', 1, 10, failures);
-  requireIntegerRange(env, 'API_BODY_LIMIT_BYTES', MIN_API_BODY_LIMIT_BYTES, MAX_API_BODY_LIMIT_BYTES, failures);
+  optionalIntegerRange(env, 'TRUST_PROXY_HOPS', 1, 10, failures);
+  optionalIntegerRange(env, 'API_BODY_LIMIT_BYTES', MIN_API_BODY_LIMIT_BYTES, MAX_API_BODY_LIMIT_BYTES, failures);
 
   requireSecret(env, 'AUTH_IDENTIFIER_HMAC_KEY', failures);
   requireSecret(env, 'AUTH_OTP_PEPPER', failures);
@@ -41,6 +41,7 @@ export function validateApiRuntimeConfig(env: NodeJS.ProcessEnv = process.env): 
   requireHttpUrl(env, 'DOCUMENT_SCANNER_URL', failures, true);
   requireSecret(env, 'DOCUMENT_SCANNER_TOKEN', failures, 24);
   requireSecret(env, 'FINANCE_PROVIDER_INGRESS_TOKEN', failures);
+  if (env.SETTLEMENT_PROVIDER_INGRESS_TOKEN?.trim()) requireSecret(env, 'SETTLEMENT_PROVIDER_INGRESS_TOKEN', failures);
 
   requireIntegerRange(env, 'AUTH_OTP_TTL_SECONDS', 30, 1800, failures);
   requireIntegerRange(env, 'AUTH_OTP_MAX_ATTEMPTS', 1, 20, failures);
@@ -81,7 +82,17 @@ function requireBase64Key(env: NodeJS.ProcessEnv, name: string, expectedBytes: n
 function requireIntegerRange(env: NodeJS.ProcessEnv, name: string, minimum: number, maximum: number, failures: string[]): void {
   const value = requireNonPlaceholder(env, name, failures);
   if (!value) return;
-  const parsed = Number(value);
+  validateIntegerRange(name, value, minimum, maximum, failures);
+}
+
+function optionalIntegerRange(env: NodeJS.ProcessEnv, name: string, minimum: number, maximum: number, failures: string[]): void {
+  const value = env[name]?.trim();
+  if (!value) return;
+  validateIntegerRange(name, value, minimum, maximum, failures);
+}
+
+function validateIntegerRange(name: string, raw: string, minimum: number, maximum: number, failures: string[]): void {
+  const parsed = Number(raw);
   if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) failures.push(`${name} must be an integer between ${minimum} and ${maximum}.`);
 }
 
