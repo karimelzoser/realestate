@@ -6,7 +6,7 @@ const root = resolve(process.cwd(), '..');
 const platform = resolve(process.cwd());
 const failures = [];
 const EXPECTED_RUNTIME_SHA = 'c2746523eb434898cbb4c46cf5df452d122ba78f';
-const EXPECTED_BUNDLE_SHA = '8750f94180b89cf58a1963f739c24aa0a56babbd';
+const EXPECTED_BUNDLE_SHA = '4da4a83f7c5ca17ed7033237b9aca74186b912ce';
 const EXPECTED_SCHEMA = 41;
 const EXPECTED_MIGRATION = '0041_inventory_lock_expiry_durability.sql';
 
@@ -47,7 +47,9 @@ for (const artifact of [
   'platform/docs/gate6-nonfunctional-certification.md',
   'platform/docs/gate6-security-scan.md',
   'platform/docs/selfhosted-deployment-bundle.md',
+  'platform/docs/deployment-provenance.md',
   'platform/ops/selfhosted-gate7-staging.json',
+  'platform/scripts/collect-gate7-host-evidence.mjs',
   'docs/PRODUCTION_DELIVERY_GATES.md',
   'platform/.env.example',
 ]) requireFile(artifact);
