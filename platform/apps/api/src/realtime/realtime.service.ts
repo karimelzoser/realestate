@@ -3,12 +3,14 @@ import type { PermissionCode } from '@preneura/contracts/access';
 import type { RealtimeSignal, RealtimeTopic } from '@preneura/contracts/realtime';
 import { Observable } from 'rxjs';
 import { AccessService } from '../access/access.service.js';
+import { SessionActivityService } from '../auth/session-activity.service.js';
 import { RealtimeListenerService } from './realtime-listener.service.js';
 import { RealtimeRepository } from './realtime.repository.js';
 
 const REPLAY_BATCH = 500;
 const MAX_REPLAY_EVENTS = 5_000;
 const HEARTBEAT_MS = 20_000;
+const DEFAULT_AUTH_REVALIDATE_MS = 5_000;
 
 @Injectable()
 export class RealtimeService {
@@ -16,9 +18,11 @@ export class RealtimeService {
     private readonly repository: RealtimeRepository,
     private readonly access: AccessService,
     private readonly listener: RealtimeListenerService,
+    private readonly sessions: SessionActivityService,
   ) {}
 
   async projectStream(input: {
+    sessionId: string;
     userId: string;
     tenantId: string;
     projectId: string;
@@ -29,6 +33,17 @@ export class RealtimeService {
 
     return this.buildStream({
       afterSequence: this.cursor(input.afterSequence),
+      revalidate: async () => {
+        if (!await this.sessions.isActive({ sessionId: input.sessionId, userId: input.userId })) {
+          return false;
+        }
+        const currentTopics = await this.allowedProjectTopics(
+          input.userId,
+          input.tenantId,
+          input.projectId,
+        );
+        return topics.every((topic) => currentTopics.includes(topic));
+      },
       listen: (push) => this.listener.realtime$.subscribe((signal) => {
         if (
           signal.tenantId === input.tenantId &&
@@ -59,6 +74,7 @@ export class RealtimeService {
   }
 
   async brokerCommissionStream(input: {
+    sessionId: string;
     userId: string;
     tenantId: string;
     projectId: string;
@@ -84,6 +100,25 @@ export class RealtimeService {
 
     return this.buildStream({
       afterSequence: this.cursor(input.afterSequence),
+      revalidate: async () => {
+        if (!await this.sessions.isActive({ sessionId: input.sessionId, userId: input.userId })) {
+          return false;
+        }
+        const current = await this.access.can({
+          userId: input.userId,
+          permission: 'commission.status.read',
+          context: {
+            tenantId: input.tenantId,
+            projectId: input.projectId,
+            brokerCompanyId: input.brokerCompanyId,
+          },
+        });
+        return Boolean(
+          current.allowed &&
+          current.assignmentId === statusDecision.assignmentId &&
+          current.role === statusDecision.role,
+        );
+      },
       listen: (push) => this.listener.realtime$.subscribe((signal) => {
         if (
           signal.tenantId === input.tenantId &&
@@ -107,6 +142,7 @@ export class RealtimeService {
 
   private buildStream(input: {
     afterSequence: string;
+    revalidate: () => Promise<boolean>;
     listen: (push: (sequence: string) => void) => { unsubscribe(): void };
     latest: () => Promise<string | null>;
     replay: (afterSequence: string, throughSequence: string | null, limit: number) => Promise<RealtimeSignal[]>;
@@ -117,7 +153,35 @@ export class RealtimeService {
       let ready = false;
       let lastSequence = input.afterSequence;
       let liveChain = Promise.resolve();
+      let validationPromise: Promise<boolean> | null = null;
+      let lastValidatedAt = 0;
       const buffered = new Set<string>();
+      const revalidateMs = this.authRevalidateMs();
+
+      const ensureAuthorized = async (force = false): Promise<boolean> => {
+        if (closed) return false;
+        if (!force && Date.now() - lastValidatedAt < revalidateMs) return true;
+        if (!validationPromise) {
+          validationPromise = input.revalidate()
+            .then((allowed) => {
+              if (allowed) lastValidatedAt = Date.now();
+              return allowed;
+            })
+            .finally(() => {
+              validationPromise = null;
+            });
+        }
+        return validationPromise;
+      };
+
+      const revoke = (): void => {
+        if (closed) return;
+        subscriber.next({
+          type: 'access_revoked',
+          data: { at: new Date().toISOString(), cursor: lastSequence },
+        });
+        subscriber.complete();
+      };
 
       const pushLive = (sequence: string): void => {
         if (closed || !this.cursorIsValid(sequence)) return;
@@ -127,6 +191,10 @@ export class RealtimeService {
         }
         liveChain = liveChain.then(async () => {
           if (closed || !this.after(sequence, lastSequence)) return;
+          if (!await ensureAuthorized()) {
+            revoke();
+            return;
+          }
           const signal = await input.fetchOne(sequence);
           if (!signal || closed || !this.after(signal.sequence, lastSequence)) return;
           subscriber.next(this.message(signal));
@@ -145,13 +213,30 @@ export class RealtimeService {
           });
         }
       }, HEARTBEAT_MS);
+      const authorizationTimer = setInterval(() => {
+        void ensureAuthorized(true)
+          .then((allowed) => {
+            if (!allowed) revoke();
+          })
+          .catch((error) => {
+            if (!closed) subscriber.error(error);
+          });
+      }, revalidateMs);
 
       void (async () => {
         try {
+          if (!await ensureAuthorized(true)) {
+            revoke();
+            return;
+          }
           const watermark = await input.latest();
           let replayed = 0;
           if (watermark && this.after(watermark, lastSequence)) {
             while (!closed && this.after(watermark, lastSequence)) {
+              if (!await ensureAuthorized(true)) {
+                revoke();
+                return;
+              }
               const remaining = MAX_REPLAY_EVENTS - replayed;
               if (remaining <= 0) {
                 subscriber.next({
@@ -192,6 +277,7 @@ export class RealtimeService {
       return () => {
         closed = true;
         clearInterval(heartbeat);
+        clearInterval(authorizationTimer);
         liveSubscription.unsubscribe();
       };
     });
@@ -228,6 +314,12 @@ export class RealtimeService {
       type: 'domain_signal',
       data: signal,
     };
+  }
+
+  private authRevalidateMs(): number {
+    const parsed = Number(process.env.SSE_AUTH_REVALIDATE_MS ?? DEFAULT_AUTH_REVALIDATE_MS);
+    if (!Number.isFinite(parsed)) return DEFAULT_AUTH_REVALIDATE_MS;
+    return Math.min(Math.max(Math.trunc(parsed), 1_000), 60_000);
   }
 
   private cursor(value: string): string {
