@@ -21,6 +21,10 @@ on:
         type: boolean
         required: true
         default: false
+      deployed_release_sha:
+        description: 'Exact Real Estate runtime commit deployed to all PRENEURA application services'
+        type: string
+        required: false
       api_url:
         description: 'Deployed API HTTPS origin, e.g. https://api.example.com'
         type: string
@@ -112,8 +116,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - uses: actions/checkout@v4
+
       - name: Validate release attestations
         env:
+          DEPLOYED_RELEASE_SHA: ${{ inputs.deployed_release_sha }}
           API_URL: ${{ inputs.api_url }}
           WEB_URL: ${{ inputs.web_url }}
           OIDC_ISSUER_URL: ${{ inputs.oidc_issuer_url }}
@@ -125,10 +132,21 @@ jobs:
           MIGRATION_REHEARSAL_COMPLETE: ${{ inputs.migration_rehearsal_complete }}
         run: |
           set -euo pipefail
-          for name in API_URL WEB_URL OIDC_ISSUER_URL OPERATIONAL_OWNER; do
+          for name in DEPLOYED_RELEASE_SHA API_URL WEB_URL OIDC_ISSUER_URL OPERATIONAL_OWNER; do
             value="${!name:-}"
             if [ -z "$value" ]; then echo "$name is required for final Gate 7 certification." >&2; exit 1; fi
           done
+
+          expected_release_sha="$(node -e "const fs=require('fs'); const m=JSON.parse(fs.readFileSync('platform/ops/railway-gate7-staging.json','utf8')); process.stdout.write(m.releaseSha);")"
+          if [ "$DEPLOYED_RELEASE_SHA" != "$expected_release_sha" ]; then
+            echo "Deployed Real Estate SHA $DEPLOYED_RELEASE_SHA does not match certified candidate $expected_release_sha." >&2
+            exit 1
+          fi
+          case "$DEPLOYED_RELEASE_SHA" in
+            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+            *) echo 'DEPLOYED_RELEASE_SHA must be a full 40-character lowercase Git SHA.' >&2; exit 1 ;;
+          esac
+
           for name in INTEGRATIONS_VERIFIED BACKUP_RESTORE_VERIFIED MONITORING_ALERTS_LIVE ROLLBACK_VALIDATED MIGRATION_REHEARSAL_COMPLETE; do
             value="${!name:-false}"
             if [ "$value" != 'true' ]; then echo "$name must be explicitly attested true." >&2; exit 1; fi
@@ -170,7 +188,9 @@ jobs:
       - name: Gate 7 decision
         env:
           OPERATIONAL_OWNER: ${{ inputs.operational_owner }}
+          DEPLOYED_RELEASE_SHA: ${{ inputs.deployed_release_sha }}
         run: |
           echo 'GATE7_FINAL_DECISION=GO'
           echo "OPERATIONAL_OWNER=$OPERATIONAL_OWNER"
-          echo "RELEASE_SHA=$GITHUB_SHA"
+          echo "DEPLOYED_RELEASE_SHA=$DEPLOYED_RELEASE_SHA"
+          echo "CERTIFICATION_WORKFLOW_SHA=$GITHUB_SHA"
