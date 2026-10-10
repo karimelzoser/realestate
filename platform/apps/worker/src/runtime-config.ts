@@ -11,6 +11,8 @@ export function validateWorkerRuntimeConfig(env: Env = process.env): void {
   requireUrl(env, 'NOTIFICATION_GATEWAY_URL', ['https:', 'http:'], true, failures);
   requireSecret(env, 'NOTIFICATION_GATEWAY_TOKEN', MIN_SECRET_LENGTH, failures);
 
+  requireIntegerRange(env, 'INVENTORY_LOCK_EXPIRY_SCAN_MS', 100, 60_000, 'milliseconds', failures);
+  requireIntegerRange(env, 'INVENTORY_LOCK_EXPIRY_BATCH_SIZE', 1, 5000, 'records', failures);
   requireInterval(env, 'OUTBOX_POLL_MS', 50, 60_000, failures);
   requireInterval(env, 'NOTIFICATION_POLL_MS', 100, 60_000, failures);
   requireInterval(env, 'SLA_SCAN_MS', 1_000, 3_600_000, failures);
@@ -63,11 +65,22 @@ function requireInterval(
   maximum: number,
   failures: string[],
 ): void {
+  requireIntegerRange(env, name, minimum, maximum, 'milliseconds', failures);
+}
+
+function requireIntegerRange(
+  env: Env,
+  name: string,
+  minimum: number,
+  maximum: number,
+  unit: string,
+  failures: string[],
+): void {
   const raw = requiredValue(env, name, failures);
   if (!raw) return;
   const value = Number(raw);
   if (!Number.isInteger(value) || value < minimum || value > maximum) {
-    failures.push(`${name} must be an integer between ${minimum} and ${maximum} milliseconds.`);
+    failures.push(`${name} must be an integer between ${minimum} and ${maximum} ${unit}.`);
   }
 }
 
