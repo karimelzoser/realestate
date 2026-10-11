@@ -1,0 +1,85 @@
+name: Gate 6 Database Recovery Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/scripts/backup-postgres.sh"
+      - "platform/scripts/restore-postgres.sh"
+      - "platform/scripts/certify-database-recovery.sh"
+      - "platform/packages/database/**"
+      - "platform/apps/api/src/health/**"
+      - "platform/apps/api/src/main.ts"
+      - "platform/pnpm-lock.yaml"
+      - "platform/docs/database-recovery.md"
+      - ".github/workflows/database-recovery-certification.yml"
+  push:
+    branches:
+      - "feature/gate6-*"
+      - "release/**"
+    paths:
+      - "platform/scripts/backup-postgres.sh"
+      - "platform/scripts/restore-postgres.sh"
+      - "platform/scripts/certify-database-recovery.sh"
+      - "platform/packages/database/**"
+      - "platform/apps/api/src/health/**"
+      - "platform/apps/api/src/main.ts"
+      - "platform/pnpm-lock.yaml"
+      - "platform/docs/database-recovery.md"
+      - ".github/workflows/database-recovery-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  backup-restore:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build API and database packages
+        run: |
+          set -euo pipefail
+          pnpm --filter @preneura/database build
+          pnpm --filter @preneura/api build
+
+      - name: Run backup and restore drill
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+        run: bash scripts/certify-database-recovery.sh
