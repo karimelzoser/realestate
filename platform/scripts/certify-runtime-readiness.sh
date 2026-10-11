@@ -12,7 +12,7 @@ cd "$ROOT_DIR"
 
 create_test_databases() {
   local db
-  for db in preneura_current preneura_stale preneura_future_compatible preneura_future_incompatible; do
+  for db in preneura_current preneura_stale preneura_untracked preneura_future_compatible preneura_future_incompatible; do
     dropdb --if-exists -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$db"
     createdb -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" "$db"
   done
@@ -26,13 +26,33 @@ create_test_databases() {
     psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_stale -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
   done
 
-  for db in preneura_current preneura_future_compatible preneura_future_incompatible; do
+  for db in preneura_current preneura_untracked preneura_future_compatible preneura_future_incompatible; do
     for migration in packages/database/migrations/*.sql; do
       psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$db" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
     done
   done
 
+  # Current and rolling-test databases represent verified legacy schemas that
+  # have been adopted into the immutable release ledger. The untracked database
+  # intentionally skips this step to prove readiness fails closed on provenance.
+  for db in preneura_current preneura_future_compatible preneura_future_incompatible; do
+    DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$db" \
+      MIGRATION_ADOPT_EXISTING=true \
+      MIGRATION_ACTOR=runtime-readiness-certification \
+      pnpm --filter @preneura/database migrate >/dev/null
+  done
+
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_compatible -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
+INSERT INTO platform_schema_migrations (
+  version, filename, checksum_sha256, apply_mode, applied_by, duration_ms
+) VALUES (
+  34,
+  '0034_additive_future.sql',
+  repeat('a', 64),
+  'APPLIED',
+  'runtime-readiness-certification',
+  0
+);
 UPDATE platform_runtime_contract
 SET schema_version = 34,
     minimum_runtime_version = 33,
@@ -42,6 +62,16 @@ WHERE singleton_key = 'production';
 SQL
 
   psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_incompatible -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
+INSERT INTO platform_schema_migrations (
+  version, filename, checksum_sha256, apply_mode, applied_by, duration_ms
+) VALUES (
+  34,
+  '0034_breaking_future.sql',
+  repeat('b', 64),
+  'APPLIED',
+  'runtime-readiness-certification',
+  0
+);
 UPDATE platform_runtime_contract
 SET schema_version = 34,
     minimum_runtime_version = 34,
@@ -98,6 +128,7 @@ const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error('DATABASE_URL is required');
 const expectedCode = process.env.EXPECT_CODE;
 const expectedDatabaseSchemaVersion = process.env.EXPECT_DATABASE_SCHEMA_VERSION;
+const expectedLedgerVersion = process.env.EXPECT_LEDGER_VERSION;
 const db = createDatabase(databaseUrl);
 
 try {
@@ -111,6 +142,11 @@ try {
   ) {
     throw new Error(
       `Expected database schema ${expectedDatabaseSchemaVersion}, got ${snapshot.databaseSchemaVersion}.`,
+    );
+  }
+  if (expectedLedgerVersion && snapshot.migrationLedgerVersion !== Number(expectedLedgerVersion)) {
+    throw new Error(
+      `Expected migration ledger ${expectedLedgerVersion}, got ${snapshot.migrationLedgerVersion}.`,
     );
   }
   console.log(JSON.stringify({ result: 'ready', ...snapshot }));
@@ -127,14 +163,20 @@ TS
 
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_current" \
     EXPECT_DATABASE_SCHEMA_VERSION=33 \
+    EXPECT_LEDGER_VERSION=33 \
     pnpm --filter @preneura/api exec tsx .runtime-readiness-certification.mts
 
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_stale" \
     EXPECT_CODE=SCHEMA_CONTRACT_MISSING \
     pnpm --filter @preneura/api exec tsx .runtime-readiness-certification.mts
 
+  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_untracked" \
+    EXPECT_CODE=MIGRATION_LEDGER_MISMATCH \
+    pnpm --filter @preneura/api exec tsx .runtime-readiness-certification.mts
+
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_future_compatible" \
     EXPECT_DATABASE_SCHEMA_VERSION=34 \
+    EXPECT_LEDGER_VERSION=34 \
     pnpm --filter @preneura/api exec tsx .runtime-readiness-certification.mts
 
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_future_incompatible" \
@@ -180,6 +222,7 @@ certify_api_current() {
   curl --fail --silent http://127.0.0.1:4100/v1/health/ready >/tmp/ready.json
   grep -q '"status":"ready"' /tmp/ready.json
   grep -q '"databaseSchemaVersion":33' /tmp/ready.json
+  grep -q '"migrationLedgerVersion":33' /tmp/ready.json
 
   kill "$pid"
   wait "$pid" || true
@@ -211,6 +254,30 @@ certify_api_stale() {
   trap - RETURN
 }
 
+certify_api_untracked() {
+  local log_file=/tmp/preneura-api-untracked.log
+  NODE_ENV=test \
+  PORT=4102 \
+  WEB_ORIGIN=http://localhost:3000 \
+  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_untracked" \
+  OBJECT_STORAGE_BUCKET=readiness-test \
+    pnpm --filter @preneura/api start >"$log_file" 2>&1 &
+  local pid=$!
+  trap 'kill '"$pid"' 2>/dev/null || true' RETURN
+
+  wait_for_live "$pid" 4102 "$log_file"
+  curl --fail --silent http://127.0.0.1:4102/v1/health/live | grep -q '"status":"ok"'
+
+  local status
+  status="$(curl --silent --output /tmp/untracked-ready.json --write-out '%{http_code}' http://127.0.0.1:4102/v1/health/ready)"
+  test "$status" = '503'
+  grep -q 'MIGRATION_LEDGER_MISMATCH' /tmp/untracked-ready.json
+
+  kill "$pid"
+  wait "$pid" || true
+  trap - RETURN
+}
+
 certify_worker() {
   set +e
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_stale" \
@@ -224,6 +291,19 @@ certify_worker() {
   fi
   grep -q 'worker.fatal' /tmp/worker-stale.log
   grep -q 'Runtime schema contract is not available' /tmp/worker-stale.log
+
+  set +e
+  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_untracked" \
+    timeout --signal=TERM --kill-after=2s 8s pnpm --filter @preneura/worker start >/tmp/worker-untracked.log 2>&1
+  local untracked_rc=$?
+  set -e
+  if [[ "$untracked_rc" -eq 0 || "$untracked_rc" -eq 124 || "$untracked_rc" -eq 137 ]]; then
+    cat /tmp/worker-untracked.log
+    echo 'Worker did not fail closed on an untracked schema.' >&2
+    return 1
+  fi
+  grep -q 'worker.fatal' /tmp/worker-untracked.log
+  grep -q 'Migration ledger is not available' /tmp/worker-untracked.log
 
   set +e
   DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_current" \
@@ -244,6 +324,7 @@ prove_contract_monotonicity
 certify_library_matrix
 certify_api_current
 certify_api_stale
+certify_api_untracked
 certify_worker
 
 echo 'Runtime readiness certification: PASS'
