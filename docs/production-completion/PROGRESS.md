@@ -85,3 +85,7 @@ Monitor the user-authored E01.3 checkpoint head until its release workflows comp
 ## Codex takeover — 11 October 2026
 
 Working branch: codex/egypt-platform-completion, based on PR #89 with the existing PR #85 deployment/provenance line merged for integration. E01 source/runtime and packaging work are being validated together. Fixed first-factor linking for privileged step-up, file-read race, stale schema checks and deployment workspace/config omissions. Added five identity-enrollment and three runtime-contract regressions. Remote runtime/deployment and real DB checks remain pending; no production GO is claimed. Server access/deployment remains excluded.
+
+### E01 verified; E02 active
+
+Exact head 1e1b85f38684e7f107ede0d3db9cfeae73d86836 passed all 28 GitHub workflows, including CodeQL, E01, emitted full stack, container/provenance and Gate 7 software preflight. All 42 migrations applied to a fresh disposable PostgreSQL 18.6 database locally; FULL_STACK_ACCEPTANCE_OK including revocation/privileged-role change. Four runtime and ten API unit regressions passed. No live GO/provider/server claim. Active task now E02.1.

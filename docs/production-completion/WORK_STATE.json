@@ -8,10 +8,10 @@
   "observedHeadBeforeCheckpoint": "ccb780adfaf5ff9821d8306453b8bc11b0bdd2d4",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "activeTaskId": "E01.3",
+  "activeTaskId": "E02.1",
   "activeTaskStatus": "IN_PROGRESS",
-  "completedCheckpoint": "Took over current E01 line; integrated deployment/provenance branch; fixed quality file-read race, privileged factor enrollment, dynamic schema certification and deployment workspace/config compatibility. Unit tests and type/lint checks passed; full changed-head checks pending.",
-  "nextAction": "Finish and certify E01 integration on this branch; run real local PostgreSQL/API and CI checks, then continue E02 and EOI-type/exact-apartment implementation.",
+  "completedCheckpoint": "E01 integrated security corrections certified: all 28 workflows PASS on exact head; local PostgreSQL 18.6 migrations and emitted full-stack acceptance PASS. E02 implementation begins.",
+  "nextAction": "Implement Arabic/English locale and Egyptian formatting/identity foundations, then chosen-type EOI and exact-apartment allocation; preserve deferred deployment.",
   "changedFiles": [
     "platform/apps/api/src/auth",
     "platform/apps/api/src/access",
@@ -52,6 +52,10 @@
     {
       "action": "local tests",
       "result": "9 API assurance/enrollment tests and 3 runtime-contract tests passed; nine-package strict type/lint checks passed before the final session-activity typed-table correction"
+    },
+    {
+      "action": "E01 final software verification",
+      "result": "28 exact-head workflows success, local real PostgreSQL 18.6 migrations and FULL_STACK_ACCEPTANCE_OK, 14 unit/runtime tests pass"
     }
   ],
   "evidencePaths": [
@@ -64,9 +68,8 @@
     ".github/workflows/e01-privileged-assurance-certification.yml"
   ],
   "remainingTests": [
-    "Rebuild API/all packages after typed assurance mapping",
-    "Real full-stack role-elevation/revocation test",
-    "CodeQL and deployment certification on the integrated head"
+    "E02 locale/RTL/timezone/identity acceptance",
+    "All subsequent plan task evidence"
   ],
   "externalBlockerIds": [
     "DEPLOYMENT_DEFERRED",
@@ -88,5 +91,7 @@
     "demoHosting": "GitHub Pages, synthetic only",
     "laterProductionHosting": "existing self-hosted server, Docker, CLI/SSH",
     "railwayRequired": false
-  }
+  },
+  "taskPr": 90,
+  "taskImplementationHead": "1e1b85f38684e7f107ede0d3db9cfeae73d86836"
 }
