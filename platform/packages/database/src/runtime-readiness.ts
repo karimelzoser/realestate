@@ -1,8 +1,8 @@
 import { sql, type Kysely } from 'kysely';
 import type { Database } from './index.js';
 
-export const RUNTIME_SCHEMA_VERSION = 35;
-export const RUNTIME_MIGRATION_MARKER = '0035_project_buyer_attribution';
+export const RUNTIME_SCHEMA_VERSION = 36;
+export const RUNTIME_MIGRATION_MARKER = '0036_transaction_attribution_authority';
 
 export type RuntimeReadinessErrorCode =
   | 'DATABASE_UNAVAILABLE'
