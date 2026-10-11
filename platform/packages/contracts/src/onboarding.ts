@@ -22,6 +22,13 @@ export const projectBrandingInputSchema = z.object({
 });
 export type ProjectBrandingInput = z.infer<typeof projectBrandingInputSchema>;
 
+export const bootstrapOperationsDirectorSchema = z.object({
+  displayName: z.string().trim().min(2).max(160),
+  phone: z.string().trim().min(6).max(40),
+  verificationChannel: z.enum(['WHATSAPP', 'SMS']).default('WHATSAPP'),
+});
+export type BootstrapOperationsDirectorInput = z.infer<typeof bootstrapOperationsDirectorSchema>;
+
 export interface TenantBrandingSnapshot {
   displayNameEn: string;
   displayNameAr: string;
@@ -34,8 +41,6 @@ export interface TenantBrandingSnapshot {
 
 export interface ProjectBrandingSnapshot {
   projectId: string;
-  projectCode: string;
-  projectStatus: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'CLOSED' | 'ARCHIVED';
   displayNameEn: string;
   displayNameAr: string;
   shortDescriptionEn: string | null;
@@ -43,6 +48,14 @@ export interface ProjectBrandingSnapshot {
   primaryColor: string | null;
   secondaryColor: string | null;
   updatedAt: string;
+}
+
+export interface DeveloperOnboardingProjectSnapshot {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  projectStatus: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'CLOSED' | 'ARCHIVED';
+  branding: ProjectBrandingSnapshot | null;
 }
 
 export interface DeveloperOnboardingReadiness {
@@ -69,7 +82,7 @@ export interface DeveloperOnboardingSnapshot {
   completedAt: string | null;
   completedBy: string | null;
   branding: TenantBrandingSnapshot | null;
-  projects: ProjectBrandingSnapshot[];
+  projects: DeveloperOnboardingProjectSnapshot[];
   staff: DeveloperOnboardingStaffSnapshot;
   readiness: DeveloperOnboardingReadiness;
 }
