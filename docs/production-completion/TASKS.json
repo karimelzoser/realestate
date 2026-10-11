@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "stage": "IMPLEMENTATION_STARTED",
+  "stage": "PRODUCT_COMPLETION",
   "planningBranch": "plan/egypt-platform-completion",
   "integrationBranch": "completion/egypt-full-platform",
   "baselineProductionSha": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "planningHeadSha": "446cfe4803bedc9868ee28799ff4b376277c0d91",
   "demoMainSha": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "activeTaskId": "E02.1",
+  "activeTaskId": "E05.2",
   "taskDefaults": {
     "actorScope": "execution-agent using existing RBAC/domain boundaries",
     "requiredEvidence": [
@@ -123,7 +123,9 @@
           "priority": "P0",
           "status": "IN_PROGRESS",
           "deliverable": "Shared i18n/accessibility/time/currency foundation",
-          "acceptance": "Critical journeys are equivalent in Arabic/English with correct RTL, Africa/Cairo and EGP behavior."
+          "acceptance": "Critical journeys are equivalent in Arabic/English with correct RTL, Africa/Cairo and EGP behavior.",
+          "existingImplementation": "Tested locale/RTL/Cairo/EGP infrastructure and critical auth copy. All operational pages/SSR persistence/exact decimal displays and responsive Arabic acceptance remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E02.2",
@@ -132,9 +134,11 @@
             "E01.3"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "PII-minimized identity profile/verification/recovery model",
-          "acceptance": "Phone ownership is not misrepresented as National-ID ownership; cross-tenant linking and recovery are scoped/audited."
+          "acceptance": "Phone ownership is not misrepresented as National-ID ownership; cross-tenant linking and recovery are scoped/audited.",
+          "existingImplementation": "Schema43 identity evidence, normalized Egypt phones/IDs/passports, consent and scoped recovery; E02 DB/normalization certification passed. Public acquisition UX and real-provider identity proof remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     },
@@ -145,7 +149,7 @@
         "E01",
         "E02"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E03.1",
@@ -154,9 +158,11 @@
             "E02.2"
           ],
           "priority": "P1",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Developer/client onboarding and deactivation workflows",
-          "acceptance": "Tenant/project lifecycle is scoped, auditable and cannot grant cross-tenant access."
+          "acceptance": "Tenant/project lifecycle is scoped, auditable and cannot grant cross-tenant access.",
+          "existingImplementation": "Schema44 developer/project branding, constrained first-director bootstrap, lifecycle onboarding API/UI and certification exist. Cross-role provider-backed enrollment/UAT remains.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E03.2",
@@ -165,9 +171,11 @@
             "E03.1"
           ],
           "priority": "P1",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Scoped brokerage organization/agreement/attribution/entitlement workflows",
-          "acceptance": "Same brokerage sees only approved projects; agents cannot self-escalate or steal attribution."
+          "acceptance": "Same brokerage sees only approved projects; agents cannot self-escalate or steal attribution.",
+          "existingImplementation": "Schema45 cross-developer brokerage organizations, agreements/project access, attribution transfer API and SQL certification exist. Complete B2B UI/enrollment/role UAT remains.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     },
@@ -177,7 +185,7 @@
       "dependencies": [
         "E03"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E04.1",
@@ -186,9 +194,11 @@
             "E03.1"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Published project/type/building/floor/physical-unit catalog with trusted assets",
-          "acceptance": "Unpublished inventory remains private and exact selection never uses anonymous unmapped stock."
+          "acceptance": "Unpublished inventory remains private and exact selection never uses anonymous unmapped stock.",
+          "existingImplementation": "Hierarchy, physical units/slots, assets, validated imports/rollback exist. Buyer public hierarchy and trusted physical-slot exact-selection API remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E04.2",
@@ -197,9 +207,11 @@
             "E04.1"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Exact identity/price component quote and validated import/rollback path",
-          "acceptance": "Counts/prices reconcile and imports cannot create duplicate/orphan scope or mutate executed history."
+          "acceptance": "Counts/prices reconcile and imports cannot create duplicate/orphan scope or mutate executed history.",
+          "existingImplementation": "Versioned indoor/roof/garden pricing and immutable reservation quote certified. Exact selected-unit quotes/adjustments and stale-quote protection remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     },
@@ -211,7 +223,7 @@
         "E03",
         "E04"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E05.1",
@@ -221,9 +233,11 @@
             "E04.1"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "One scoped buyer journey across acquisition channels",
-          "acceptance": "Refresh/relogin preserves progress and attribution remains authorized."
+          "acceptance": "Refresh/relogin preserves progress and attribution remains authorized.",
+          "existingImplementation": "Secure login, staff invite and buyer profiles exist. Public registration, browse/preferences/favorites/compare and consent journey remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E05.2",
@@ -233,9 +247,11 @@
             "E04.2"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "EOI type selection independent from exact apartment capacity",
-          "acceptance": "EOI cannot lock exact inventory or invent eligibility and paid policy history is immutable."
+          "acceptance": "EOI cannot lock exact inventory or invent eligibility and paid policy history is immutable.",
+          "existingImplementation": "EOI policy/payment/refund evidence exists. Required chosen apartment type and policy acceptance/eligibility UX are missing; active implementation.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     },
@@ -245,7 +261,7 @@
       "dependencies": [
         "E05"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E06.1",
@@ -254,9 +270,11 @@
             "E05.2"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Durable online/offline shared queue authority",
-          "acceptance": "Concurrent check-in/dispatch preserves stable priority and unauthorized priority changes fail."
+          "acceptance": "Concurrent check-in/dispatch preserves stable priority and unauthorized priority changes fail.",
+          "existingImplementation": "Shared queue/check-in/dispatch exists. Buyer invitation/windows/attendance and safe self-service live queue remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E06.2",
@@ -265,9 +283,11 @@
             "E06.1"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "One active session per service slot/allocator with restart-safe policies",
-          "acceptance": "No arbitrary buyer selection or blanket buyer locking capability."
+          "acceptance": "No arbitrary buyer selection or blanket buyer locking capability.",
+          "existingImplementation": "Allocator assignment and scoped called-buyer session exist. Online capacity/service slots and manager live seats remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     },
@@ -278,7 +298,7 @@
         "E04",
         "E06"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E07.1",
@@ -288,9 +308,11 @@
             "E06.2"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Authorized exact physical-unit selection and quote confirmation",
-          "acceptance": "Buyer explicitly selects one eligible available apartment; no silent substitution."
+          "acceptance": "Buyer explicitly selects one eligible available apartment; no silent substitution.",
+          "existingImplementation": "Physical hierarchy stored internally. Production UI locks unit type; exact eligible apartment selection is missing.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E07.2",
@@ -299,9 +321,11 @@
             "E07.1"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Exact-unit lock/reservation/transaction/contract/property identity path",
-          "acceptance": "High concurrency yields one winner; retries are stable; cross-project/stale/ineligible requests fail."
+          "acceptance": "High concurrency yields one winner; retries are stable; cross-project/stale/ineligible requests fail.",
+          "existingImplementation": "Atomic type/slot locks, expiry and quote/reservation exist. Explicit exact apartment identity/idempotency and propagation must be implemented.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     },
@@ -344,7 +368,7 @@
         "E05",
         "E07"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E09.1",
@@ -354,9 +378,11 @@
             "E07.2"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Verified payment intent/callback/manual evidence boundary",
-          "acceptance": "Wrong signature/merchant/amount/project fails; browser success cannot manufacture payment."
+          "acceptance": "Wrong signature/merchant/amount/project fails; browser success cannot manufacture payment.",
+          "existingImplementation": "Frozen type-based reservation quote/payment schedule and normalized finance ingress exist. Exact-unit bind and selected Egypt provider/manual accepted process remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E09.2",
@@ -365,9 +391,11 @@
             "E09.1"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Reconciled ledger/report/unmatched-event/receipt operations",
-          "acceptance": "Replays never double-post and finance outputs reconcile exactly to ledger evidence."
+          "acceptance": "Replays never double-post and finance outputs reconcile exactly to ledger evidence.",
+          "existingImplementation": "Immutable double-entry ledger, partial allocations, replay/reversal/refund/cheque history certified. User receipts, operational maker-checker acceptance and provider reconciliation remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     },
@@ -378,7 +406,7 @@
         "E07",
         "E09"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E10.1",
@@ -388,9 +416,11 @@
             "E09.1"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Trusted documents and durable populated Arabic/English contract PDF",
-          "acceptance": "Exact apartment/price/plan/template data is pinned; scanner/renderer failures fail closed."
+          "acceptance": "Exact apartment/price/plan/template data is pinned; scanner/renderer failures fail closed.",
+          "existingImplementation": "Private storage/trust/scanner boundary, templates/requirements exist. Actual populated Arabic/bilingual PDF and real storage/scanner verification remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E10.2",
@@ -399,9 +429,11 @@
             "E10.1"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Ordered signer evidence and immutable executed contract manifest",
-          "acceptance": "Replay/reordering/revoked signer/mutated object fails; no fake biometric/legal proof."
+          "acceptance": "Replay/reordering/revoked signer/mutated object fails; no fake biometric/legal proof.",
+          "existingImplementation": "Signer order/signature/evidence and executed manifest exist. Single-use hash-bound challenge/signing UX and real provider/legal acceptance remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     },
@@ -412,7 +444,7 @@
         "E09",
         "E10"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E11.1",
@@ -422,9 +454,11 @@
             "E10.2"
           ],
           "priority": "P1",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Buyer after-sale property/finance/document experience",
-          "acceptance": "Displayed money and evidence reconcile to one authoritative snapshot/ledger."
+          "acceptance": "Displayed money and evidence reconcile to one authoritative snapshot/ledger.",
+          "existingImplementation": "Buyer property/finance/schedules exist. Exact-unit visual detail, complete receipt/document download and after-sale UX remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E11.2",
@@ -449,7 +483,7 @@
         "E10",
         "E11"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E12.1",
@@ -461,9 +495,11 @@
             "E11.2"
           ],
           "priority": "P1",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Role-correct operational control rooms",
-          "acceptance": "Sensitive economics stay independently redacted and role matrix holds across channels."
+          "acceptance": "Sensitive economics stay independently redacted and role matrix holds across channels.",
+          "existingImplementation": "Role dashboards and commission policy/redaction/countdown exist. Buyer360, grace/capacity and command-center parity remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E12.2",
@@ -472,9 +508,11 @@
             "E12.1"
           ],
           "priority": "P1",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Production-scale list/KPI/query/realtime behavior",
-          "acceptance": "Counts are not derived from capped rows and older cases remain navigable without refetch storms."
+          "acceptance": "Counts are not derived from capped rows and older cases remain navigable without refetch storms.",
+          "existingImplementation": "Scoped datasets/exports/SSE exist. Cursor/aggregate correctness and volume certification remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     },
@@ -486,7 +524,7 @@
         "E02",
         "E09"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E13.1",
@@ -497,9 +535,11 @@
             "E09.2"
           ],
           "priority": "P1",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Verified messaging contacts/templates/callback evidence",
-          "acceptance": "Wrong-signature callbacks fail and unverified contacts are never used."
+          "acceptance": "Wrong-signature callbacks fail and unverified contacts are never used.",
+          "existingImplementation": "Encrypted verified contacts, durable gateway/templates exist. Bilingual templates/preferences and actual callbacks/provider certification remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E13.2",
@@ -508,9 +548,11 @@
             "E13.1"
           ],
           "priority": "P1",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Crash/outage-safe delivery lifecycle",
-          "acceptance": "Accepted-but-response-lost does not cause uncontrolled duplicate external sends."
+          "acceptance": "Accepted-but-response-lost does not cause uncontrolled duplicate external sends.",
+          "existingImplementation": "DB outbox/jobs, retries/idempotency and stale reminders exist. Uncertain-send recovery/dead letters/provider reconciliation remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     },
@@ -522,7 +564,7 @@
         "E04",
         "E07"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E14.1",
@@ -544,9 +586,11 @@
             "E14.1"
           ],
           "priority": "P1",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Safe advisory AI boundary with quotas/timeouts/outage behavior",
-          "acceptance": "AI cannot alter price/eligibility/turn/locks/payments/grace/signatures and PII stays out of prompts."
+          "acceptance": "AI cannot alter price/eligibility/turn/locks/payments/grace/signatures and PII stays out of prompts.",
+          "existingImplementation": "Deterministic/advisory AI and provider fallback exist. Exact candidates/hard filters and visual allowlisted action integration remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     },
@@ -561,7 +605,7 @@
         "E13",
         "E14"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E15.1",
@@ -571,9 +615,11 @@
             "E14.2"
           ],
           "priority": "P1",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Synthetic demo parity/data/status/currency correction",
-          "acceptance": "Pages remains synthetic/shareable with no production secrets/PII/provider side effects."
+          "acceptance": "Pages remains synthetic/shareable with no production secrets/PII/provider side effects.",
+          "existingImplementation": "Synthetic Pages demo preserved. Dataset/currency consistency and final feature parity require work.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E15.2",
@@ -608,7 +654,9 @@
           "status": "IN_PROGRESS",
           "deliverable": "Reproducible self-hosted deployment bundle and CLI/SSH workflow",
           "acceptance": "Fresh disposable production-config environment boots with malformed config failing closed; target server untouched.",
-          "note": "Existing four-process container/provenance bundle integrated and certified; full additional-service/operational scope remains."
+          "note": "Existing four-process container/provenance bundle integrated and certified; full additional-service/operational scope remains.",
+          "existingImplementation": "Compose/non-root images, explicit migrations, proxy/SSE/readiness packaging certified. Render profile from PR91 must be adapted to candidate and one hosting path selected later.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E16.2",
@@ -617,9 +665,11 @@
             "E16.1"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Recovery/monitoring/offline operations package",
-          "acceptance": "Coordinated restore verifies DB/identity/object/config evidence and actionable alert paths."
+          "acceptance": "Coordinated restore verifies DB/identity/object/config evidence and actionable alert paths.",
+          "existingImplementation": "CI backup/restore/observability/rollback boundaries exist. Real topology/PITR/offline artifact and operational evidence remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     },
@@ -630,7 +680,7 @@
         "E15",
         "E16"
       ],
-      "status": "NOT_STARTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E17.1",
@@ -640,9 +690,11 @@
             "E16.2"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Final non-functional certification evidence",
-          "acceptance": "Known security/load/realtime/job/provider failure cases pass on one exact candidate."
+          "acceptance": "Known security/load/realtime/job/provider failure cases pass on one exact candidate.",
+          "existingImplementation": "Candidate45 automated authorization/concurrency/security/fullstack matrix passed. Final exact-unit/new product flows/scale/UAT/provider negatives remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         },
         {
           "id": "E17.2",
@@ -651,9 +703,11 @@
             "E17.1"
           ],
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "SOFTWARE_READY_FOR_DEPLOYMENT decision package or named blockers",
-          "acceptance": "One exact artifact set is reproducible and all remaining live/deployment dependencies are explicitly registered."
+          "acceptance": "One exact artifact set is reproducible and all remaining live/deployment dependencies are explicitly registered.",
+          "existingImplementation": "Software DB/backup/readiness/deployment reference rehearsals exist. Final frozen artifact and real staging restore/rollback/liveGO remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
     }
@@ -663,5 +717,8 @@
     "status": "DEPLOYMENT_DEFERRED",
     "reason": "Software and deployment package must be complete before separate user authorization",
     "deploymentAuthorized": false
-  }
+  },
+  "currentCandidateSha": "e8f5216e0964be01b2f2aa754944df9423c390da",
+  "activeBranch": "codex/egypt-platform-completion",
+  "activePr": 90
 }

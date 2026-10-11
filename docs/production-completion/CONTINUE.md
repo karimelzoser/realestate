@@ -1,5 +1,10 @@
 # Continue protocol
 
-Active implementation: codex/egypt-platform-completion, draft PR #90. Canonical completion branch may contain older checkpoint documents; read WORK_STATE on the active branch before repeating work.
+1. Read WORK_STATE.json, TASKS.json, CURRENT_STATUS_AND_CONTINUATION.md, PLAN, DECISIONS, PROGRESS and SERVICE_READINESS.
+2. Inspect/fetch active branch codex/egypt-platform-completion (PR90), preserve local work, reconcile concurrent remote changes. Main is synthetic demo. Never reimplement an existing domain from stale task statuses.
+3. Resume recorded active acceptance E05.2: chosen apartment type on EOI, then E07 exact physical allocation. Locale/identity/developer/brokerage foundations schema45 already exist.
+4. Preserve business invariants; append migrations; add focused positive/negative/concurrency evidence; run affected gates and mandatory normal checks.
+5. Commit focused changes and refresh checkpoint/evidence after each tested slice. Continue independent product work without recurring questions.
+6. Keep actual provider/live dependencies honest. Railway platform-core preview is a different repo; realestate staging has no app deployment. Render PR91 is an older-base profile. Use one final candidate/profile later. No server access or paid-resource creation during current implementation.
 
-Read PLAN, DECISIONS, TASKS, PROGRESS, WORK_STATE, BLOCKERS and SERVICE_READINESS. Preserve uncommitted work and inspect actual HEAD/remote/commands. E01 is TESTED on 1e1b85f (28 workflows plus local real-DB full-stack acceptance). Resume E02.1 or the current recorded unfinished task, not the old E01.3 checkpoint. Keep code and evidence committed. No server access/deployment; live provider evidence remains separate.
+Public fully integrated production is the final goal. A DEVELOPMENT manifest, green structural CI, configured credentials or a simulated demo are not a live GO.

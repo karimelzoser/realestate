@@ -89,3 +89,9 @@ Working branch: codex/egypt-platform-completion, based on PR #89 with the existi
 ### E01 verified; E02 active
 
 Exact head 1e1b85f38684e7f107ede0d3db9cfeae73d86836 passed all 28 GitHub workflows, including CodeQL, E01, emitted full stack, container/provenance and Gate 7 software preflight. All 42 migrations applied to a fresh disposable PostgreSQL 18.6 database locally; FULL_STACK_ACCEPTANCE_OK including revocation/privileged-role change. Four runtime and ten API unit regressions passed. No live GO/provider/server claim. Active task now E02.1.
+
+## Schema45 candidate reconciliation and public-production continuation
+
+Reviewed PR90 e8f5216e0964be01b2f2aa754944df9423c390da: 32 distinct workflows success (33 runs). Reused identity43, developer44, brokerage45 and locale/auth foundations; did not duplicate them. Updated task/control/feature/service ledgers from actual code. Railway read-only inventory confirms realestate staging has two buckets and zero services/deployments; active app preview is platform-core on a separate PG16 topology. Render PR91 is an older-base deployment profile; fresh live inventory is unavailable and remains unverified. No provider/hosting changes, merge or live deployment performed.
+
+Next acceptance: E05.2 required immutable chosen apartment type on EOI, then exact physical allocation and evidence propagation. Original unfinished pre-sync localization expansion is preserved in a named git stash for selective reuse with the canonical locale provider.

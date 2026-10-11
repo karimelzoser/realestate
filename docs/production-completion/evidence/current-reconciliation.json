@@ -1,0 +1,494 @@
+{
+  "inspectedAt": "2026-10-11 20:45:47 UTC",
+  "candidate": {
+    "pr": 90,
+    "branch": "codex/egypt-platform-completion",
+    "sha": "e8f5216e0964be01b2f2aa754944df9423c390da",
+    "schema": 45,
+    "draft": true,
+    "mergeable": true
+  },
+  "ci": [
+    {
+      "name": "Gate 7 Production Go-No-Go",
+      "id": 38170053021,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170053021"
+    },
+    {
+      "name": "Gate 5 Sales Buyer Certification",
+      "id": 38170052854,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052854"
+    },
+    {
+      "name": "E03 Brokerage Onboarding Certification",
+      "id": 38170052813,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052813"
+    },
+    {
+      "name": "Gate 6 Security Scan",
+      "id": 38170052830,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052830"
+    },
+    {
+      "name": "Gate 5 Transaction Operator Certification",
+      "id": 38170052878,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052878"
+    },
+    {
+      "name": "Self-Hosted Deployment Certification",
+      "id": 38170052777,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052777"
+    },
+    {
+      "name": "E02 Egypt Identity Certification",
+      "id": 38170052836,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052836"
+    },
+    {
+      "name": "E03 Developer Onboarding Certification",
+      "id": 38170052734,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052734"
+    },
+    {
+      "name": "Gate 5 Broker Roles Certification",
+      "id": 38170052852,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052852"
+    },
+    {
+      "name": "Gate 2 Inventory Lock Durability Certification",
+      "id": 38170052720,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052720"
+    },
+    {
+      "name": "Gate 5 Buyer Property Certification",
+      "id": 38170052779,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052779"
+    },
+    {
+      "name": "Gate 4 Integrated Finance Certification",
+      "id": 38170052891,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052891"
+    },
+    {
+      "name": "Gate 2 Pricing Certification",
+      "id": 38170052753,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052753"
+    },
+    {
+      "name": "Gate 3 Document & Contract Trust Certification",
+      "id": 38170052798,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052798"
+    },
+    {
+      "name": "Production Platform Foundation",
+      "id": 38170052750,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052750"
+    },
+    {
+      "name": "Gate 3 Finance Ledger Certification",
+      "id": 38170052808,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052808"
+    },
+    {
+      "name": "Backup Restore Certification",
+      "id": 38170052866,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052866"
+    },
+    {
+      "name": "E02 Locale Foundation Certification",
+      "id": 38170052905,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052905"
+    },
+    {
+      "name": "Gate 5 Receptionist Allocator Certification",
+      "id": 38170052752,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052752"
+    },
+    {
+      "name": "Production Configuration Certification",
+      "id": 38170052740,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052740"
+    },
+    {
+      "name": "Gate 7 Evidence Policy Contract",
+      "id": 38170052876,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052876"
+    },
+    {
+      "name": "Release Dependency Reproducibility",
+      "id": 38170052749,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052749"
+    },
+    {
+      "name": "HTTP Security Certification",
+      "id": 38170052774,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052774"
+    },
+    {
+      "name": "Gate 5 Full Role Parity Certification",
+      "id": 38170052799,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052799"
+    },
+    {
+      "name": "Runtime Readiness Certification",
+      "id": 38170052722,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052722"
+    },
+    {
+      "name": "Gate 4-5 Product Parity Certification",
+      "id": 38170052797,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052797"
+    },
+    {
+      "name": "Full Stack Acceptance Certification",
+      "id": 38170052721,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052721"
+    },
+    {
+      "name": "Gate 5 Manager Director Certification",
+      "id": 38170052809,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052809"
+    },
+    {
+      "name": "Concurrency Certification",
+      "id": 38170052811,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052811"
+    },
+    {
+      "name": "Production Observability Certification",
+      "id": 38170052819,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052819"
+    },
+    {
+      "name": "Gate 6 Non-Functional Certification",
+      "id": 38170052812,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052812"
+    },
+    {
+      "name": "E01 Privileged Assurance Certification",
+      "id": 38170052889,
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170052889"
+    },
+    {
+      "name": "E03 Brokerage Onboarding Certification",
+      "id": 38170049861,
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/karimelzoser/realestate/actions/runs/38170049861"
+    }
+  ],
+  "railway": [
+    {
+      "project": {
+        "id": "b5397123-aaa6-45b7-be1d-9c93da955fa5",
+        "name": "preneura-re-gate7-staging",
+        "workspaceName": "karimelzoser's Projects"
+      },
+      "environment": {
+        "id": "aa6aaf0d-2db4-4835-851b-d357a99464a8",
+        "name": "staging",
+        "isEphemeral": false
+      },
+      "staged": null,
+      "region": null,
+      "services": [],
+      "volumes": [],
+      "buckets": [
+        {
+          "id": "4f76bc0e-0ada-4ee8-851f-ae8906c672a2",
+          "name": "preneura-documents",
+          "state": "live",
+          "region": "iad",
+          "stagedChangeCount": 0
+        },
+        {
+          "id": "d34144fd-8d3f-4c33-83c5-dc8736d36211",
+          "name": "preneura-documents-staging",
+          "state": "live",
+          "region": "ams",
+          "stagedChangeCount": 0
+        }
+      ],
+      "sharedVariableNames": []
+    },
+    {
+      "project": {
+        "id": "74b36e83-a1d7-488c-b694-42eb73526088",
+        "name": "preneura-platform-preview",
+        "workspaceName": "karimelzoser's Projects"
+      },
+      "environment": {
+        "id": "785e039d-9dc6-4ae7-8858-9e456a95b45a",
+        "name": "production",
+        "isEphemeral": false
+      },
+      "staged": null,
+      "region": null,
+      "services": [
+        {
+          "id": "2b7f193b-58d6-4d58-bd0e-76defe69df0d",
+          "name": "keycloak",
+          "state": "live",
+          "source": {
+            "image": "quay.io/keycloak/keycloak:26.8.0",
+            "repo": null,
+            "branch": null
+          },
+          "regions": [
+            "iad"
+          ],
+          "numReplicas": 1,
+          "cronSchedule": null,
+          "volumeMounts": [],
+          "latestDeployment": {
+            "id": "57a2b04e-c788-4a88-9957-7008a6400f0c",
+            "status": "SUCCESS",
+            "createdAt": "2026-10-10T10:29:41.894Z",
+            "url": null
+          },
+          "stagedChangeCount": 0
+        },
+        {
+          "id": "62f64ff0-1e0e-4578-be6c-8e8ea146407f",
+          "name": "platform-preview",
+          "state": "live",
+          "source": {
+            "image": null,
+            "repo": "karimelzoser/platform-core",
+            "branch": "main"
+          },
+          "regions": [
+            "iad"
+          ],
+          "numReplicas": 1,
+          "cronSchedule": null,
+          "volumeMounts": [],
+          "latestDeployment": {
+            "id": "451a935c-7ee7-4519-83ed-0907917801f2",
+            "status": "SUCCESS",
+            "createdAt": "2026-10-11T02:46:36.802Z",
+            "url": null
+          },
+          "stagedChangeCount": 0
+        },
+        {
+          "id": "2fb52496-491d-4f14-a795-a15d568d7980",
+          "name": "temporal",
+          "state": "live",
+          "source": {
+            "image": "temporalio/auto-setup:1.29.7",
+            "repo": null,
+            "branch": null
+          },
+          "regions": [
+            "iad"
+          ],
+          "numReplicas": 1,
+          "cronSchedule": null,
+          "volumeMounts": [],
+          "latestDeployment": {
+            "id": "4deda355-5e6b-4963-b5a1-cafd077b205e",
+            "status": "SUCCESS",
+            "createdAt": "2026-10-07T16:14:55.378Z",
+            "url": null
+          },
+          "stagedChangeCount": 0
+        },
+        {
+          "id": "834c7e19-e82a-4e44-a704-1a2bdd200a23",
+          "name": "nats-jetstream",
+          "state": "live",
+          "source": {
+            "image": "nats:2.10.24-alpine",
+            "repo": null,
+            "branch": null
+          },
+          "regions": [
+            "iad"
+          ],
+          "numReplicas": 1,
+          "cronSchedule": null,
+          "volumeMounts": [
+            {
+              "volumeId": "fe52c4e6-fc15-4813-b5e9-2cbe34ebcb3c",
+              "volumeName": "nats-storage",
+              "mountPath": "/data"
+            }
+          ],
+          "latestDeployment": {
+            "id": "9462d5e1-81c6-4efe-9dbb-7f5c7f0bf5dd",
+            "status": "SUCCESS",
+            "createdAt": "2026-10-07T16:09:04.912Z",
+            "url": null
+          },
+          "stagedChangeCount": 0
+        },
+        {
+          "id": "58444952-7e24-445b-abd1-6a860b30b4d9",
+          "name": "pgvector-postgres",
+          "state": "live",
+          "source": {
+            "image": "pgvector/pgvector:0.8.0-pg16",
+            "repo": null,
+            "branch": null
+          },
+          "regions": [
+            "iad"
+          ],
+          "numReplicas": 1,
+          "cronSchedule": null,
+          "volumeMounts": [
+            {
+              "volumeId": "2e45d194-fbae-4c0c-8095-d23cbb85d8b0",
+              "volumeName": "postgres-shared",
+              "mountPath": "/var/lib/postgresql/data"
+            }
+          ],
+          "latestDeployment": {
+            "id": "34c3327b-e514-4c87-a3eb-e4b1a15558c1",
+            "status": "SUCCESS",
+            "createdAt": "2026-10-07T16:15:40.671Z",
+            "url": null
+          },
+          "stagedChangeCount": 0
+        }
+      ],
+      "volumes": [
+        {
+          "id": "fe52c4e6-fc15-4813-b5e9-2cbe34ebcb3c",
+          "name": "nats-storage",
+          "state": "live",
+          "region": "iad",
+          "sizeMB": 500,
+          "mountedOn": {
+            "serviceId": "834c7e19-e82a-4e44-a704-1a2bdd200a23",
+            "serviceName": "nats-jetstream",
+            "mountPath": "/data"
+          },
+          "stagedChangeCount": 0
+        },
+        {
+          "id": "2e45d194-fbae-4c0c-8095-d23cbb85d8b0",
+          "name": "postgres-shared",
+          "state": "live",
+          "region": "iad",
+          "sizeMB": 500,
+          "mountedOn": {
+            "serviceId": "58444952-7e24-445b-abd1-6a860b30b4d9",
+            "serviceName": "pgvector-postgres",
+            "mountPath": "/var/lib/postgresql/data"
+          },
+          "stagedChangeCount": 0
+        }
+      ],
+      "buckets": [],
+      "sharedVariableNames": []
+    }
+  ],
+  "render": {
+    "pr": 91,
+    "sha": "1bb7cf650baeed781f598e8c2a9d17e04299ceb9",
+    "base": "feature/production-runtime-readiness",
+    "profile": "Frankfurt; four paid app services and PostgreSQL18",
+    "liveStatus": "NOT_VERIFIED; no Render connector/session available; PR91 claim of empty workspace not independently accepted",
+    "productionProfileCanonical": false
+  },
+  "noDeploymentPerformed": true
+}

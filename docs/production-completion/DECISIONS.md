@@ -14,3 +14,7 @@ Unselected provider names, credentials, domain/host configuration and finance/id
 ## Current-stage clarification
 
 The user requires implementation and disposable local/CI validation only. No server access, configuration, installation or deployment in this stage. Prepare a portable deployment package; actual hosting/deployment remains a separate later assignment.
+
+## Latest reconciliation
+
+Public fully integrated production is the final goal. Latest user requests review of Railway and Render; both are assessed as possible hosting profiles. This does not choose a paid plan or authorize using the reserved self-hosted server now. Keep portable packaging, finish the software and record actual live evidence. Railway platform-core services are separate from realestate. Render PR91 must be adapted to the final realestate candidate before any deployment.
