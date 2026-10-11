@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module.js';
 import { AllocationOperationsController } from './allocation-operations.controller.js';
 import { AllocationOperationsRepository } from './allocation-operations.repository.js';
 import { AllocationOperationsService } from './allocation-operations.service.js';
+import { BuyerAttributionRepository } from './buyer-attribution.repository.js';
 import { EoiListController } from './eoi-list.controller.js';
 import { EoiListRepository } from './eoi-list.repository.js';
 import { EoiListService } from './eoi-list.service.js';
@@ -41,6 +42,7 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
   ],
   providers: [
     SalesRepository,
+    BuyerAttributionRepository,
     MilestoneEvidenceService,
     SalesService,
     EoiListRepository,
