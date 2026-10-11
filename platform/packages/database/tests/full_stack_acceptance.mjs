@@ -238,7 +238,7 @@ async function certifySupportStreamExpiry() {
   );
   try {
     await db.query(
-      `UPDATE platform_support_access_sessions SET expires_at = now() - interval '1 second' WHERE id = $1::uuid`,
+      `UPDATE platform_support_access_sessions SET expires_at = now() + interval '2 seconds' WHERE id = $1::uuid`,
       [SUPPORT_ACCESS_SESSION],
     );
     await waitForSseEvent(stream, 'access_revoked', 7_000);
