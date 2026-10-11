@@ -18,16 +18,12 @@ test -r "$BACKUP_FILE" || { echo "Backup file is not readable: $BACKUP_FILE" >&2
 test -r "$BACKUP_CHECKSUM_FILE" || { echo "Checksum file is not readable: $BACKUP_CHECKSUM_FILE" >&2; exit 1; }
 test -r "$BACKUP_METADATA_FILE" || { echo "Metadata file is not readable: $BACKUP_METADATA_FILE" >&2; exit 1; }
 
-backup_dir="$(cd "$(dirname "$BACKUP_FILE")" && pwd)"
-backup_name="$(basename "$BACKUP_FILE")"
-checksum_name="$(basename "$BACKUP_CHECKSUM_FILE")"
-(
-  cd "$backup_dir"
-  sha256sum --check --status "$checksum_name"
-) || {
+expected_sidecar_sha="$(awk 'NF {print $1; exit}' "$BACKUP_CHECKSUM_FILE")"
+actual_sha="$(sha256sum "$BACKUP_FILE" | awk '{print $1}')"
+if [[ ! "$expected_sidecar_sha" =~ ^[0-9a-fA-F]{64}$ || "$expected_sidecar_sha" != "$actual_sha" ]]; then
   echo 'Backup checksum verification failed.' >&2
   exit 1
-}
+fi
 
 archive_count="$(pg_restore --list "$BACKUP_FILE" | grep -c ';' || true)"
 if [[ "$archive_count" -lt 1 ]]; then
@@ -64,14 +60,13 @@ expected_schema="$(metadata_value schema_version)"
 expected_marker="$(metadata_value migration_marker)"
 expected_ledger_version="$(metadata_value migration_ledger_version)"
 expected_ledger_filename="$(metadata_value migration_ledger_filename)"
-expected_sha="$(metadata_value backup_sha256)"
-actual_sha="$(sha256sum "$BACKUP_FILE" | awk '{print $1}')"
+expected_metadata_sha="$(metadata_value backup_sha256)"
 
 if [[ -z "$expected_schema" || -z "$expected_marker" || -z "$expected_ledger_version" || -z "$expected_ledger_filename" ]]; then
   echo 'Backup metadata is incomplete.' >&2
   exit 1
 fi
-if [[ -n "$expected_sha" && "$expected_sha" != "$actual_sha" ]]; then
+if [[ -n "$expected_metadata_sha" && "$expected_metadata_sha" != "$actual_sha" ]]; then
   echo 'Metadata SHA-256 does not match the restored backup.' >&2
   exit 1
 fi
