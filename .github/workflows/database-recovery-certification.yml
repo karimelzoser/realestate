@@ -54,6 +54,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install PostgreSQL 18 client
+        working-directory: .
+        run: |
+          set -euo pipefail
+          sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
+          curl --fail --silent --show-error \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo tee /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc >/dev/null
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client-18 >/dev/null
+          /usr/lib/postgresql/18/bin/pg_dump --version
+          echo "/usr/lib/postgresql/18/bin" >> "$GITHUB_PATH"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -75,6 +91,14 @@ jobs:
           set -euo pipefail
           pnpm --filter @preneura/database build
           pnpm --filter @preneura/api build
+
+      - name: Verify PostgreSQL client/server major match
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          test "$(pg_dump --version | sed -E 's/.* ([0-9]+).*/\1/')" = '18'
+          test "$(psql -h 127.0.0.1 -U postgres -d postgres -Atc "SHOW server_version_num" | cut -c1-2)" = '18'
 
       - name: Run backup and restore drill
         env:
