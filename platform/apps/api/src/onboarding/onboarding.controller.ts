@@ -14,6 +14,10 @@ import {
   tenantBrandingInputSchema,
   type DeveloperOnboardingSnapshot,
 } from '@preneura/contracts/onboarding';
+import {
+  createProjectSchema,
+  updateProjectStatusSchema,
+} from '@preneura/contracts/platform-admin';
 import type { ProvisionedAccountSnapshot } from '@preneura/contracts/accounts';
 import type { ResolvedSession } from '../auth/auth.repository.js';
 import { CurrentSession, SessionAuthGuard } from '../auth/session-auth.guard.js';
@@ -43,6 +47,32 @@ export class OnboardingController {
     const parsed = tenantBrandingInputSchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException('Invalid developer branding configuration.');
     return this.onboarding.updateTenantBranding(session.userId, tenantId, parsed.data);
+  }
+
+  @Post('projects')
+  createProject(
+    @Param('tenantId') tenantId: string,
+    @Body() body: unknown,
+    @CurrentSession() session: ResolvedSession,
+  ): Promise<{ projectId: string; onboarding: DeveloperOnboardingSnapshot }> {
+    this.assertUuid(tenantId, 'tenantId');
+    const parsed = createProjectSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException('Invalid project configuration.');
+    return this.onboarding.createProject(session.userId, tenantId, parsed.data);
+  }
+
+  @Post('projects/:projectId/status')
+  setProjectStatus(
+    @Param('tenantId') tenantId: string,
+    @Param('projectId') projectId: string,
+    @Body() body: unknown,
+    @CurrentSession() session: ResolvedSession,
+  ): Promise<DeveloperOnboardingSnapshot> {
+    this.assertUuid(tenantId, 'tenantId');
+    this.assertUuid(projectId, 'projectId');
+    const parsed = updateProjectStatusSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException('Invalid project status.');
+    return this.onboarding.setProjectStatus(session.userId, tenantId, projectId, parsed.data.status);
   }
 
   @Put('projects/:projectId/branding')
