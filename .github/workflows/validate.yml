@@ -2,7 +2,7 @@ name: Validate PRENEURA
 
 on:
   push:
-    branches: [main, develop, "feature/**", "refactor/**", "fix/**", "release/**"]
+    branches: [main, develop, "feature/**", "integration/software-ready-for-deployment", "refactor/**", "fix/**", "release/**"]
   pull_request:
     branches: [main, develop]
 
