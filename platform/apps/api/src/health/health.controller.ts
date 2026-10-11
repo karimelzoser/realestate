@@ -23,6 +23,7 @@ interface ReadyHealthResponse {
     databaseSchemaVersion: number;
     minimumRuntimeVersion: number;
     migrationMarker: string;
+    migrationLedgerVersion: number;
     latencyMs: number;
   };
 }
