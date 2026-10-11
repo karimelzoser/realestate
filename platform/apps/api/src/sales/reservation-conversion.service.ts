@@ -31,7 +31,7 @@ export class ReservationConversionService {
       context: { tenantId: input.data.tenantId, projectId: input.data.projectId },
     });
 
-    return this.repository.convert({
+    const result = await this.repository.convert({
       actorUserId: input.actorUserId,
       tenantId: input.data.tenantId,
       projectId: input.data.projectId,
@@ -40,5 +40,9 @@ export class ReservationConversionService {
       lockId: input.data.lockId,
       now: new Date(),
     });
+
+    // The focused repository persists and returns exact physical-unit identity;
+    // its legacy base return annotation is kept only for source compatibility.
+    return result as ExactReservationResult;
   }
 }
