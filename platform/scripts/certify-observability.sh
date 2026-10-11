@@ -197,7 +197,12 @@ certify_api() {
     echo 'Observability assertion failed: API readiness endpoint failed.' >&2
     return 1
   fi
-  assert_contains '^x-request-id: observability-cert-123' "$HEADERS" 'valid request ID must be propagated'
+  assert_not_contains '^x-request-id: observability-cert-123' "$HEADERS" 'caller-controlled request ID must not become server correlation authority'
+  if ! grep -Eqi '^x-request-id: [0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}' "$HEADERS"; then
+    cat "$HEADERS" >&2
+    echo 'Observability assertion failed: caller request ID was not replaced by a server-owned UUIDv4.' >&2
+    return 1
+  fi
   assert_contains '"status":"ready"' /tmp/observability-ready.json 'API readiness must be green'
 
   curl --silent --fail -D /tmp/observability-invalid-headers.txt -o /dev/null \
