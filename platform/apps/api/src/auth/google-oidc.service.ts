@@ -51,6 +51,7 @@ export class GoogleOidcService {
     code: string;
     codeVerifier: string;
     requireAal2?: boolean;
+    targetUserId?: string;
   }): Promise<{ login: VerifiedLogin; accountStatus: 'ACTIVE' | 'PENDING' }> {
     const issuer = this.required('OIDC_ISSUER').replace(/\/$/, '');
     const clientId = this.required('OIDC_CLIENT_ID');
@@ -109,6 +110,30 @@ export class GoogleOidcService {
       typeof verified.payload.name === 'string'
         ? verified.payload.name
         : email ?? 'Google User';
+
+    if (input.targetUserId) {
+      if (assurance.assuranceLevel !== 'AAL2') {
+        throw new UnauthorizedException('Account step-up requires AAL2 identity evidence.');
+      }
+      const linked = await this.repository.linkExternalIdentityToUser({
+        userId: input.targetUserId,
+        provider: 'google',
+        providerSubject: subject,
+        verifiedEmail: email,
+      });
+      if (linked === 'CONFLICT') {
+        throw new UnauthorizedException(
+          'This Google identity is already linked to another PRENEURA account.',
+        );
+      }
+
+      const login = await this.authService.issueSessionForUser(
+        input.targetUserId,
+        { eventType: linked === 'LINKED' ? 'LOGIN_GOOGLE_OIDC_STEP_UP_LINKED' : 'LOGIN_GOOGLE_OIDC_STEP_UP_VERIFIED' },
+        assurance,
+      );
+      return { login, accountStatus: 'ACTIVE' };
+    }
 
     const identity = await this.repository.findOrProvisionExternalIdentity({
       provider: 'google',
