@@ -13,12 +13,18 @@ import {
 } from '@preneura/contracts/sales';
 import type { ResolvedSession } from '../auth/auth.repository.js';
 import { CurrentSession, SessionAuthGuard } from '../auth/session-auth.guard.js';
+import { EoiCommandService } from './eoi-command.service.js';
+import { ReservationConversionService } from './reservation-conversion.service.js';
 import { SalesService } from './sales.service.js';
 
 @UseGuards(SessionAuthGuard)
 @Controller('tenants/:tenantId/projects/:projectId')
 export class SalesController {
-  constructor(private readonly sales: SalesService) {}
+  constructor(
+    private readonly sales: SalesService,
+    private readonly eoiCommands: EoiCommandService,
+    private readonly reservationConversion: ReservationConversionService,
+  ) {}
 
   @Post('buyers')
   createBuyer(
@@ -49,11 +55,17 @@ export class SalesController {
     @Param('tenantId') tenantId: string,
     @Param('projectId') projectId: string,
     @Param('buyerProfileId') buyerProfileId: string,
+    @Body() body: unknown,
     @CurrentSession() session: ResolvedSession,
   ): Promise<{ eoiId: string; amount: string; currency: string }> {
-    const parsed = createBuyerEoiSchema.safeParse({ tenantId, projectId, buyerProfileId });
-    if (!parsed.success) throw new BadRequestException('Invalid EOI request.');
-    return this.sales.createEoi({ actorUserId: session.userId, data: parsed.data });
+    const parsed = createBuyerEoiSchema.safeParse({
+      ...this.objectBody(body),
+      tenantId,
+      projectId,
+      buyerProfileId,
+    });
+    if (!parsed.success) throw new BadRequestException('Invalid typed EOI request.');
+    return this.eoiCommands.create({ actorUserId: session.userId, data: parsed.data });
   }
 
   @Post('eois/:eoiId/mark-paid')
@@ -101,7 +113,7 @@ export class SalesController {
   ): Promise<ReservationResult> {
     const parsed = convertLockToReservationSchema.safeParse({ ...this.objectBody(body), tenantId, projectId });
     if (!parsed.success) throw new BadRequestException('Invalid reservation request.');
-    return this.sales.convertLockToReservation({ actorUserId: session.userId, data: parsed.data });
+    return this.reservationConversion.convert({ actorUserId: session.userId, data: parsed.data });
   }
 
   @Post('transactions/:transactionId/milestones/:milestoneCode/complete')
