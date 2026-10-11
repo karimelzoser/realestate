@@ -78,10 +78,14 @@ jobs:
           MIGRATION_ACTOR: gate5-receptionist-allocator-certification
         run: pnpm --filter @preneura/database migrate
       - name: Verify allocation authority structures
+        working-directory: platform
         env:
           PGPASSWORD: postgres
         run: |
           set -euo pipefail
+          expected_runtime="$(node scripts/runtime-contract.mjs schemaVersion)"
+          actual_schema="$(psql -h 127.0.0.1 -U postgres -d preneura -Atqc "SELECT schema_version FROM platform_runtime_contract WHERE singleton_key='production'")"
+          test "$actual_schema" = "$expected_runtime"
           psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 <<'SQL'
           DO $$
           BEGIN
@@ -103,7 +107,7 @@ jobs:
               SELECT 1 FROM platform_runtime_contract
               WHERE singleton_key='production'
                 AND schema_version >= 40
-                AND minimum_runtime_version <= 40
+                  AND minimum_runtime_version <= schema_version
             ) THEN RAISE EXCEPTION 'runtime contract does not accept Gate 5 allocation schema'; END IF;
           END $$;
           SQL
