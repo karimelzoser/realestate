@@ -275,7 +275,9 @@ const report = {
   },
 };
 
-const reportPath = resolve(process.cwd(), process.env.REPORT_PATH ?? 'gate7-live-evidence.json');
+// Provider responses and workflow input must never select the destination path.
+// This package-owned artifact name is also the workflow upload contract.
+const reportPath = resolve(process.cwd(), 'gate7-live-evidence.json');
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 });
 console.log('GATE7_FINAL_DECISION=GO');
 console.log(`DEPLOYED_BUNDLE_SHA=${deployedBundleSha}`);
