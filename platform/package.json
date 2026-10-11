@@ -10,8 +10,8 @@
     "dev": "turbo dev --parallel",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
-    "test": "turbo test",
-    "lint": "turbo lint"
+    "test": "node scripts/verify-quality-contract.mjs && turbo test",
+    "lint": "node scripts/static-policy-lint.mjs && turbo lint"
   },
   "devDependencies": {
     "turbo": "2.11.7",
