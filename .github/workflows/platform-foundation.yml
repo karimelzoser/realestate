@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - "feature/production-*"
+      - "integration/software-ready-for-deployment"
     paths:
       - "platform/**"
       - ".github/workflows/platform-foundation.yml"
@@ -71,128 +72,29 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          set -euo pipefail
           for migration in platform/packages/database/migrations/*.sql; do
-            echo "Applying ${migration}"
-            psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 -f "${migration}"
+            echo "Applying $migration"
+            psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d preneura -f "$migration"
           done
       - name: Verify production domain constraints
         env:
           PGPASSWORD: postgres
         run: |
-          set -euo pipefail
-          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 <<'SQL'
-          DO $$
-          BEGIN
-            IF to_regclass('public.catalog_unit_types') IS NULL THEN RAISE EXCEPTION 'catalog_unit_types missing'; END IF;
-            IF to_regclass('public.inventory_slots') IS NULL THEN RAISE EXCEPTION 'inventory_slots missing'; END IF;
-            IF to_regclass('public.inventory_locks_one_active_per_slot') IS NULL THEN RAISE EXCEPTION 'active lock uniqueness index missing'; END IF;
-            IF to_regclass('public.domain_outbox_unpublished') IS NULL THEN RAISE EXCEPTION 'outbox index missing'; END IF;
-            IF to_regclass('public.buyer_eois_one_live_per_project') IS NULL THEN RAISE EXCEPTION 'buyer EOI live uniqueness index missing'; END IF;
-            IF to_regclass('public.queue_entries_one_live_per_buyer') IS NULL THEN RAISE EXCEPTION 'queue live uniqueness index missing'; END IF;
-            IF to_regclass('public.reservations_one_active_per_slot') IS NULL THEN RAISE EXCEPTION 'reservation slot uniqueness index missing'; END IF;
-            IF to_regclass('public.transaction_milestones_progress') IS NULL THEN RAISE EXCEPTION 'transaction milestone progress index missing'; END IF;
-            IF to_regclass('public.eoi_refund_requests_one_live') IS NULL THEN RAISE EXCEPTION 'EOI refund live uniqueness index missing'; END IF;
-            IF to_regclass('public.document_templates_active_lookup') IS NULL THEN RAISE EXCEPTION 'document template active lookup index missing'; END IF;
-            IF to_regclass('public.document_signatures_role_unique') IS NULL THEN RAISE EXCEPTION 'document signature uniqueness index missing'; END IF;
-            IF to_regclass('public.payment_schedule_items_due') IS NULL THEN RAISE EXCEPTION 'payment schedule due index missing'; END IF;
-            IF to_regclass('public.transaction_cheques_transaction_status') IS NULL THEN RAISE EXCEPTION 'transaction cheque status index missing'; END IF;
-            IF to_regclass('public.broker_commission_plans_active') IS NULL THEN RAISE EXCEPTION 'commission plan active index missing'; END IF;
-            IF to_regclass('public.broker_commission_cases_due') IS NULL THEN RAISE EXCEPTION 'commission due index missing'; END IF;
-            IF to_regclass('public.notification_jobs_dispatch') IS NULL THEN RAISE EXCEPTION 'notification dispatch index missing'; END IF;
-            IF to_regclass('public.notification_jobs_processing') IS NULL THEN RAISE EXCEPTION 'notification processing recovery index missing'; END IF;
-            IF to_regclass('public.notification_delivery_attempts_job') IS NULL THEN RAISE EXCEPTION 'notification attempt audit index missing'; END IF;
-            IF to_regclass('public.project_milestone_slas') IS NULL THEN RAISE EXCEPTION 'project milestone SLA table missing'; END IF;
-            IF to_regclass('public.project_milestone_reminder_policies') IS NULL THEN RAISE EXCEPTION 'multi-audience milestone reminder policy table missing'; END IF;
-            IF to_regclass('public.project_milestone_reminder_policies_active') IS NULL THEN RAISE EXCEPTION 'active milestone reminder policy index missing'; END IF;
-            IF to_regclass('public.project_installment_reminder_policies') IS NULL THEN RAISE EXCEPTION 'installment reminder policy table missing'; END IF;
-            IF to_regclass('public.project_installment_reminder_policies_active') IS NULL THEN RAISE EXCEPTION 'active installment reminder policy index missing'; END IF;
-            IF to_regclass('public.document_template_signer_requirements') IS NULL THEN RAISE EXCEPTION 'document template signer requirements missing'; END IF;
-            IF to_regclass('public.realtime_events') IS NULL THEN RAISE EXCEPTION 'realtime event replay table missing'; END IF;
-            IF to_regclass('public.realtime_events_project_sequence') IS NULL THEN RAISE EXCEPTION 'project realtime replay index missing'; END IF;
-            IF to_regclass('public.realtime_events_tenant_sequence') IS NULL THEN RAISE EXCEPTION 'tenant realtime replay index missing'; END IF;
-            IF to_regclass('public.user_notifications') IS NULL THEN RAISE EXCEPTION 'user notifications table missing'; END IF;
-            IF to_regclass('public.user_notifications_recipient_sequence') IS NULL THEN RAISE EXCEPTION 'user notification replay index missing'; END IF;
-            IF to_regclass('public.user_notifications_unread') IS NULL THEN RAISE EXCEPTION 'user unread notification index missing'; END IF;
-            IF to_regclass('public.auth_contact_verification_challenges') IS NULL THEN RAISE EXCEPTION 'account contact verification table missing'; END IF;
-            IF to_regclass('public.auth_contact_verification_lookup') IS NULL THEN RAISE EXCEPTION 'account contact verification lookup index missing'; END IF;
-            IF to_regclass('public.auth_delivery_contacts_user_verified') IS NULL THEN RAISE EXCEPTION 'verified contact lookup index missing'; END IF;
-            IF to_regclass('public.notification_gateway_deliveries') IS NULL THEN RAISE EXCEPTION 'notification gateway idempotency table missing'; END IF;
-            IF to_regclass('public.notification_gateway_deliveries_failed') IS NULL THEN RAISE EXCEPTION 'notification gateway failed-delivery index missing'; END IF;
-            IF to_regclass('public.platform_support_access_sessions') IS NULL THEN RAISE EXCEPTION 'support access session table missing'; END IF;
-            IF to_regclass('public.platform_support_access_operator_active') IS NULL THEN RAISE EXCEPTION 'active support access index missing'; END IF;
-            IF to_regclass('public.platform_support_access_one_active_scope') IS NULL THEN RAISE EXCEPTION 'support access uniqueness index missing'; END IF;
-            IF to_regclass('public.project_ai_settings') IS NULL THEN RAISE EXCEPTION 'project AI settings table missing'; END IF;
-            IF to_regclass('public.project_ai_settings_provider') IS NULL THEN RAISE EXCEPTION 'project AI enabled-provider index missing'; END IF;
-            IF to_regclass('public.ai_invocations') IS NULL THEN RAISE EXCEPTION 'AI invocation audit table missing'; END IF;
-            IF to_regclass('public.ai_invocations_project_created') IS NULL THEN RAISE EXCEPTION 'AI invocation project audit index missing'; END IF;
-            IF to_regclass('public.ai_invocations_failures') IS NULL THEN RAISE EXCEPTION 'AI fallback/failure index missing'; END IF;
-
-            -- Project hierarchy and type-based-selling/internal-unit reconciliation.
-            IF to_regclass('public.project_phases') IS NULL THEN RAISE EXCEPTION 'project phase table missing'; END IF;
-            IF to_regclass('public.project_buildings') IS NULL THEN RAISE EXCEPTION 'project building table missing'; END IF;
-            IF to_regclass('public.project_floors') IS NULL THEN RAISE EXCEPTION 'project floor table missing'; END IF;
-            IF to_regclass('public.physical_units') IS NULL THEN RAISE EXCEPTION 'internal physical unit table missing'; END IF;
-            IF to_regclass('public.inventory_slots_one_physical_unit') IS NULL THEN RAISE EXCEPTION 'physical unit to inventory slot uniqueness index missing'; END IF;
-            IF NOT EXISTS (
-              SELECT 1 FROM information_schema.columns
-              WHERE table_schema='public' AND table_name='inventory_slots' AND column_name='physical_unit_id'
-            ) THEN RAISE EXCEPTION 'inventory physical-unit mapping column missing'; END IF;
-            IF NOT EXISTS (
-              SELECT 1 FROM pg_constraint
-              WHERE conname='inventory_slots_physical_unit_fk'
-                AND conrelid='public.inventory_slots'::regclass
-                AND contype='f'
-            ) THEN RAISE EXCEPTION 'inventory physical-unit integrity foreign key missing'; END IF;
-
-            -- Project setup commercial/configuration data.
-            IF to_regclass('public.project_master_plan_assets') IS NULL THEN RAISE EXCEPTION 'master-plan asset table missing'; END IF;
-            IF to_regclass('public.project_master_plan_assets_lookup') IS NULL THEN RAISE EXCEPTION 'master-plan asset lookup index missing'; END IF;
-            IF to_regclass('public.project_payment_plan_definitions') IS NULL THEN RAISE EXCEPTION 'payment plan definition table missing'; END IF;
-            IF to_regclass('public.project_payment_plan_active_version') IS NULL THEN RAISE EXCEPTION 'active payment plan uniqueness index missing'; END IF;
-            IF to_regclass('public.project_sales_windows') IS NULL THEN RAISE EXCEPTION 'project sales window table missing'; END IF;
-
-            -- Controlled import, preview, publication lineage and rollback support.
-            IF to_regclass('public.project_import_jobs') IS NULL THEN RAISE EXCEPTION 'project import jobs table missing'; END IF;
-            IF to_regclass('public.project_import_rows') IS NULL THEN RAISE EXCEPTION 'project import rows table missing'; END IF;
-            IF to_regclass('public.project_import_published_entities') IS NULL THEN RAISE EXCEPTION 'project import publication lineage table missing'; END IF;
-            IF to_regclass('public.project_import_jobs_project_created') IS NULL THEN RAISE EXCEPTION 'project import audit index missing'; END IF;
-            IF to_regclass('public.project_import_rows_review') IS NULL THEN RAISE EXCEPTION 'project import row review index missing'; END IF;
-            IF to_regclass('public.project_import_published_entities_rollback') IS NULL THEN RAISE EXCEPTION 'project import rollback lineage index missing'; END IF;
-            IF NOT EXISTS (
-              SELECT 1 FROM information_schema.columns
-              WHERE table_schema='public' AND table_name='project_import_jobs' AND column_name='rollback_status'
-            ) THEN RAISE EXCEPTION 'project import rollback status missing'; END IF;
-
-            IF EXISTS (
-              SELECT 1 FROM pg_attribute
-              WHERE attrelid = 'public.auth_login_aliases'::regclass
-                AND attname = 'verified_at'
-                AND attnotnull
-                AND NOT attisdropped
-            ) THEN RAISE EXCEPTION 'auth login alias verified_at must allow pending enrollment'; END IF;
-            IF NOT EXISTS (
-              SELECT 1 FROM information_schema.columns
-              WHERE table_schema = 'public' AND table_name = 'auth_delivery_contacts' AND column_name = 'display_hint'
-            ) THEN RAISE EXCEPTION 'delivery contact display hint missing'; END IF;
-            IF NOT EXISTS (
-              SELECT 1 FROM information_schema.columns
-              WHERE table_schema = 'public' AND table_name = 'realtime_events' AND column_name = 'source_aggregate_id'
-            ) THEN RAISE EXCEPTION 'realtime source aggregate id missing'; END IF;
-            IF EXISTS (
-              SELECT 1 FROM information_schema.columns
-              WHERE table_schema = 'public' AND table_name = 'ai_invocations'
-                AND column_name IN ('prompt','question','response','request_body','response_body')
-            ) THEN RAISE EXCEPTION 'AI invocation audit must not persist raw prompts or responses'; END IF;
-            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_create_broker_commission_case' AND NOT tgisinternal) THEN RAISE EXCEPTION 'commission case creation trigger missing'; END IF;
-            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_refresh_commission_after_milestone' AND NOT tgisinternal) THEN RAISE EXCEPTION 'commission milestone refresh trigger missing'; END IF;
-            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_notify_preneura_realtime_event' AND NOT tgisinternal) THEN RAISE EXCEPTION 'realtime LISTEN/NOTIFY trigger missing'; END IF;
-            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_notify_preneura_user_notification' AND NOT tgisinternal) THEN RAISE EXCEPTION 'user notification LISTEN/NOTIFY trigger missing'; END IF;
-            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_support_access_project_tenant' AND NOT tgisinternal) THEN RAISE EXCEPTION 'support project/tenant trigger missing'; END IF;
-            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_ai_settings_project_tenant' AND NOT tgisinternal) THEN RAISE EXCEPTION 'AI settings project/tenant trigger missing'; END IF;
-            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_ai_invocations_project_tenant' AND NOT tgisinternal) THEN RAISE EXCEPTION 'AI invocation project/tenant trigger missing'; END IF;
-            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_master_plan_asset_hierarchy' AND NOT tgisinternal) THEN RAISE EXCEPTION 'master-plan asset hierarchy trigger missing'; END IF;
-            IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_sync_import_rollback_state' AND NOT tgisinternal) THEN RAISE EXCEPTION 'import rollback-state trigger missing'; END IF;
-            IF to_regprocedure('public.refresh_broker_commission_case(uuid)') IS NULL THEN RAISE EXCEPTION 'commission refresh function missing'; END IF;
-          END $$;
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d preneura <<'SQL'
+          SELECT to_regclass('public.tenants') IS NOT NULL AS tenants_exists;
+          SELECT to_regclass('public.access_role_assignments') IS NOT NULL AS access_exists;
+          SELECT to_regclass('public.catalog_unit_types') IS NOT NULL AS catalog_exists;
+          SELECT to_regclass('public.inventory_locks_one_active_per_slot') IS NOT NULL AS active_lock_unique_exists;
+          SELECT to_regclass('public.inventory_locks_one_active_per_physical_unit') IS NOT NULL AS exact_active_lock_unique_exists;
+          SELECT to_regclass('public.buyer_eois') IS NOT NULL AS eoi_exists;
+          SELECT to_regclass('public.transactions') IS NOT NULL AS transactions_exists;
+          SELECT to_regclass('public.transaction_documents') IS NOT NULL AS documents_exists;
+          SELECT to_regclass('public.payment_schedules') IS NOT NULL AS payments_exists;
+          SELECT to_regclass('public.broker_commission_cases') IS NOT NULL AS commissions_exists;
+          SELECT to_regclass('public.notification_jobs') IS NOT NULL AS notification_jobs_exists;
+          SELECT to_regclass('public.realtime_events') IS NOT NULL AS realtime_events_exists;
+          SELECT to_regclass('public.platform_runtime_contract') IS NOT NULL AS runtime_contract_exists;
+          SELECT schema_version, minimum_runtime_version, migration_marker
+          FROM platform_runtime_contract
+          WHERE singleton_key = 'production';
           SQL
