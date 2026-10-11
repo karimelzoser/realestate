@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "service": "preneura-real-estate-os",
+  "slos": {
+    "apiAvailabilityTarget": 0.999,
+    "apiP95Ms": 500,
+    "unitLockP95Ms": 750,
+    "workerBacklogMaxSeconds": 60,
+    "notificationTerminalFailureRateMax": 0.01
+  },
+  "alerts": [
+    {"code":"API_NOT_READY","severity":"critical","condition":"readiness_success_ratio_5m < 0.99","for":"2m","owner":"platform-oncall"},
+    {"code":"API_ERROR_BURN","severity":"critical","condition":"http_5xx_ratio_5m > 0.02","for":"5m","owner":"platform-oncall"},
+    {"code":"API_LATENCY","severity":"warning","condition":"http_p95_ms_10m > 500","for":"10m","owner":"platform-oncall"},
+    {"code":"LOCK_LATENCY","severity":"warning","condition":"unit_lock_p95_ms_10m > 750","for":"10m","owner":"realestate-ops"},
+    {"code":"OUTBOX_LAG","severity":"critical","condition":"oldest_unpublished_outbox_age_seconds > 60","for":"5m","owner":"platform-oncall"},
+    {"code":"NOTIFICATION_BACKLOG","severity":"warning","condition":"oldest_due_notification_age_seconds > 120","for":"10m","owner":"support-ops"},
+    {"code":"NOTIFICATION_FAILURE_RATE","severity":"warning","condition":"notification_terminal_failure_ratio_15m > 0.01","for":"15m","owner":"support-ops"},
+    {"code":"FINANCE_RECONCILIATION","severity":"critical","condition":"finance_unbalanced_event_count > 0","for":"0m","owner":"finance-oncall"},
+    {"code":"BACKUP_STALE","severity":"critical","condition":"last_successful_backup_age_hours > 24","for":"0m","owner":"platform-oncall"},
+    {"code":"RESTORE_REHEARSAL_STALE","severity":"warning","condition":"last_restore_rehearsal_age_days > 30","for":"0m","owner":"platform-lead"}
+  ]
+}
