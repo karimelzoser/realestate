@@ -1,0 +1,63 @@
+.locale-switcher {
+  position: fixed;
+  inset-block-start: 14px;
+  inset-inline-end: 14px;
+  z-index: 1000;
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgba(107, 122, 139, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 24px rgba(23, 32, 45, 0.1);
+  backdrop-filter: blur(12px);
+}
+
+.locale-switcher__button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: transparent;
+  color: #506174;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.locale-switcher__button:hover {
+  background: #edf1f4;
+  color: #17202d;
+}
+
+.locale-switcher__button:focus-visible {
+  outline: 3px solid rgba(82, 111, 141, 0.28);
+  outline-offset: 2px;
+}
+
+.locale-switcher__button.is-active {
+  background: #1d3043;
+  color: #fff;
+}
+
+html[dir='rtl'] body {
+  text-align: start;
+}
+
+@media (max-width: 640px) {
+  .locale-switcher {
+    inset-block-start: 8px;
+    inset-inline-end: 8px;
+  }
+
+  .locale-switcher__button {
+    min-height: 30px;
+    padding-inline: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .locale-switcher__button {
+    scroll-behavior: auto;
+  }
+}
