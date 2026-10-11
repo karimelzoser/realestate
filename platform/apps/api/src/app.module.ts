@@ -10,6 +10,7 @@ import { DocumentModule } from './documents/document.module.js';
 import { ExportModule } from './exports/export.module.js';
 import { FinanceModule } from './finance/finance.module.js';
 import { HealthController } from './health/health.controller.js';
+import { IdentityModule } from './identity/identity.module.js';
 import { ManagementModule } from './management/management.module.js';
 import { NotificationModule } from './notifications/notification.module.js';
 import { PlatformAdminModule } from './platform-admin/platform-admin.module.js';
@@ -26,6 +27,7 @@ import { StorageModule } from './storage/storage.module.js';
     AuthModule,
     AccessModule,
     AccountModule,
+    IdentityModule,
     PlatformAdminModule,
     StorageModule,
     CatalogModule,
