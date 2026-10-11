@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS developer_onboarding_events (
   actor_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
   event_type text NOT NULL CHECK (event_type IN (
     'TENANT_BRANDING_UPDATED',
+    'PROJECT_CREATED',
     'PROJECT_BRANDING_UPDATED',
     'OPERATIONS_DIRECTOR_INVITED',
     'ONBOARDING_COMPLETED',
