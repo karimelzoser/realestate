@@ -41,6 +41,26 @@ test('OIDC is AAL2 only when verified claims prove approved step-up', () => {
   );
 });
 
+test('OIDC OTP or key AMR alone cannot satisfy privileged AAL2', () => {
+  for (const amr of [
+    ['otp'],
+    ['pwd', 'otp'],
+    ['hwk'],
+    ['swk'],
+  ]) {
+    const assurance = oidcAssuranceFromClaims({
+      acr: '1',
+      amr,
+      approvedAcrValues: ['urn:preneura:aal2'],
+    });
+    assert.equal(
+      assurance.assuranceLevel,
+      'AAL1',
+      `AMR ${JSON.stringify(amr)} must not independently grant AAL2`,
+    );
+  }
+});
+
 test('privileged role set covers administrative, allocation and finance authority', () => {
   for (const role of [
     'PRENEURA_SUPER_ADMIN',
