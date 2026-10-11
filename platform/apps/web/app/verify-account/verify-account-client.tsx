@@ -1,10 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import { useLocale } from '../locale-provider';
 import { apiFetch } from '../../lib/api';
+import { normalizeLocalizedDigits } from '../../lib/locale';
+import { authMessages } from '../../lib/messages';
 import styles from './verify-account.module.css';
 
 export default function VerifyAccountClient() {
+  const { locale } = useLocale();
+  const copy = authMessages[locale].verifyAccount;
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -21,8 +26,9 @@ export default function VerifyAccountClient() {
         body: JSON.stringify({ phone, code }),
       });
       setVerified(true);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Unable to verify this account.');
+    } catch {
+      // Do not surface provider/server detail in enrollment copy.
+      setError(copy.error);
     } finally {
       setBusy(false);
     }
@@ -31,22 +37,52 @@ export default function VerifyAccountClient() {
   return (
     <main className={styles.page}>
       <section className={styles.card}>
-        <div className={styles.brand}><span>P</span><div><strong>PRENEURA</strong><small>Account verification</small></div></div>
+        <div className={styles.brand}>
+          <span>P</span>
+          <div><strong>PRENEURA</strong><small>{copy.accountVerification}</small></div>
+        </div>
         {verified ? (
           <div className={styles.success}>
-            <span>✓</span>
-            <h1>Account verified</h1>
-            <p>Your phone identity is verified and your assigned workspace access is now active.</p>
-            <a href="/login">Continue to sign in</a>
+            <span aria-hidden="true">✓</span>
+            <h1>{copy.verifiedTitle}</h1>
+            <p>{copy.verifiedBody}</p>
+            <a href="/login">{copy.continueSignIn}</a>
           </div>
         ) : (
           <>
-            <div className={styles.heading}><span>Secure enrollment</span><h1>Verify your account</h1><p>Enter the same phone number used for your invitation and the six-digit code sent by PRENEURA.</p></div>
-            {error ? <div className={styles.error}>{error}</div> : null}
-            <label><span>Phone number</span><input value={phone} onChange={(event) => setPhone(event.target.value)} inputMode="tel" autoComplete="tel" placeholder="+20…" /></label>
-            <label><span>Verification code</span><input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" maxLength={6} /></label>
-            <button type="button" disabled={busy || !phone || code.length !== 6} onClick={() => void submit()}>{busy ? 'Verifying…' : 'Verify account'}</button>
-            <small className={styles.help}>Codes expire for security. If your code expired, ask your PRENEURA administrator to resend verification.</small>
+            <div className={styles.heading}>
+              <span>{copy.secureEnrollment}</span>
+              <h1>{copy.title}</h1>
+              <p>{copy.body}</p>
+            </div>
+            {error ? <div className={styles.error} role="alert">{error}</div> : null}
+            <label>
+              <span>{copy.phoneLabel}</span>
+              <input
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="+20…"
+              />
+            </label>
+            <label>
+              <span>{copy.codeLabel}</span>
+              <input
+                value={code}
+                onChange={(event) =>
+                  setCode(normalizeLocalizedDigits(event.target.value).replace(/\D/g, '').slice(0, 6))
+                }
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="000000"
+                maxLength={6}
+              />
+            </label>
+            <button type="button" disabled={busy || !phone || code.length !== 6} onClick={() => void submit()}>
+              {busy ? copy.verifying : copy.verify}
+            </button>
+            <small className={styles.help}>{copy.help}</small>
           </>
         )}
       </section>
