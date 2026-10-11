@@ -10,7 +10,6 @@ import {
 } from '@nestjs/common';
 import {
   addInventoryCapacitySchema,
-  createInventoryLockSchema,
   createPricingVersionSchema,
   createUnitTypeSchema,
   publishPricingVersionSchema,
@@ -107,23 +106,8 @@ export class CatalogController {
     return this.catalog.publishPricingVersion({ actorUserId: session.userId, data: parsed.data });
   }
 
-  @Post('unit-types/:unitTypeId/locks')
-  async createLock(
-    @Param('tenantId') tenantId: string,
-    @Param('projectId') projectId: string,
-    @Param('unitTypeId') unitTypeId: string,
-    @Body() body: unknown,
-    @CurrentSession() session: ResolvedSession,
-  ) {
-    const parsed = createInventoryLockSchema.safeParse({
-      ...(this.objectBody(body)),
-      tenantId,
-      projectId,
-      unitTypeId,
-    });
-    if (!parsed.success) throw new BadRequestException('Invalid lock request.');
-    return this.catalog.createInventoryLock({ actorUserId: session.userId, data: parsed.data });
-  }
+  // Exact-unit lock creation intentionally lives under the allocation API, where
+  // the called queue entry and paid typed EOI are validated atomically.
 
   @Delete('locks/:lockId')
   async releaseLock(
