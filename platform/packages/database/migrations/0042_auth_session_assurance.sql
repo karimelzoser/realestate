@@ -23,4 +23,14 @@ CREATE INDEX auth_session_assurance_level_time
 COMMENT ON TABLE auth_session_assurance IS
   'Server-side authentication assurance evidence. Sessions without a row are treated as AAL1 for backward-safe fail-closed behavior.';
 
+-- Runtime 42 depends on this table for privileged authorization. The migration is
+-- additive, so the previous runtime may continue during a rolling deployment.
+UPDATE platform_runtime_contract
+SET
+  schema_version = 42,
+  minimum_runtime_version = LEAST(minimum_runtime_version, 41),
+  migration_marker = '0042_auth_session_assurance',
+  updated_at = now()
+WHERE singleton_key = 'production';
+
 COMMIT;
