@@ -194,13 +194,16 @@ export interface ReservationResult {
   reservationId: string;
   transactionId: string;
   unitTypeId: string;
+  quotedTotal: string | null;
+  currency: string;
+  reservedAt: string;
+}
+
+export interface ExactReservationResult extends ReservationResult {
   physicalUnitId: string;
   physicalUnitReference: string;
   buildingCode: string;
   floorCode: string;
-  quotedTotal: string | null;
-  currency: string;
-  reservedAt: string;
 }
 
 export interface TransactionListItemSnapshot {
