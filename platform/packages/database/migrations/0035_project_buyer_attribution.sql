@@ -104,17 +104,27 @@ ALTER TABLE transactions
   ADD COLUMN broker_company_id uuid,
   ADD COLUMN broker_agent_user_id uuid REFERENCES users(id) ON DELETE SET NULL;
 
+WITH attribution_source AS (
+  SELECT
+    transaction.id AS transaction_id,
+    COALESCE(attribution.source, profile.source) AS buyer_source,
+    COALESCE(attribution.broker_company_id, profile.broker_company_id) AS broker_company_id,
+    COALESCE(attribution.broker_agent_user_id, profile.broker_agent_user_id) AS broker_agent_user_id
+  FROM transactions transaction
+  JOIN buyer_profiles profile
+    ON profile.id = transaction.buyer_profile_id
+   AND profile.tenant_id = transaction.tenant_id
+  LEFT JOIN buyer_project_attributions attribution
+    ON attribution.buyer_profile_id = transaction.buyer_profile_id
+   AND attribution.tenant_id = transaction.tenant_id
+   AND attribution.project_id = transaction.project_id
+)
 UPDATE transactions transaction
-SET buyer_source = COALESCE(attribution.source, profile.source),
-    broker_company_id = COALESCE(attribution.broker_company_id, profile.broker_company_id),
-    broker_agent_user_id = COALESCE(attribution.broker_agent_user_id, profile.broker_agent_user_id)
-FROM buyer_profiles profile
-LEFT JOIN buyer_project_attributions attribution
-  ON attribution.buyer_profile_id = profile.id
- AND attribution.tenant_id = profile.tenant_id
- AND attribution.project_id = transaction.project_id
-WHERE profile.id = transaction.buyer_profile_id
-  AND profile.tenant_id = transaction.tenant_id;
+SET buyer_source = source.buyer_source,
+    broker_company_id = source.broker_company_id,
+    broker_agent_user_id = source.broker_agent_user_id
+FROM attribution_source source
+WHERE source.transaction_id = transaction.id;
 
 ALTER TABLE transactions
   ALTER COLUMN buyer_source SET NOT NULL,
