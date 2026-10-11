@@ -44,6 +44,10 @@
       "types": "./src/sales.ts",
       "default": "./dist/sales.js"
     },
+    "./allocation": {
+      "types": "./src/allocation.ts",
+      "default": "./dist/allocation.js"
+    },
     "./documents": {
       "types": "./src/documents.ts",
       "default": "./dist/documents.js"
