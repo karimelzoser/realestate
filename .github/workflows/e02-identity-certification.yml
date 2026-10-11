@@ -1,0 +1,99 @@
+name: E02 Egypt Identity Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/api/src/identity/**"
+      - "platform/apps/api/src/auth/auth.service.ts"
+      - "platform/apps/api/src/app.module.ts"
+      - "platform/apps/api/scripts/certify-egypt-identity-normalization.mjs"
+      - "platform/packages/contracts/src/identity.ts"
+      - "platform/packages/contracts/src/index.ts"
+      - "platform/packages/contracts/package.json"
+      - "platform/packages/database/migrations/0043_egypt_identity_profile.sql"
+      - "platform/packages/database/tests/e02_egypt_identity_certification.sql"
+      - "platform/.env.example"
+      - ".github/workflows/e02-identity-certification.yml"
+  push:
+    branches:
+      - "codex/egypt-platform-completion"
+    paths:
+      - "platform/apps/api/src/identity/**"
+      - "platform/apps/api/src/auth/auth.service.ts"
+      - "platform/apps/api/src/app.module.ts"
+      - "platform/apps/api/scripts/certify-egypt-identity-normalization.mjs"
+      - "platform/packages/contracts/src/identity.ts"
+      - "platform/packages/contracts/src/index.ts"
+      - "platform/packages/contracts/package.json"
+      - "platform/packages/database/migrations/0043_egypt_identity_profile.sql"
+      - "platform/packages/database/tests/e02_egypt_identity_certification.sql"
+      - "platform/.env.example"
+      - ".github/workflows/e02-identity-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Certify Egypt normalization behavior
+        working-directory: platform
+        run: node apps/api/scripts/certify-egypt-identity-normalization.mjs
+
+      - name: Strict contracts and API typecheck
+        working-directory: platform
+        run: |
+          pnpm --filter @preneura/contracts... typecheck
+          pnpm --filter @preneura/api... typecheck
+
+      - name: Build API
+        working-directory: platform
+        env:
+          PRENEURA_BUILD_SHA: ${{ github.sha }}
+        run: pnpm --filter @preneura/api... build
+
+      - name: Migrate and certify tenant-scoped identity evidence
+        working-directory: platform
+        env:
+          PGPASSWORD: postgres
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/e02_identity
+        run: |
+          set -euo pipefail
+          createdb -h 127.0.0.1 -U postgres e02_identity
+          MIGRATION_ACTOR=e02-identity pnpm --filter @preneura/database migrate
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/database/tests/e02_egypt_identity_certification.sql
