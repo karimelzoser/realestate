@@ -15,6 +15,9 @@ const localeConfig: Record<
   ar: { intlLocale: 'ar-EG', direction: 'rtl' },
 };
 
+const arabicIndicDigits = '٠١٢٣٤٥٦٧٨٩';
+const easternArabicDigits = '۰۱۲۳۴۵۶۷۸۹';
+
 export function isAppLocale(value: unknown): value is AppLocale {
   return typeof value === 'string' && SUPPORTED_LOCALES.includes(value as AppLocale);
 }
@@ -29,6 +32,24 @@ export function getLocaleDirection(locale: AppLocale): AppDirection {
 
 export function getIntlLocale(locale: AppLocale): 'en-EG' | 'ar-EG' {
   return localeConfig[locale].intlLocale;
+}
+
+export function normalizeLocalizedDigits(value: string): string {
+  let normalized = '';
+  for (const character of value) {
+    const arabicIndicIndex = arabicIndicDigits.indexOf(character);
+    if (arabicIndicIndex >= 0) {
+      normalized += String(arabicIndicIndex);
+      continue;
+    }
+    const easternArabicIndex = easternArabicDigits.indexOf(character);
+    if (easternArabicIndex >= 0) {
+      normalized += String(easternArabicIndex);
+      continue;
+    }
+    normalized += character;
+  }
+  return normalized;
 }
 
 export function formatEgp(
