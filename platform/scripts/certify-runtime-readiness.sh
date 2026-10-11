@@ -10,8 +10,21 @@ export PGPASSWORD
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-CURRENT_SCHEMA_VERSION=42
-FUTURE_SCHEMA_VERSION=43
+CURRENT_SCHEMA_VERSION="$(node scripts/runtime-contract.mjs schemaVersion)"
+CURRENT_MIGRATION_MARKER="$(node scripts/runtime-contract.mjs migrationMarker)"
+FUTURE_SCHEMA_VERSION="$((CURRENT_SCHEMA_VERSION + 1))"
+FUTURE_SCHEMA_PREFIX="$(printf '%04d' "$FUTURE_SCHEMA_VERSION")"
+FUTURE_COMPATIBLE_MARKER="${FUTURE_SCHEMA_PREFIX}_additive_future"
+FUTURE_INCOMPATIBLE_MARKER="${FUTURE_SCHEMA_PREFIX}_breaking_future"
+
+if [[ ! "$CURRENT_SCHEMA_VERSION" =~ ^[0-9]+$ ]] || [[ "$CURRENT_SCHEMA_VERSION" -lt 1 ]]; then
+  echo "Invalid current runtime schema version: $CURRENT_SCHEMA_VERSION" >&2
+  exit 1
+fi
+if [[ "$CURRENT_MIGRATION_MARKER" != "$(printf '%04d' "$CURRENT_SCHEMA_VERSION")_"* ]]; then
+  echo "Runtime migration marker does not match schema version: $CURRENT_MIGRATION_MARKER" >&2
+  exit 1
+fi
 
 create_test_databases() {
   local db
@@ -35,22 +48,32 @@ create_test_databases() {
     done
   done
 
-  # Simulate the next additive migration: newer schema remains compatible with runtime 42.
-  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_compatible -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
+  # Simulate the next additive migration: the newer schema remains compatible with the
+  # current runtime. The version is derived from the authoritative runtime contract so
+  # adding migration N does not require hand-editing this certification fixture.
+  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_compatible \
+    -v ON_ERROR_STOP=1 \
+    -v future_schema="$FUTURE_SCHEMA_VERSION" \
+    -v current_runtime="$CURRENT_SCHEMA_VERSION" \
+    -v future_marker="$FUTURE_COMPATIBLE_MARKER" <<'SQL' >/dev/null
 UPDATE platform_runtime_contract
-SET schema_version = 43,
-    minimum_runtime_version = 42,
-    migration_marker = '0043_additive_future',
+SET schema_version = :'future_schema'::integer,
+    minimum_runtime_version = :'current_runtime'::integer,
+    migration_marker = :'future_marker',
     updated_at = now()
 WHERE singleton_key = 'production';
 SQL
 
-  # Simulate a future breaking migration that explicitly requires runtime 43.
-  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_incompatible -v ON_ERROR_STOP=1 <<'SQL' >/dev/null
+  # Simulate the next breaking migration: it explicitly requires the next runtime and
+  # therefore must fail closed for the current application binary.
+  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d preneura_future_incompatible \
+    -v ON_ERROR_STOP=1 \
+    -v future_schema="$FUTURE_SCHEMA_VERSION" \
+    -v future_marker="$FUTURE_INCOMPATIBLE_MARKER" <<'SQL' >/dev/null
 UPDATE platform_runtime_contract
-SET schema_version = 43,
-    minimum_runtime_version = 43,
-    migration_marker = '0043_breaking_future',
+SET schema_version = :'future_schema'::integer,
+    minimum_runtime_version = :'future_schema'::integer,
+    migration_marker = :'future_marker',
     updated_at = now()
 WHERE singleton_key = 'production';
 SQL
@@ -171,7 +194,7 @@ certify_api_current() {
   curl --fail --silent http://127.0.0.1:4100/v1/health/live | grep -q '"status":"ok"'
   curl --fail --silent http://127.0.0.1:4100/v1/health/ready >/tmp/ready.json
   grep -q '"status":"ready"' /tmp/ready.json
-  grep -q '"databaseSchemaVersion":42' /tmp/ready.json
+  grep -q "\"databaseSchemaVersion\":$CURRENT_SCHEMA_VERSION" /tmp/ready.json
 
   kill "$pid"
   wait "$pid" || true
@@ -225,7 +248,7 @@ certify_worker() {
     return 1
   fi
   grep -q 'worker.ready' /tmp/worker-current.log
-  grep -q '"databaseSchemaVersion":42' /tmp/worker-current.log
+  grep -q "\"databaseSchemaVersion\":$CURRENT_SCHEMA_VERSION" /tmp/worker-current.log
 }
 
 create_test_databases
@@ -235,4 +258,4 @@ certify_api_current
 certify_api_stale
 certify_worker
 
-echo 'Runtime readiness certification: PASS'
+echo "Runtime readiness certification: PASS (runtime=$CURRENT_SCHEMA_VERSION marker=$CURRENT_MIGRATION_MARKER future=$FUTURE_SCHEMA_VERSION)"
