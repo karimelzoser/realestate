@@ -1,6 +1,9 @@
 'use client';
 
 import { useMemo, useState, type FormEvent } from 'react';
+import { useLocale } from '../locale-provider';
+import { normalizeLocalizedDigits } from '../../lib/locale';
+import { authMessages } from '../../lib/messages';
 
 type Method = 'phone' | 'national_id';
 type Step = 'identifier' | 'otp';
@@ -8,6 +11,8 @@ type Step = 'identifier' | 'otp';
 const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4100';
 
 export default function LoginPage() {
+  const { locale } = useLocale();
+  const copy = authMessages[locale].login;
   const [method, setMethod] = useState<Method>('phone');
   const [step, setStep] = useState<Step>('identifier');
   const [identifier, setIdentifier] = useState('');
@@ -17,14 +22,11 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const label = method === 'phone' ? 'Phone number' : 'National ID';
-  const placeholder = method === 'phone' ? '+20 10 1234 5678' : '14-digit National ID';
+  const label = method === 'phone' ? copy.phoneLabel : copy.nationalIdLabel;
+  const placeholder = method === 'phone' ? '+20 10 1234 5678' : copy.nationalIdPlaceholder;
   const hint = useMemo(
-    () =>
-      method === 'phone'
-        ? 'Use the verified phone number linked to your PRENEURA account.'
-        : 'Your National ID is only used to find your account. The OTP is sent to your registered phone.',
-    [method],
+    () => (method === 'phone' ? copy.phoneHint : copy.nationalIdHint),
+    [copy.nationalIdHint, copy.phoneHint, method],
   );
 
   function changeMethod(next: Method): void {
@@ -50,24 +52,18 @@ export default function LoginPage() {
         credentials: 'include',
         body: JSON.stringify({ method, identifier, channel: 'sms' }),
       });
-      const body = (await response.json()) as {
-        challengeId?: string;
-        message?: string;
-        messageText?: string;
-      };
+      const body = (await response.json()) as { challengeId?: string };
 
       if (!response.ok || !body.challengeId) {
-        throw new Error(body.messageText ?? 'Check the login details and try again.');
+        throw new Error(copy.genericStartError);
       }
 
       setChallengeId(body.challengeId);
-      setNotice(
-        body.message ??
-          'If the details match an active account, a one-time code will be sent to the registered phone.',
-      );
+      // Keep the same anti-enumeration response regardless of whether an account exists.
+      setNotice(copy.genericOtpNotice);
       setStep('otp');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Unable to start login.');
+      setError(reason instanceof Error ? reason.message : copy.genericStartFailure);
     } finally {
       setBusy(false);
     }
@@ -87,12 +83,12 @@ export default function LoginPage() {
       });
 
       if (!response.ok) {
-        throw new Error('The one-time code is invalid or expired.');
+        throw new Error(copy.invalidOtp);
       }
 
       window.location.assign('/');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Unable to verify the code.');
+      setError(reason instanceof Error ? reason.message : copy.verifyFailure);
     } finally {
       setBusy(false);
     }
@@ -103,44 +99,41 @@ export default function LoginPage() {
       <section className="login-brand" aria-label="PRENEURA Real Estate OS">
         <div className="brand-mark">PRENEURA</div>
         <div className="brand-copy">
-          <small>Real Estate Operating System</small>
-          <h1>One secure entry to every property workflow.</h1>
-          <p>
-            Buyers, brokers and authorized project teams enter the same platform with the permissions,
-            project scope and data visibility assigned to their account.
-          </p>
+          <small>{copy.brandEyebrow}</small>
+          <h1>{copy.brandTitle}</h1>
+          <p>{copy.brandBody}</p>
         </div>
-        <div className="brand-foot">Identity protected • Activity audited • Access scoped</div>
+        <div className="brand-foot">{copy.brandFoot}</div>
       </section>
 
       <section className="login-main">
         <div className="login-card">
           <header>
-            <small>Secure access</small>
-            <h2>{step === 'identifier' ? 'Sign in to PRENEURA' : 'Enter your one-time code'}</h2>
-            <p>
-              {step === 'identifier'
-                ? 'No password is required. Choose the easiest verified method for your account.'
-                : 'The code expires quickly and can only be used once.'}
-            </p>
+            <small>{copy.secureAccess}</small>
+            <h2>{step === 'identifier' ? copy.signIn : copy.enterOtp}</h2>
+            <p>{step === 'identifier' ? copy.intro : copy.otpIntro}</p>
           </header>
 
           {step === 'identifier' ? (
             <>
-              <div className="login-tabs" role="tablist" aria-label="Login method">
+              <div className="login-tabs" role="tablist" aria-label={copy.methodLabel}>
                 <button
                   className={`login-tab ${method === 'phone' ? 'active' : ''}`}
                   type="button"
+                  role="tab"
+                  aria-selected={method === 'phone'}
                   onClick={() => changeMethod('phone')}
                 >
-                  Phone
+                  {copy.phoneTab}
                 </button>
                 <button
                   className={`login-tab ${method === 'national_id' ? 'active' : ''}`}
                   type="button"
+                  role="tab"
+                  aria-selected={method === 'national_id'}
                   onClick={() => changeMethod('national_id')}
                 >
-                  National ID
+                  {copy.nationalIdTab}
                 </button>
               </div>
 
@@ -159,46 +152,45 @@ export default function LoginPage() {
                   <span className="hint">{hint}</span>
                 </div>
 
-                {error ? <div className="error">{error}</div> : null}
+                {error ? <div className="error" role="alert">{error}</div> : null}
                 <button className="primary-button" type="submit" disabled={busy}>
-                  {busy ? 'Checking…' : 'Continue with OTP'}
+                  {busy ? copy.checking : copy.continueOtp}
                 </button>
               </form>
 
-              <div className="divider">or</div>
+              <div className="divider">{copy.or}</div>
               <a className="google-button" href={`${apiBase}/v1/auth/google/start`}>
                 <span className="google-g" aria-hidden="true">G</span>
-                Continue with Google
+                {copy.continueGoogle}
               </a>
 
-              <p className="security-note">
-                PRENEURA never uses your National ID as a password. Staff and partner permissions are applied
-                only after identity verification and are enforced again by the server for every protected action.
-              </p>
+              <p className="security-note">{copy.securityNote}</p>
             </>
           ) : (
             <form className="otp-grid" onSubmit={verifyOtp}>
-              {notice ? <div className="notice">{notice}</div> : null}
+              {notice ? <div className="notice" role="status">{notice}</div> : null}
               <div className="field">
-                <label htmlFor="otp">One-time code</label>
+                <label htmlFor="otp">{copy.otpLabel}</label>
                 <input
                   id="otp"
                   value={otp}
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  placeholder="6-digit code"
+                  placeholder={copy.otpPlaceholder}
                   maxLength={8}
-                  onChange={(event) => setOtp(event.target.value.replace(/\D/g, ''))}
+                  onChange={(event) =>
+                    setOtp(normalizeLocalizedDigits(event.target.value).replace(/\D/g, ''))
+                  }
                   required
                   autoFocus
                 />
               </div>
-              {error ? <div className="error">{error}</div> : null}
+              {error ? <div className="error" role="alert">{error}</div> : null}
               <button className="primary-button" type="submit" disabled={busy}>
-                {busy ? 'Verifying…' : 'Verify and sign in'}
+                {busy ? copy.verifying : copy.verifySignIn}
               </button>
               <button className="secondary-button" type="button" onClick={() => setStep('identifier')}>
-                Use another login method
+                {copy.anotherMethod}
               </button>
             </form>
           )}
