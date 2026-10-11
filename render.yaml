@@ -1,0 +1,210 @@
+# PRENEURA Real Estate OS production topology on Render.
+# This Blueprint is intended for the default production branch after the stacked
+# production PRs are merged. Required third-party credentials are sync:false and
+# must be supplied in Render before the first healthy rollout.
+
+services:
+  - type: web
+    name: aipreneura-realestate-web
+    runtime: node
+    region: frankfurt
+    plan: starter
+    rootDir: platform
+    autoDeployTrigger: checksPass
+    buildCommand: >-
+      corepack enable && corepack prepare pnpm@12.9.1 --activate &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @preneura/web build
+    startCommand: pnpm --filter @preneura/web start
+    healthCheckPath: /api/health
+    maxShutdownDelaySeconds: 60
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://aipreneura-realestate-api.onrender.com
+
+  - type: web
+    name: aipreneura-realestate-api
+    runtime: node
+    region: frankfurt
+    plan: starter
+    rootDir: platform
+    autoDeployTrigger: checksPass
+    buildCommand: >-
+      corepack enable && corepack prepare pnpm@12.9.1 --activate &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @preneura/api build
+    preDeployCommand: pnpm --filter @preneura/database migrate
+    startCommand: pnpm --filter @preneura/api start
+    healthCheckPath: /v1/health/ready
+    maxShutdownDelaySeconds: 90
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aipreneura-realestate-db
+          property: connectionString
+      - key: WEB_ORIGIN
+        value: https://aipreneura-realestate-web.onrender.com
+      - key: MIGRATION_ACTOR
+        value: render-api-predeploy
+      - key: MIGRATION_ADOPT_EXISTING
+        value: "false"
+
+      - key: AUTH_IDENTIFIER_HMAC_KEY
+        generateValue: true
+      - key: AUTH_OTP_PEPPER
+        generateValue: true
+      - key: COOKIE_SIGNING_SECRET
+        generateValue: true
+      - key: CONTACT_HMAC_KEY
+        generateValue: true
+      - key: CONTACT_VERIFICATION_PEPPER
+        generateValue: true
+      - key: CONTACT_ENCRYPTION_KEY_BASE64
+        fromService:
+          name: aipreneura-realestate-notify
+          type: web
+          envVarKey: CONTACT_ENCRYPTION_KEY_BASE64
+      - key: OTP_PROVIDER
+        value: gateway
+      - key: OTP_CHANNEL
+        value: sms
+      - key: AUTH_OTP_GATEWAY_URL
+        value: https://aipreneura-realestate-notify.onrender.com/auth-otp
+      - key: CONTACT_VERIFICATION_GATEWAY_URL
+        value: https://aipreneura-realestate-notify.onrender.com/contact-verification
+      - key: NOTIFICATION_GATEWAY_TOKEN
+        fromService:
+          name: aipreneura-realestate-notify
+          type: web
+          envVarKey: NOTIFICATION_GATEWAY_TOKEN
+      - key: FINANCE_PROVIDER_INGRESS_TOKEN
+        generateValue: true
+
+      - key: OIDC_ISSUER
+        sync: false
+      - key: OIDC_CLIENT_ID
+        sync: false
+      - key: OIDC_CLIENT_SECRET
+        sync: false
+      - key: OIDC_REDIRECT_URI
+        value: https://aipreneura-realestate-api.onrender.com/v1/auth/google/callback
+
+      - key: OBJECT_STORAGE_BUCKET
+        sync: false
+      - key: OBJECT_STORAGE_REGION
+        value: eu-central-1
+      - key: OBJECT_STORAGE_ENDPOINT
+        sync: false
+      - key: OBJECT_STORAGE_ACCESS_KEY_ID
+        sync: false
+      - key: OBJECT_STORAGE_SECRET_ACCESS_KEY
+        sync: false
+      - key: OBJECT_STORAGE_FORCE_PATH_STYLE
+        value: "false"
+      - key: DOCUMENT_SCANNER_URL
+        sync: false
+      - key: DOCUMENT_SCANNER_TOKEN
+        sync: false
+
+      - key: AI_PROVIDER_URL
+        sync: false
+      - key: AI_PROVIDER_TOKEN
+        sync: false
+      - key: AI_PROVIDER_MODEL
+        sync: false
+      - key: AI_PROVIDER_TIMEOUT_MS
+        value: "8000"
+
+  - type: worker
+    name: aipreneura-realestate-worker
+    runtime: node
+    region: frankfurt
+    plan: starter
+    rootDir: platform
+    autoDeployTrigger: checksPass
+    buildCommand: >-
+      corepack enable && corepack prepare pnpm@12.9.1 --activate &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @preneura/worker build
+    startCommand: pnpm --filter @preneura/worker start
+    maxShutdownDelaySeconds: 120
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aipreneura-realestate-db
+          property: connectionString
+      - key: WORKER_ID
+        value: render-worker
+      - key: OUTBOX_POLL_MS
+        value: "300"
+      - key: NOTIFICATION_POLL_MS
+        value: "1000"
+      - key: SLA_SCAN_MS
+        value: "30000"
+      - key: INSTALLMENT_REMINDER_SCAN_MS
+        value: "30000"
+      - key: COMMISSION_DUE_SCAN_MS
+        value: "30000"
+      - key: NOTIFICATION_GATEWAY_URL
+        value: https://aipreneura-realestate-notify.onrender.com/deliver
+      - key: NOTIFICATION_GATEWAY_TOKEN
+        fromService:
+          name: aipreneura-realestate-notify
+          type: web
+          envVarKey: NOTIFICATION_GATEWAY_TOKEN
+
+  # Kept as a token-protected web service for the initial Render topology so the
+  # existing API/worker absolute-URL contract remains unchanged. The POST routes
+  # require NOTIFICATION_GATEWAY_TOKEN; /health is intentionally public.
+  - type: web
+    name: aipreneura-realestate-notify
+    runtime: node
+    region: frankfurt
+    plan: starter
+    rootDir: platform
+    autoDeployTrigger: checksPass
+    buildCommand: >-
+      corepack enable && corepack prepare pnpm@12.9.1 --activate &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @preneura/notification-gateway build
+    startCommand: pnpm --filter @preneura/notification-gateway start
+    healthCheckPath: /health
+    maxShutdownDelaySeconds: 60
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aipreneura-realestate-db
+          property: connectionString
+      - key: NOTIFICATION_GATEWAY_TOKEN
+        generateValue: true
+      - key: CONTACT_ENCRYPTION_KEY_BASE64
+        generateValue: true
+      - key: META_GRAPH_API_VERSION
+        sync: false
+      - key: META_WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: META_WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_TEMPLATE_BINDINGS_JSON
+        sync: false
+
+# Managed PostgreSQL is the transactional source of truth. The production plan
+# below is intentionally not free-tier because free databases are not an
+# acceptable durability baseline for buyer, contract, payment and commission data.
+databases:
+  - name: aipreneura-realestate-db
+    region: frankfurt
+    plan: basic-1gb
+    postgresMajorVersion: 18
+    databaseName: preneura
+    user: preneura
+    diskSizeGB: 10
+    storageAutoscalingEnabled: true
