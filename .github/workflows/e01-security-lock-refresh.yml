@@ -1,0 +1,60 @@
+name: E01 Security Lockfile Refresh
+
+on:
+  push:
+    branches:
+      - "task/e01-privileged-assurance"
+    paths:
+      - ".github/workflows/e01-security-lock-refresh.yml"
+      - "platform/package.json"
+      - "platform/apps/web/package.json"
+      - "platform/packages/exceljs/**"
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: task/e01-privileged-assurance
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Resolve patched workspace lockfile
+        working-directory: platform
+        run: pnpm install --lockfile-only
+
+      - name: Prove no high-severity production dependency finding remains
+        working-directory: platform
+        run: pnpm audit --prod --audit-level=high
+
+      - name: Prove frozen install from generated lockfile
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Commit generated lockfile only
+        run: |
+          set -euo pipefail
+          git add platform/pnpm-lock.yaml
+          if git diff --cached --quiet; then
+            echo 'LOCKFILE_ALREADY_CURRENT'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build(security): refresh patched dependency lockfile'
+          git push origin HEAD:task/e01-privileged-assurance

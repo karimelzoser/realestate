@@ -138,7 +138,7 @@ jobs:
           COMMON_TOKEN=0123456789abcdef0123456789abcdef
           CONTACT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
           COMMON_OTEL=https://otel.preneura.invalid
-          EXPECTED_SCHEMA_VERSION=41
+          EXPECTED_SCHEMA_VERSION=42
 
           NODE_ENV=production \
           PORT=4120 \
@@ -146,6 +146,7 @@ jobs:
           WEB_ORIGIN=https://app.preneura.example \
           TRUST_PROXY_HOPS=1 \
           API_BODY_LIMIT_BYTES=8388608 \
+          PRENEURA_EXPECTED_RELEASE_SHA="$GITHUB_SHA" \
           AUTH_IDENTIFIER_HMAC_KEY="$COMMON_TOKEN" \
           AUTH_OTP_PEPPER="$COMMON_TOKEN" \
           COOKIE_SIGNING_SECRET="$COMMON_TOKEN" \
@@ -160,6 +161,8 @@ jobs:
           OIDC_CLIENT_ID=preneura-web \
           OIDC_CLIENT_SECRET=0123456789abcdef \
           OIDC_REDIRECT_URI=https://api.preneura.example/v1/auth/google/callback \
+          OIDC_AAL2_ACR_VALUES=urn:preneura:aal2 \
+          AUTH_STEP_UP_BASE_MAX_AGE_SECONDS=600 \
           OBJECT_STORAGE_BUCKET=preneura-production \
           DOCUMENT_SCANNER_URL=http://document-scanner.internal/v1/scan \
           DOCUMENT_SCANNER_TOKEN=0123456789abcdef \

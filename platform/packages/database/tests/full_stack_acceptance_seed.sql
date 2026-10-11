@@ -123,6 +123,56 @@ INSERT INTO auth_sessions (id, user_id, token_digest, expires_at) VALUES
     now() + interval '2 hours'
   );
 
+-- Acceptance uses explicit assurance evidence. Manager/finance-like roles are
+-- synthetic AAL2 OIDC sessions; ordinary buyer/broker-agent sessions remain AAL1.
+INSERT INTO auth_session_assurance (
+  session_id, auth_method, assurance_level, provider_acr, provider_amr
+) VALUES
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'OTP', 'AAL1', NULL, '[]'::jsonb
+  ),
+  (
+    '51000000-0000-4000-8000-000000000002',
+    'OIDC_GOOGLE', 'AAL2', 'urn:preneura:aal2', '["mfa"]'::jsonb
+  ),
+  (
+    '51000000-0000-4000-8000-000000000003',
+    'OIDC_GOOGLE', 'AAL2', 'urn:preneura:aal2', '["mfa"]'::jsonb
+  ),
+  (
+    '51000000-0000-4000-8000-000000000004',
+    'OTP', 'AAL1', NULL, '[]'::jsonb
+  );
+
+-- Pre-seed the disposable support identity so its session can carry AAL2
+-- evidence before the runtime test renews its expiry/support grant.
+INSERT INTO users (id, display_name, status)
+VALUES ('36000000-0000-4000-8000-000000000001', 'Acceptance Support Admin', 'ACTIVE');
+
+INSERT INTO access_role_assignments (
+  id, user_id, role_code, scope_type, tenant_id, project_id, broker_company_id, status
+) VALUES (
+  '36000000-0000-4000-8000-000000000002',
+  '36000000-0000-4000-8000-000000000001',
+  'PRENEURA_SUPER_ADMIN', 'PLATFORM', NULL, NULL, NULL, 'ACTIVE'
+);
+
+INSERT INTO auth_sessions (id, user_id, token_digest, expires_at)
+VALUES (
+  '36000000-0000-4000-8000-000000000003',
+  '36000000-0000-4000-8000-000000000001',
+  digest('acceptance-super-admin-token-000000001', 'sha256'),
+  now() + interval '1 hour'
+);
+
+INSERT INTO auth_session_assurance (
+  session_id, auth_method, assurance_level, provider_acr, provider_amr
+) VALUES (
+  '36000000-0000-4000-8000-000000000003',
+  'OIDC_GOOGLE', 'AAL2', 'urn:preneura:aal2', '["mfa"]'::jsonb
+);
+
 -- Runtime worker probes: one outbox event, one in-app notification and one
 -- expired lock that must be reclaimed by the emitted production worker.
 INSERT INTO domain_outbox_events (

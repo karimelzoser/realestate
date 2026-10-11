@@ -26,6 +26,7 @@ DECLARE
   v_lock_2 uuid;
   v_reservation uuid;
   v_rejected boolean;
+  v_now timestamptz := clock_timestamp();
 BEGIN
   INSERT INTO users (id, display_name, status) VALUES
     (v_allocator_1, 'Gate5 Allocator One', 'ACTIVE'),
@@ -67,7 +68,7 @@ BEGIN
     effective_at, published_at, created_by, published_by
   ) VALUES (
     v_tenant, v_project, 1, 'Gate 5 Allocation EOI', 'ACTIVE', 25000, 'EGP',
-    '2026-01-01T00:00:00+00', '2026-01-01T00:00:00+00', v_allocator_1, v_allocator_1
+    v_now - interval '1 day', v_now - interval '1 day', v_allocator_1, v_allocator_1
   ) RETURNING id INTO v_policy;
 
   INSERT INTO buyer_eois (
@@ -86,17 +87,17 @@ BEGIN
     priority_score, status, checked_in_at, called_at, created_by
   ) VALUES (
     v_tenant, v_project, v_buyer_1, v_eoi_1, 'ONSITE', 'VIP', 100,
-    'CALLED', '2026-01-02T09:00:00+00', '2026-01-02T09:05:00+00', v_allocator_1
+    'CALLED', v_now - interval '10 minutes', v_now - interval '5 minutes', v_allocator_1
   ) RETURNING id INTO v_queue_1;
   INSERT INTO queue_entries (
     tenant_id, project_id, buyer_profile_id, eoi_id, channel, priority_group,
     priority_score, status, checked_in_at, called_at, created_by
   ) VALUES (
     v_tenant, v_project, v_buyer_2, v_eoi_2, 'ONSITE', 'STANDARD', 0,
-    'CALLED', '2026-01-02T09:01:00+00', '2026-01-02T09:06:00+00', v_allocator_1
+    'CALLED', v_now - interval '9 minutes', v_now - interval '4 minutes', v_allocator_1
   ) RETURNING id INTO v_queue_2;
 
-  SELECT preneura_claim_called_queue_entry(v_tenant, v_project, v_allocator_1, '2026-01-02T09:07:00+00')
+  SELECT preneura_claim_called_queue_entry(v_tenant, v_project, v_allocator_1, v_now - interval '3 minutes')
     INTO v_claimed;
   IF v_claimed IS DISTINCT FROM v_queue_1 THEN
     RAISE EXCEPTION 'allocator one did not claim the oldest called buyer';
@@ -104,13 +105,13 @@ BEGIN
 
   v_rejected := false;
   BEGIN
-    PERFORM preneura_claim_called_queue_entry(v_tenant, v_project, v_allocator_1, '2026-01-02T09:07:01+00');
+    PERFORM preneura_claim_called_queue_entry(v_tenant, v_project, v_allocator_1, v_now - interval '2 minutes 59 seconds');
   EXCEPTION WHEN OTHERS THEN
     v_rejected := true;
   END;
   IF NOT v_rejected THEN RAISE EXCEPTION 'allocator second active session was not rejected'; END IF;
 
-  SELECT preneura_claim_called_queue_entry(v_tenant, v_project, v_allocator_2, '2026-01-02T09:08:00+00')
+  SELECT preneura_claim_called_queue_entry(v_tenant, v_project, v_allocator_2, v_now - interval '2 minutes')
     INTO v_claimed;
   IF v_claimed IS DISTINCT FROM v_queue_2 THEN
     RAISE EXCEPTION 'allocator two did not claim the remaining called buyer';
@@ -123,7 +124,7 @@ BEGIN
 
   INSERT INTO pricing_versions (
     tenant_id, project_id, version_number, label, status, effective_at, created_by
-  ) VALUES (v_tenant, v_project, 1, 'Gate5 Allocation Price', 'DRAFT', '2026-01-01T00:00:00+00', v_allocator_1)
+  ) VALUES (v_tenant, v_project, 1, 'Gate5 Allocation Price', 'DRAFT', v_now - interval '1 day', v_allocator_1)
   RETURNING id INTO v_pricing;
   INSERT INTO pricing_rates (
     tenant_id, project_id, pricing_version_id, unit_type_id, component, rate_per_sqm
@@ -132,7 +133,7 @@ BEGIN
     (v_tenant, v_project, v_pricing, v_unit_type, 'ROOF', 100),
     (v_tenant, v_project, v_pricing, v_unit_type, 'GARDEN', 100);
   UPDATE pricing_versions
-  SET status='PUBLISHED', published_at='2026-01-01T00:00:00+00', published_by=v_allocator_1
+  SET status='PUBLISHED', published_at=v_now - interval '1 day', published_by=v_allocator_1
   WHERE id=v_pricing;
 
   INSERT INTO inventory_slots (tenant_id, project_id, unit_type_id, state, internal_reference)
@@ -147,7 +148,7 @@ BEGIN
       locked_by_user_id, status, expires_at
     ) VALUES (
       v_tenant, v_project, v_unit_type, v_slot_1, v_buyer_user_2,
-      v_allocator_1, 'ACTIVE', '2026-01-02T09:20:00+00'
+      v_allocator_1, 'ACTIVE', clock_timestamp() + interval '20 minutes'
     );
   EXCEPTION WHEN OTHERS THEN
     v_rejected := true;
@@ -156,7 +157,7 @@ BEGIN
 
   SELECT lock_id INTO v_lock_1
   FROM preneura_create_assigned_inventory_lock(
-    v_tenant, v_project, v_allocator_1, v_unit_type, 900, '2026-01-02T09:10:00+00'
+    v_tenant, v_project, v_allocator_1, v_unit_type, 900, clock_timestamp()
   );
   IF v_lock_1 IS NULL THEN RAISE EXCEPTION 'assigned allocator lock was not created'; END IF;
   IF NOT EXISTS (
@@ -166,7 +167,7 @@ BEGIN
   ) THEN RAISE EXCEPTION 'allocator lock was not bound to queue session'; END IF;
 
   UPDATE inventory_locks
-  SET status='RELEASED', released_at='2026-01-02T09:11:00+00', release_reason='change selection'
+  SET status='RELEASED', released_at=clock_timestamp(), release_reason='change selection'
   WHERE id=v_lock_1;
   IF NOT EXISTS (
     SELECT 1 FROM queue_entries WHERE id=v_queue_1 AND status='CALLED' AND allocation_lock_id IS NULL
@@ -174,7 +175,7 @@ BEGIN
 
   SELECT lock_id INTO v_lock_2
   FROM preneura_create_assigned_inventory_lock(
-    v_tenant, v_project, v_allocator_1, v_unit_type, 900, '2026-01-02T09:12:00+00'
+    v_tenant, v_project, v_allocator_1, v_unit_type, 900, clock_timestamp()
   );
   IF v_lock_2 IS NULL THEN RAISE EXCEPTION 'second assigned allocator lock was not created'; END IF;
 
@@ -187,7 +188,7 @@ BEGIN
     )
     SELECT v_tenant, v_project, v_buyer_1, v_queue_1, l.id,
       l.inventory_slot_id, v_unit_type, v_pricing, 100000,
-      'EGP', 'ACTIVE', v_allocator_2, '2026-01-02T09:13:00+00'
+      'EGP', 'ACTIVE', v_allocator_2, clock_timestamp()
     FROM inventory_locks l WHERE l.id=v_lock_2;
   EXCEPTION WHEN OTHERS THEN
     v_rejected := true;
@@ -201,7 +202,7 @@ BEGIN
   )
   SELECT v_tenant, v_project, v_buyer_1, v_queue_1, l.id,
     l.inventory_slot_id, v_unit_type, v_pricing, 100000,
-    'EGP', 'ACTIVE', v_allocator_1, '2026-01-02T09:13:00+00'
+    'EGP', 'ACTIVE', v_allocator_1, clock_timestamp()
   FROM inventory_locks l WHERE l.id=v_lock_2
   RETURNING id INTO v_reservation;
 

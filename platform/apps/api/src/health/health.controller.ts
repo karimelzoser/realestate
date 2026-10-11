@@ -7,6 +7,7 @@ import {
 } from '@preneura/database/runtime-readiness';
 import type { Kysely } from 'kysely';
 import { DATABASE } from '../database/database.module.js';
+import { readBuildIdentity, type BuildIdentity } from '../release/build-identity.js';
 
 interface LiveHealthResponse {
   status: 'ok';
@@ -16,6 +17,7 @@ interface LiveHealthResponse {
 interface ReadyHealthResponse {
   status: 'ready';
   service: 'preneura-api';
+  build: BuildIdentity;
   checks: {
     database: 'ok';
     schema: 'ok';
@@ -45,11 +47,29 @@ export class HealthController {
 
   @Get('ready')
   async getReadiness(): Promise<ReadyHealthResponse> {
+    const build = readBuildIdentity();
+    if (build.matchesExpected === false) {
+      this.logger.warn(
+        `Readiness check failed: RELEASE_IDENTITY_MISMATCH running=${build.gitSha} expected=${build.expectedGitSha}`,
+      );
+      throw new ServiceUnavailableException({
+        status: 'not_ready',
+        service: 'preneura-api',
+        checks: {
+          database: 'unknown',
+          schema: 'unknown',
+          code: 'RELEASE_IDENTITY_MISMATCH',
+        },
+        build,
+      });
+    }
+
     try {
       const readiness = await assertRuntimeReadiness(this.db);
       return {
         status: 'ready',
         service: 'preneura-api',
+        build,
         checks: readiness,
       };
     } catch (error) {
@@ -64,6 +84,7 @@ export class HealthController {
           schema: code === 'DATABASE_UNAVAILABLE' ? 'unknown' : 'failed',
           code,
         },
+        build,
       });
     }
   }

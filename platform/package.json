@@ -10,11 +10,17 @@
     "dev": "turbo dev --parallel",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
-    "test": "turbo test",
-    "lint": "turbo lint"
+    "test": "node scripts/verify-quality-contract.mjs && turbo test",
+    "lint": "node scripts/static-policy-lint.mjs && turbo lint"
   },
   "devDependencies": {
     "turbo": "2.11.7",
     "typescript": "7.0.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "serialize-javascript": "7.0.5",
+      "nodemailer": "7.0.13"
+    }
   }
 }

@@ -1,0 +1,24 @@
+{
+  "name": "exceljs",
+  "version": "9.3.10-preneura.1",
+  "private": true,
+  "type": "module",
+  "description": "PRENEURA's minimal ExcelJS-compatible read-only shim backed by read-excel-file.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "read-excel-file": "9.3.10"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}

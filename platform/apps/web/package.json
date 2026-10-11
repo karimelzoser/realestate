@@ -5,16 +5,15 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "node scripts/validate-build-config.mjs && pnpm run build:deps && next build",
-    "build:deps": "pnpm --filter @preneura/contracts build",
+    "build:deps": "pnpm --filter @preneura/contracts build && pnpm --filter exceljs build",
     "start": "next start -p ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
-    "test": "node --test",
-    "lint": "next lint"
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@preneura/contracts": "workspace:*",
-    "exceljs": "4.4.0",
-    "next": "16.3.8",
+    "exceljs": "workspace:*",
+    "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },

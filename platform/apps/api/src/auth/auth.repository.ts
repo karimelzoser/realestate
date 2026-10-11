@@ -1,10 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Kysely } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 import type { Database, JsonValue } from '@preneura/database';
 import { DATABASE } from '../database/database.module.js';
+import type { SessionAssuranceEvidence } from './auth-assurance.js';
 
 export type AliasKind = 'PHONE' | 'NATIONAL_ID';
 export type DeliveryChannel = 'SMS' | 'WHATSAPP';
+export type ExternalIdentityLinkResult = 'LINKED' | 'ALREADY_LINKED' | 'CONFLICT';
 
 export interface NewChallenge {
   id: string;
@@ -22,6 +24,7 @@ export interface SessionRecord {
   userId: string;
   tokenDigest: Uint8Array;
   expiresAt: Date;
+  assurance: SessionAssuranceEvidence;
 }
 
 export interface ResolvedSession {
@@ -29,6 +32,9 @@ export interface ResolvedSession {
   userId: string;
   userStatus: 'ACTIVE' | 'DISABLED' | 'PENDING';
   expiresAt: Date;
+  authMethod: 'OTP' | 'OIDC_GOOGLE';
+  assuranceLevel: 'AAL1' | 'AAL2';
+  assuranceVerifiedAt: Date | null;
 }
 
 export interface ExternalIdentityResult {
@@ -45,12 +51,19 @@ export abstract class AuthRepository {
     displayName: string;
     verifiedEmail?: string | null;
   }): Promise<ExternalIdentityResult>;
+  abstract linkExternalIdentityToUser(input: {
+    userId: string;
+    provider: string;
+    providerSubject: string;
+    verifiedEmail?: string | null;
+  }): Promise<ExternalIdentityLinkResult>;
   abstract createChallenge(challenge: NewChallenge): Promise<void>;
   abstract markDeliveryAttempted(challengeId: string): Promise<void>;
   abstract consumeChallenge(challengeId: string, otpDigest: Uint8Array, now: Date): Promise<string | null>;
   abstract decrementChallengeAttempt(challengeId: string, now: Date): Promise<void>;
   abstract createSession(session: SessionRecord): Promise<void>;
   abstract resolveSession(tokenDigest: Uint8Array, now: Date): Promise<ResolvedSession | null>;
+  abstract userRequiresPrivilegedAssurance(userId: string): Promise<boolean>;
   abstract revokeSession(sessionId: string, now: Date): Promise<void>;
   abstract recordEvent(input: {
     userId?: string | null;
@@ -148,6 +161,59 @@ export class PostgresAuthRepository extends AuthRepository {
     });
   }
 
+  async linkExternalIdentityToUser(input: {
+    userId: string;
+    provider: string;
+    providerSubject: string;
+    verifiedEmail?: string | null;
+  }): Promise<ExternalIdentityLinkResult> {
+    return this.db.transaction().execute(async (trx) => {
+      const subjectOwner = await trx
+        .selectFrom('auth_external_identities')
+        .select('user_id')
+        .where('provider', '=', input.provider)
+        .where('provider_subject', '=', input.providerSubject)
+        .executeTakeFirst();
+      if (subjectOwner) {
+        return subjectOwner.user_id === input.userId ? 'ALREADY_LINKED' : 'CONFLICT';
+      }
+
+      const existingForUser = await trx
+        .selectFrom('auth_external_identities')
+        .select('provider_subject')
+        .where('provider', '=', input.provider)
+        .where('user_id', '=', input.userId)
+        .executeTakeFirst();
+      if (existingForUser) {
+        return existingForUser.provider_subject === input.providerSubject
+          ? 'ALREADY_LINKED'
+          : 'CONFLICT';
+      }
+
+      const inserted = await trx
+        .insertInto('auth_external_identities')
+        .values({
+          user_id: input.userId,
+          provider: input.provider,
+          provider_subject: input.providerSubject,
+          email_at_link_time: input.verifiedEmail ?? null,
+        })
+        .onConflict((oc) => oc.columns(['provider', 'provider_subject']).doNothing())
+        .returning('user_id')
+        .executeTakeFirst();
+
+      if (inserted) return 'LINKED';
+
+      const winner = await trx
+        .selectFrom('auth_external_identities')
+        .select('user_id')
+        .where('provider', '=', input.provider)
+        .where('provider_subject', '=', input.providerSubject)
+        .executeTakeFirst();
+      return winner?.user_id === input.userId ? 'ALREADY_LINKED' : 'CONFLICT';
+    });
+  }
+
   async createChallenge(challenge: NewChallenge): Promise<void> {
     await this.db
       .insertInto('auth_otp_challenges')
@@ -199,16 +265,31 @@ export class PostgresAuthRepository extends AuthRepository {
   }
 
   async createSession(session: SessionRecord): Promise<void> {
-    await this.db
-      .insertInto('auth_sessions')
-      .values({
-        id: session.id,
-        user_id: session.userId,
-        token_digest: session.tokenDigest,
-        expires_at: session.expiresAt,
-        revoked_at: null,
-      })
-      .executeTakeFirstOrThrow();
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .insertInto('auth_sessions')
+        .values({
+          id: session.id,
+          user_id: session.userId,
+          token_digest: session.tokenDigest,
+          expires_at: session.expiresAt,
+          revoked_at: null,
+        })
+        .executeTakeFirstOrThrow();
+
+      await sql`
+        INSERT INTO auth_session_assurance (
+          session_id, auth_method, assurance_level, provider_acr, provider_amr, verified_at
+        ) VALUES (
+          ${session.id}::uuid,
+          ${session.assurance.authMethod},
+          ${session.assurance.assuranceLevel},
+          ${session.assurance.providerAcr ?? null},
+          ${JSON.stringify(session.assurance.providerAmr ?? [])}::jsonb,
+          now()
+        )
+      `.execute(trx);
+    });
   }
 
   async resolveSession(tokenDigest: Uint8Array, now: Date): Promise<ResolvedSession | null> {
@@ -227,12 +308,48 @@ export class PostgresAuthRepository extends AuthRepository {
       .executeTakeFirst();
 
     if (!row || row.user_status === 'DISABLED') return null;
+
+    const assuranceResult = await sql<{
+      auth_method: 'OTP' | 'OIDC_GOOGLE';
+      assurance_level: 'AAL1' | 'AAL2';
+      verified_at: Date;
+    }>`
+      SELECT auth_method, assurance_level, verified_at
+      FROM auth_session_assurance
+      WHERE session_id = ${row.session_id}::uuid
+    `.execute(this.db);
+    const assurance = assuranceResult.rows[0];
+
     return {
       sessionId: row.session_id,
       userId: row.user_id,
       userStatus: row.user_status,
       expiresAt: row.expires_at as Date,
+      authMethod: assurance?.auth_method ?? 'OTP',
+      assuranceLevel: assurance?.assurance_level ?? 'AAL1',
+      assuranceVerifiedAt: assurance?.verified_at ?? null,
     };
+  }
+
+  async userRequiresPrivilegedAssurance(userId: string): Promise<boolean> {
+    const row = await this.db
+      .selectFrom('access_role_assignments')
+      .select('id')
+      .where('user_id', '=', userId)
+      .where('status', '=', 'ACTIVE')
+      .where('revoked_at', 'is', null)
+      .where('role_code', 'in', [
+        'PRENEURA_SUPER_ADMIN',
+        'OPERATIONS_DIRECTOR',
+        'MANAGER',
+        'ALLOCATOR',
+        'TRANSACTION_OPERATOR',
+        'BROKER_MANAGER',
+        'BROKER_FINANCE',
+      ])
+      .limit(1)
+      .executeTakeFirst();
+    return Boolean(row);
   }
 
   async revokeSession(sessionId: string, now: Date): Promise<void> {
