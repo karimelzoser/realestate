@@ -24,6 +24,11 @@ interface RecoveryTargetRow {
   contact_id: string;
 }
 
+interface RecoveryChallengeContext {
+  tenantId: string;
+  userId: string | null;
+}
+
 @Injectable()
 export class IdentityRepository {
   constructor(@Inject(DATABASE) private readonly db: Kysely<Database>) {}
@@ -260,14 +265,6 @@ export class IdentityRepository {
         AND ip.document_kind = ${input.kind}
         AND ip.document_hmac = ${input.documentHmac}
         AND ip.status IN ('DECLARED','REVIEWED','EXTERNAL_VERIFIED')
-        AND EXISTS (
-          SELECT 1 FROM identity_consent_events ice
-          WHERE ice.tenant_id = ip.tenant_id
-            AND ice.user_id = ip.user_id
-            AND ice.purpose = 'ACCOUNT_RECOVERY'
-          ORDER BY ice.created_at DESC, ice.id DESC
-          LIMIT 1
-        )
         AND (
           SELECT ice.action FROM identity_consent_events ice
           WHERE ice.tenant_id = ip.tenant_id
@@ -309,6 +306,17 @@ export class IdentityRepository {
       UPDATE identity_recovery_challenges SET sent_at = now()
       WHERE id = ${challengeId}::uuid AND sent_at IS NULL
     `.execute(this.db);
+  }
+
+  async recoveryChallengeContext(challengeId: string): Promise<RecoveryChallengeContext | null> {
+    const result = await sql<{ tenant_id: string; user_id: string | null }>`
+      SELECT tenant_id, user_id
+      FROM identity_recovery_challenges
+      WHERE id = ${challengeId}::uuid
+      LIMIT 1
+    `.execute(this.db);
+    const row = result.rows[0];
+    return row ? { tenantId: row.tenant_id, userId: row.user_id } : null;
   }
 
   async consumeRecoveryChallenge(input: {
