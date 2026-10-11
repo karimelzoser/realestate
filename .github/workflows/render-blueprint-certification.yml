@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "render.yaml"
+      - "platform/docs/render-deployment.md"
       - "platform/package.json"
       - "platform/pnpm-lock.yaml"
       - "platform/apps/**/package.json"
@@ -15,6 +16,7 @@ on:
       - "release/**"
     paths:
       - "render.yaml"
+      - "platform/docs/render-deployment.md"
       - "platform/package.json"
       - "platform/pnpm-lock.yaml"
       - "platform/apps/**/package.json"
