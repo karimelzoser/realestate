@@ -44,7 +44,11 @@ export class IdentityService {
     data: DeclareIdentityDocumentInput;
   }): Promise<IdentityProfileSnapshot> {
     await this.requireMembership(input);
-    const normalized = normalizeIdentityDocument(input.data);
+    const normalized = normalizeIdentityDocument({
+      kind: input.data.kind,
+      identifier: input.data.identifier,
+      ...(input.data.countryCode !== undefined ? { countryCode: input.data.countryCode } : {}),
+    });
     try {
       await this.repository.declareDocument({
         tenantId: input.tenantId,
@@ -112,7 +116,11 @@ export class IdentityService {
   }
 
   async startRecovery(rawInput: IdentityRecoveryStartInput): Promise<IdentityRecoveryStartResponse> {
-    const normalized = normalizeIdentityDocument(rawInput);
+    const normalized = normalizeIdentityDocument({
+      kind: rawInput.kind,
+      identifier: rawInput.identifier,
+      ...(rawInput.countryCode !== undefined ? { countryCode: rawInput.countryCode } : {}),
+    });
     const documentHmac = this.documentHmac(normalized.normalizedIdentifier);
     const windowSeconds = this.positiveIntegerEnv('IDENTITY_RECOVERY_REQUEST_WINDOW_SECONDS', 600);
     const recent = await this.repository.countRecoveryChallengesSince({
