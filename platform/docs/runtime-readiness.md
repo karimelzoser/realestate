@@ -11,7 +11,7 @@ build immutable release
         ↓
 run one migration/release job
         ↓
-wait for migration success
+wait for migration success + immutable migration ledger
         ↓
 start/roll API instances
         ↓
@@ -54,9 +54,8 @@ Historical migration files are therefore append-only release artifacts. Fix a pr
 
 Databases created before the migration runner was introduced do not have `platform_schema_migrations` history. There is one controlled transition path:
 
-1. bring the legacy database to the exact current certified schema, including migration `0033_runtime_readiness_contract.sql`;
-2. verify `/v1/health/ready` against that schema;
-3. run once:
+1. bring the legacy database to the exact current independently verified schema, including migration `0033_runtime_readiness_contract.sql`;
+2. run once:
 
 ```bash
 MIGRATION_ADOPT_EXISTING=true \
@@ -64,9 +63,13 @@ MIGRATION_ACTOR=legacy-baseline \
 pnpm --filter @preneura/database migrate
 ```
 
+3. verify that `/v1/health/ready` now returns `200` and reports the same schema and migration-ledger version.
+
 Adoption is refused unless the runtime contract exactly matches the latest migration version and marker. It records the current migration set as `ADOPTED` with checksums; it does not rerun the SQL.
 
 `MIGRATION_ADOPT_EXISTING=true` must **not** remain configured after this one-time baseline. Every later release uses normal `migrate` mode.
+
+Before adoption, readiness intentionally returns `503 MIGRATION_LEDGER_MISMATCH` even if the expected tables already exist. That prevents an untracked/manual schema from being treated as production-ready.
 
 ## API probes
 
@@ -80,7 +83,7 @@ GET /v1/health/ready
 
 `/v1/health` and `/v1/health/live` are liveness probes. They prove only that the API process is running and able to answer HTTP.
 
-`/v1/health/ready` is the production traffic gate. It performs a PostgreSQL connectivity check and validates the database runtime contract. It returns HTTP `200` only when the running application version is compatible with the database schema. Otherwise it returns HTTP `503` with a bounded machine-readable failure code; raw database errors are not exposed.
+`/v1/health/ready` is the production traffic gate. It performs a PostgreSQL connectivity check, validates runtime/schema compatibility, and verifies that the runtime contract is backed by the immutable migration ledger. It returns HTTP `200` only when the running application can safely use the database and the database has release provenance. Otherwise it returns HTTP `503` with a bounded machine-readable failure code; raw database errors are not exposed.
 
 Railway or any reverse proxy/load balancer should use:
 
@@ -100,12 +103,16 @@ Migration `0033_runtime_readiness_contract.sql` creates the singleton `platform_
 
 The application currently identifies itself as runtime schema version `33`.
 
-Readiness succeeds when:
+Readiness succeeds when all of the following are true:
 
 ```text
 database schema version >= application runtime schema version
 AND
 minimum compatible runtime version <= application runtime schema version
+AND
+latest immutable migration-ledger version = database schema version
+AND
+latest migration-ledger filename matches the runtime contract marker
 ```
 
 When the database schema version equals the runtime schema version, the migration marker must also match the runtime's expected marker.
@@ -116,7 +123,7 @@ The database prevents deleting the runtime contract, decreasing `schema_version`
 
 For an additive/backward-compatible migration, advance `schema_version` but leave `minimum_runtime_version` at the oldest runtime that can still safely operate. This lets old and new API/worker instances overlap during a rolling deployment.
 
-Example for an additive schema 34 migration while runtime 33 remains compatible:
+For example, migration `0034_additive_change.sql` can contain:
 
 ```sql
 UPDATE platform_runtime_contract
@@ -127,15 +134,26 @@ SET schema_version = 34,
 WHERE singleton_key = 'production';
 ```
 
-Runtime 33 remains ready while runtime 34 instances roll out.
+The release migrator then records `0034_additive_change.sql` as ledger version 34 in the **same release migration transaction**. Runtime 33 remains ready while runtime 34 instances roll out.
+
+Do not update `platform_runtime_contract` manually in production without the matching migration-ledger row. Readiness rejects that state as untracked provenance.
 
 For a breaking migration, use an **expand/contract** deployment. First deploy code that can operate against both representations, migrate/backfill data, drain old runtime instances, and only then advance `minimum_runtime_version`. Raising the minimum runtime is the explicit switch that makes older processes fail readiness and prevents them from processing background work.
 
 ## Worker startup
 
-The worker has no public HTTP port. Before starting any outbox, notification, reminder, or commission loop it validates its production configuration and executes the same database/runtime compatibility probe used by API readiness.
+The worker has no public HTTP port. Before starting any outbox, notification, reminder, or commission loop it validates its production configuration and executes the same database/runtime/ledger compatibility probe used by API readiness.
 
-A stale or incompatible database therefore causes the worker process to exit non-zero before it can claim jobs or mutate operational projections.
+A stale, incompatible, or untracked database therefore causes the worker process to exit non-zero before it can claim jobs or mutate operational projections.
+
+The `worker.ready` structured log includes:
+
+- runtime schema version;
+- database schema version;
+- minimum compatible runtime version;
+- migration marker;
+- migration-ledger version;
+- database readiness latency.
 
 ## Production configuration fail-closed rule
 
@@ -149,7 +167,8 @@ The API validates, among other requirements:
 - gateway OTP mode and verification gateway URLs;
 - Google OIDC issuer/client/redirect configuration;
 - object-storage bucket/endpoint shape;
-- malware-scanner URL/token.
+- malware-scanner URL/token;
+- finance-provider ingress secret.
 
 The worker validates:
 
@@ -175,7 +194,8 @@ The readiness layer uses bounded failure codes:
 - `SCHEMA_CONTRACT_MISSING` — the runtime contract table/row is absent;
 - `SCHEMA_TOO_OLD` — the database has not been migrated far enough for this runtime;
 - `RUNTIME_VERSION_TOO_OLD` — the database has advanced beyond compatibility with this runtime;
-- `SCHEMA_CONTRACT_MISMATCH` — same-version migration identity does not match the application expectation.
+- `SCHEMA_CONTRACT_MISMATCH` — same-version migration identity does not match the application expectation;
+- `MIGRATION_LEDGER_MISMATCH` — runtime contract exists but the immutable release-migration ledger is missing or does not prove the same schema version/marker.
 
 ## Executable certification
 
@@ -189,19 +209,20 @@ It is called by `.github/workflows/runtime-readiness-certification.yml` after a 
 
 The certification proves:
 
-1. current schema returns API readiness `200`;
+1. current schema with immutable migration provenance returns API readiness `200`;
 2. pre-contract/stale schema keeps liveness `200` but readiness `503`;
-3. worker exits before loops on stale schema;
-4. worker starts on current schema;
-5. additive future schema remains compatible with the current runtime;
-6. a future schema that raises `minimum_runtime_version` rejects the old runtime;
-7. the runtime contract cannot be deleted or moved backwards;
-8. incomplete production configuration causes API and worker startup to fail closed;
-9. complete production-shaped configuration can boot API/worker against the current schema;
-10. a fresh database is migrated from zero and a rerun is idempotent;
-11. the pre-runner/current schema can be adopted exactly once into checksum history;
-12. modifying historical migration SQL is rejected by checksum verification;
-13. concurrent migrators serialize under the PostgreSQL advisory lock and converge on one 33-row history;
-14. strict TypeScript and the complete deployable API/worker dependency graph build successfully.
+3. a fully shaped but untracked database returns `503 MIGRATION_LEDGER_MISMATCH`;
+4. worker exits before loops on stale or untracked schema;
+5. worker starts on current tracked schema;
+6. additive future schema remains compatible with the current runtime when its ledger and minimum runtime permit it;
+7. a future schema that raises `minimum_runtime_version` rejects the old runtime;
+8. the runtime contract cannot be deleted or moved backwards;
+9. incomplete production configuration causes API, worker, and notification-gateway startup to fail closed;
+10. complete production-shaped configuration can boot API/worker/gateway/web against the current schema;
+11. a fresh database is migrated from zero and a rerun is idempotent;
+12. the pre-runner/current schema can be adopted into checksum history;
+13. modifying historical migration SQL is rejected by checksum verification;
+14. concurrent migrators serialize under the PostgreSQL advisory lock and converge on one migration history;
+15. strict TypeScript and the complete deployable runtime graph build successfully.
 
 The runtime script can also be run against an isolated PostgreSQL 18 instance outside GitHub Actions after the production workspace is built. It creates and destroys only its named certification databases and does not target a production database.
