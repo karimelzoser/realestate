@@ -8,7 +8,6 @@
     "build:deps": "pnpm --filter @preneura/contracts build",
     "start": "next start -p ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
-    "test": "node --test",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
