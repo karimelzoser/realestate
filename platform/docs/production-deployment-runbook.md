@@ -201,7 +201,7 @@ Do not bypass `preflight`. Correct the database/schema or provider/secret config
 
 ## Release evidence
 
-The runtime-readiness certification must prove the complete branch only after implementation is finished. It covers:
+The runtime-readiness certification covers:
 
 - frozen dependency installation and production builds;
 - incomplete production configuration rejection;
@@ -215,3 +215,5 @@ The runtime-readiness certification must prove the complete branch only after im
 - concurrent migration serialization;
 - one-time legacy migration-ledger adoption;
 - rejection of a fully shaped database that lacks immutable migration provenance.
+
+Release evidence is valid only for the exact pull-request head on which the runtime-readiness and inherited production gates pass. Any later code, workflow, migration, or deployment-contract change requires fresh evidence.
