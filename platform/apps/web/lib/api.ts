@@ -49,6 +49,15 @@ export async function apiFetch<T>(
     } catch {
       // Keep the status-based fallback when the response is not JSON.
     }
+
+    if (
+      code === 'STEP_UP_REQUIRED' &&
+      requiredAssurance === 'AAL2' &&
+      typeof window !== 'undefined'
+    ) {
+      window.location.assign(`${apiBase}/v1/auth/google/start?assurance=aal2`);
+    }
+
     throw new ApiError(message, response.status, code, requiredAssurance);
   }
 
