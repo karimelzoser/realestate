@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - "platform/packages/database/migrations/**"
-      - "platform/packages/database/tests/gate4_broker_notification_refund_seed.sql"
+      - "platform/packages/database/tests/gate4_seed_*.sql"
       - "platform/packages/contracts/src/commissions.ts"
       - "platform/packages/contracts/src/notifications.ts"
       - "platform/packages/contracts/src/sales.ts"
@@ -16,6 +16,7 @@ on:
       - "platform/apps/worker/src/notification-recipients.ts"
       - "platform/apps/worker/src/notifications.ts"
       - "platform/apps/worker/src/certifications/gate4-reminder-certification.ts"
+      - "platform/docs/gate4-broker-notification-refund.md"
       - ".github/workflows/gate4-broker-notification-refund-certification.yml"
   push:
     branches:
@@ -23,7 +24,7 @@ on:
       - "release/**"
     paths:
       - "platform/packages/database/migrations/**"
-      - "platform/packages/database/tests/gate4_broker_notification_refund_seed.sql"
+      - "platform/packages/database/tests/gate4_seed_*.sql"
       - "platform/packages/contracts/src/commissions.ts"
       - "platform/packages/contracts/src/notifications.ts"
       - "platform/packages/contracts/src/sales.ts"
@@ -35,6 +36,7 @@ on:
       - "platform/apps/worker/src/notification-recipients.ts"
       - "platform/apps/worker/src/notifications.ts"
       - "platform/apps/worker/src/certifications/gate4-reminder-certification.ts"
+      - "platform/docs/gate4-broker-notification-refund.md"
       - ".github/workflows/gate4-broker-notification-refund-certification.yml"
 
 permissions:
@@ -92,8 +94,11 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
-            -f platform/packages/database/tests/gate4_broker_notification_refund_seed.sql
+          set -euo pipefail
+          for seed in platform/packages/database/tests/gate4_seed_*.sql; do
+            echo "Applying ${seed}"
+            psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 -f "${seed}"
+          done
 
       - name: Build API and worker emitted runtime
         working-directory: platform
