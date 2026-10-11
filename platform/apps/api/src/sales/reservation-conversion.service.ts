@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { ConvertLockToReservationInput, ReservationResult } from '@preneura/contracts/sales';
+import type { ConvertLockToReservationInput, ExactReservationResult } from '@preneura/contracts/sales';
 import { AccessService } from '../access/access.service.js';
 import { ReservationConversionRepository } from './reservation-conversion.repository.js';
 import { SalesRepository } from './sales.repository.js';
@@ -15,7 +15,7 @@ export class ReservationConversionService {
   async convert(input: {
     actorUserId: string;
     data: ConvertLockToReservationInput;
-  }): Promise<ReservationResult> {
+  }): Promise<ExactReservationResult> {
     if (!(await this.salesRepository.projectExists(input.data.tenantId, input.data.projectId))) {
       throw new NotFoundException('Project not found.');
     }
