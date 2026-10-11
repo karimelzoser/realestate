@@ -52,6 +52,14 @@ try {
 }
 
 async function certifyEoiChoiceHttpBoundary() {
+  const attack = await fetch(`${apiBase}/v1/auth/logout`, { method: 'POST', headers: {
+    cookie: `preneura_session=${tokens.buyer}`, origin: 'https://untrusted.example',
+  } });
+  assert.equal(attack.status, 403, 'untrusted bodyless logout must be rejected before session revocation');
+  const missingOrigin = await fetch(`${apiBase}/v1/auth/logout`, { method: 'POST', headers: {
+    cookie: `preneura_session=${tokens.buyer}`,
+  } });
+  assert.equal(missingOrigin.status, 403, 'missing browser origin cannot mutate a cookie session');
   const path = `${apiBase}/v1/tenants/${TENANT}/projects/${PROJECT}`;
   const policy = await requestJson(`${path}/eoi-policy`, session(tokens.buyer));
   assert.equal(policy.response.status, 200);
@@ -391,7 +399,7 @@ async function certifySessionRevocation() {
 }
 
 function session(token) {
-  return { headers: { cookie: `preneura_session=${token}` } };
+  return { headers: { cookie: `preneura_session=${token}`, origin: new URL(webBase).origin } };
 }
 
 async function openSse(url, token) {

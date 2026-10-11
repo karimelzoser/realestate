@@ -41,9 +41,36 @@ export function resolveTrustProxy(env: NodeJS.ProcessEnv = process.env): TrustPr
   return (_address: string, hop: number): boolean => hop < parsed;
 }
 
-export function registerHttpSecurity(instance: FastifyInstance): void {
+export function trustedMutationOrigin(
+  method: string,
+  headers: { origin?: string | string[] | undefined; referer?: string | string[] | undefined; cookie?: string | undefined },
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) return true;
+  const allowed = new Set((env.WEB_ORIGIN ?? 'http://localhost:3000').split(',').map((value) => value.trim()));
+  const cookieName = env.SESSION_COOKIE_NAME ?? 'preneura_session';
+  const hasSessionCookie = headers.cookie?.split(';').some((part) => part.trim().startsWith(`${cookieName}=`)) ?? false;
+  if (headers.origin !== undefined) {
+    if (typeof headers.origin !== 'string') return false;
+    try {
+      const url = new URL(headers.origin);
+      return ['https:', 'http:'].includes(url.protocol) && url.origin === headers.origin && allowed.has(url.origin);
+    } catch { return false; }
+  }
+  if (!hasSessionCookie) return true; // Provider/machine calls still require their own bearer/signature authorization.
+  if (typeof headers.referer !== 'string') return false;
+  try {
+    const url = new URL(headers.referer);
+    return !url.username && !url.password && ['https:', 'http:'].includes(url.protocol) && allowed.has(url.origin);
+  } catch { return false; }
+}
+
+export function registerHttpSecurity(instance: FastifyInstance, env: NodeJS.ProcessEnv = process.env): void {
   instance.addHook('onRequest', async (request, reply) => {
     reply.header('x-request-id', request.id);
+    if (!trustedMutationOrigin(request.method, request.headers, env)) {
+      await reply.code(403).send({ statusCode: 403, error: 'UNTRUSTED_ORIGIN', message: 'Request origin is not authorized.' });
+    }
   });
 
   instance.addHook('onSend', async (request, reply, payload) => {

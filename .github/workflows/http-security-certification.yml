@@ -67,6 +67,8 @@ jobs:
           set -euo pipefail
           pnpm --filter @preneura/api typecheck
           pnpm --filter @preneura/api build
+      - name: Test origin protection and authentication boundaries
+        run: pnpm --filter @preneura/api test
       - name: Certify proxy and body-limit resolvers
         run: |
           set -euo pipefail

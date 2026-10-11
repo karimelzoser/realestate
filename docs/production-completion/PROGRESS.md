@@ -105,3 +105,9 @@ Local verification: 26 normal tests, strict package checks and all apps/Next pro
 Exact-head CI and browser acceptance are pending at this checkpoint. Public EOI payment/identity-eligibility UX and exact-apartment allocation are still open; no full-product/live GO claim.
 
 Follow-up security acceptance E01.4 added from code inspection: SessionAuthGuard enforces authentication/assurance but has no explicit trusted-Origin/CSRF validation for unsafe bodyless routes. Signed cookies/CORS/SameSite alone require selected-topology browser verification. Close this before final hosted release; it does not invalidate the previously tested lifecycle/assurance boundaries.
+
+## Trusted origin mutation protection
+
+Global HTTP protection now rejects untrusted/malformed browser Origins on unsafe requests and requires a trusted Origin or Referer for session-cookie mutations, including bodyless routes. Provider/machine requests retain bearer/signature authorization. Four additional tests exercise real Fastify handlers and header edge cases; emitted full-stack checks show hostile/missing-Origin logout cannot revoke a valid session. Local strict type/lint/API build and30 normal tests pass. The selected hosted browser cookie/login/SSE topology still needs UAT; Lax host-only cookies are preserved.
+
+Git CLI credential cache expired during CI fix publication. Used the connected GitHub account with expected-head checks to publish df ae90e/36941e7 (canonical LF source tree equal to saved local9202e6f); preserved local commit on backup branch and aligned the clean candidate before restoring the named work stash. No force push or work loss.

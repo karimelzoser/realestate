@@ -5,13 +5,13 @@
   "planningBranch": "plan/egypt-platform-completion",
   "integrationBranch": "completion/egypt-full-platform",
   "taskBranch": "codex/egypt-platform-completion",
-  "observedHeadBeforeCheckpoint": "e8f5216e0964be01b2f2aa754944df9423c390da",
+  "observedHeadBeforeCheckpoint": "36941e74f1b0edba40a41947106720a459010b8e",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
   "activeTaskId": "E05.2",
   "activeTaskStatus": "IN_PROGRESS",
-  "completedCheckpoint": "Selected-type EOI slice implemented and locally certified on schema46; exact-head CI pending commit. Full task E05.2 remains open for public buyer eligibility/payment UX.",
-  "nextAction": "Verify exact-head CI for schema46 EOI slice, then implement E07.1/E07.2 exact apartment quote/selection/atomic lock and propagation; complete buyer EOI UX alongside it.",
+  "completedCheckpoint": "Schema46 EOI software and CI fixes published; explicit cookie mutation Origin/Referer protection now passes local normal/security/emitted full-stack tests. Hosted browser/provider acceptance remains.",
+  "nextAction": "Publish and verify Origin protection exact-head CI, then implement exact physical apartment selection/quote/idempotent lock and end-to-end identity propagation (E07), alongside public EOI UX.",
   "changedFiles": [
     "platform/apps/api/src/auth",
     "platform/apps/api/src/access",
@@ -60,6 +60,10 @@
     {
       "action": "Schema46 EOI choice local verification",
       "result": "26 normal tests; strict types/lint/all app builds; zero/upgrade migrations; actual repository and domain regression; dedicated concurrency; emitted FULL_STACK_ACCEPTANCE_OK"
+    },
+    {
+      "action": "Trusted-origin mutation security",
+      "result": "Fastify real-hook and header edge regressions; strict type/lint/API build; 30 normal tests and emitted full-stack acceptance including untrusted/missing-Origin logout rejection"
     }
   ],
   "evidencePaths": [
@@ -99,7 +103,7 @@
     "railwayRequired": false
   },
   "taskPr": 90,
-  "taskImplementationHead": "e8f5216e0964be01b2f2aa754944df9423c390da",
+  "taskImplementationHead": "36941e74f1b0edba40a41947106720a459010b8e",
   "runtimeSchemaVersion": 46,
   "migrationMarker": "0046_eoi_apartment_type_choice.sql",
   "localWorkPreservation": "Unfinished pre-sync locale expansion preserved in named git stash; reuse selectively with canonical locale provider, never duplicate it."

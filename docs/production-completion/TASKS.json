@@ -111,10 +111,14 @@
           "dependencies": [
             "E01.3"
           ],
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "deliverable": "Explicit trusted-origin protection for all cookie-authenticated unsafe actions plus same-origin/hosted cross-origin browser tests",
           "acceptance": "Requests from an untrusted origin cannot mutate authenticated state, including endpoints without JSON bodies; selected deployment login/cookies/credentialed SSE works without disabling protection.",
-          "existingImplementation": "Signed session cookies, configured credentialed CORS and cookie SameSite exist; SessionAuthGuard has no explicit Origin/CSRF check. Review revealed this missing defense, especially for bodyless POST routes or deployments across sites."
+          "existingImplementation": "Explicit global unsafe-request Origin allowlist; cookie writes without Origin require trusted Referer; exact origins reject suffix/path/null/multiple/scheme attacks. 4 real Fastify/header regressions and emitted logout negatives pass. Hosted selected-topology cookie/login/SSE browser UAT remains.",
+          "evidence": [
+            "30 normal tests pass; strict types/lint and emitted API build",
+            "Real emitted full-stack acceptance passes on disposable PostgreSQL18.6 with cookie mutations carrying trusted Origin and attack logout remaining blocked"
+          ]
         }
       ]
     },
