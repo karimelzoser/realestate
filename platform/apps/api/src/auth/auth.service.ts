@@ -26,6 +26,7 @@ import {
   type AliasKind,
   type ResolvedSession,
 } from './auth.repository.js';
+import { otpAssurance, type SessionAssuranceEvidence } from './auth-assurance.js';
 import { OtpDeliveryPort } from './otp-delivery.js';
 
 export interface VerifiedLogin {
@@ -33,6 +34,7 @@ export interface VerifiedLogin {
   sessionId: string;
   sessionToken: string;
   expiresAt: Date;
+  assuranceLevel: 'AAL1' | 'AAL2';
 }
 
 @Injectable()
@@ -134,15 +136,20 @@ export class AuthService {
       throw new UnauthorizedException('The code is invalid or expired.');
     }
 
-    return this.issueSessionForUser(userId, {
-      eventType: 'LOGIN_OTP_VERIFIED',
-      challengeId: input.challengeId,
-    });
+    return this.issueSessionForUser(
+      userId,
+      {
+        eventType: 'LOGIN_OTP_VERIFIED',
+        challengeId: input.challengeId,
+      },
+      otpAssurance(),
+    );
   }
 
   async issueSessionForUser(
     userId: string,
     audit: { eventType: string; challengeId?: string | null },
+    assurance: SessionAssuranceEvidence = otpAssurance(),
   ): Promise<VerifiedLogin> {
     const sessionId = randomUUID();
     const sessionToken = randomBytes(32).toString('base64url');
@@ -153,6 +160,7 @@ export class AuthService {
       userId,
       tokenDigest: this.sessionDigest(sessionToken),
       expiresAt,
+      assurance,
     });
 
     await this.repository.recordEvent({
@@ -161,14 +169,29 @@ export class AuthService {
       result: 'SUCCESS',
       challengeId: audit.challengeId ?? null,
       sessionId,
+      metadata: {
+        authMethod: assurance.authMethod,
+        assuranceLevel: assurance.assuranceLevel,
+        ...(assurance.providerAcr ? { providerAcr: assurance.providerAcr } : {}),
+      },
     });
 
-    return { userId, sessionId, sessionToken, expiresAt };
+    return {
+      userId,
+      sessionId,
+      sessionToken,
+      expiresAt,
+      assuranceLevel: assurance.assuranceLevel,
+    };
   }
 
   async resolveSessionToken(sessionToken: string | undefined): Promise<ResolvedSession | null> {
     if (!sessionToken) return null;
     return this.repository.resolveSession(this.sessionDigest(sessionToken), new Date());
+  }
+
+  async requiresPrivilegedAssurance(userId: string): Promise<boolean> {
+    return this.repository.userRequiresPrivilegedAssurance(userId);
   }
 
   async revokeSessionToken(sessionToken: string | undefined): Promise<void> {
