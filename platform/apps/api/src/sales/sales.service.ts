@@ -19,8 +19,12 @@ import type {
   TransactionProgressSnapshot,
 } from '@preneura/contracts/sales';
 import { AccessService } from '../access/access.service.js';
+import {
+  BuyerAttributionRepository,
+  type ProjectBuyerRecord,
+} from './buyer-attribution.repository.js';
 import { MilestoneEvidenceService } from './milestone-evidence.service.js';
-import { SalesRepository, type BuyerProfileRecord } from './sales.repository.js';
+import { SalesRepository } from './sales.repository.js';
 
 const MILESTONE_PERMISSION: Readonly<Record<TransactionMilestoneCode, PermissionCode>> = {
   BUYER_DOCUMENTS_COMPLETE: 'documents.verify',
@@ -37,6 +41,7 @@ const BROKER_ROLES = new Set(['BROKER_MANAGER', 'BROKER_FINANCE', 'BROKER_AGENT'
 export class SalesService {
   constructor(
     private readonly repository: SalesRepository,
+    private readonly buyerAttribution: BuyerAttributionRepository,
     private readonly access: AccessService,
     private readonly milestoneEvidence: MilestoneEvidenceService,
   ) {}
@@ -82,7 +87,7 @@ export class SalesService {
       });
     }
 
-    const buyerProfileId = await this.repository.createBuyerProfile(input);
+    const buyerProfileId = await this.buyerAttribution.createOrAttribute(input);
     return { buyerProfileId };
   }
 
@@ -117,7 +122,11 @@ export class SalesService {
     data: CreateBuyerEoiInput;
   }): Promise<{ eoiId: string; amount: string; currency: string }> {
     await this.requireProject(input.data.tenantId, input.data.projectId);
-    const buyer = await this.requireBuyer(input.data.tenantId, input.data.buyerProfileId);
+    const buyer = await this.requireBuyer(
+      input.data.tenantId,
+      input.data.projectId,
+      input.data.buyerProfileId,
+    );
 
     if (buyer.userId === input.actorUserId) {
       await this.access.assert({
@@ -173,7 +182,11 @@ export class SalesService {
     data: CheckInQueueInput;
   }): Promise<{ queueEntryId: string }> {
     await this.requireProject(input.data.tenantId, input.data.projectId);
-    await this.requireBuyer(input.data.tenantId, input.data.buyerProfileId);
+    await this.requireBuyer(
+      input.data.tenantId,
+      input.data.projectId,
+      input.data.buyerProfileId,
+    );
     await this.access.assert({
       userId: input.actorUserId,
       permission: 'queue.checkin',
@@ -201,6 +214,11 @@ export class SalesService {
     data: ConvertLockToReservationInput;
   }): Promise<ReservationResult> {
     await this.requireProject(input.data.tenantId, input.data.projectId);
+    await this.requireBuyer(
+      input.data.tenantId,
+      input.data.projectId,
+      input.data.buyerProfileId,
+    );
     await this.access.assert({
       userId: input.actorUserId,
       permission: 'allocation.assist',
@@ -265,7 +283,12 @@ export class SalesService {
     await this.requireProject(input.tenantId, input.projectId);
     const progress = await this.repository.getTransactionProgress(input);
     if (!progress) throw new NotFoundException('Transaction not found.');
-    const buyer = await this.requireBuyer(input.tenantId, progress.buyerProfileId);
+    const buyer = await this.buyerAttribution.getTransactionBuyer({
+      tenantId: input.tenantId,
+      projectId: input.projectId,
+      transactionId: input.transactionId,
+    });
+    if (!buyer) throw new NotFoundException('Transaction attribution not found.');
 
     await this.assertTransactionRead({
       actorUserId: input.actorUserId,
@@ -280,7 +303,7 @@ export class SalesService {
     actorUserId: string;
     tenantId: string;
     projectId: string;
-    buyer: BuyerProfileRecord;
+    buyer: ProjectBuyerRecord;
   }): Promise<void> {
     const regularAssignments = await this.access.matchingAssignments({
       userId: input.actorUserId,
@@ -322,9 +345,17 @@ export class SalesService {
     }
   }
 
-  private async requireBuyer(tenantId: string, buyerProfileId: string): Promise<BuyerProfileRecord> {
-    const buyer = await this.repository.getBuyerProfile({ tenantId, buyerProfileId });
-    if (!buyer) throw new NotFoundException('Buyer profile not found.');
+  private async requireBuyer(
+    tenantId: string,
+    projectId: string,
+    buyerProfileId: string,
+  ): Promise<ProjectBuyerRecord> {
+    const buyer = await this.buyerAttribution.getProjectBuyer({
+      tenantId,
+      projectId,
+      buyerProfileId,
+    });
+    if (!buyer) throw new NotFoundException('Buyer is not attributed to this project.');
     return buyer;
   }
 }
