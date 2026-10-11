@@ -10,5 +10,6 @@ import { AccountVerificationDelivery } from './account-verification-delivery.js'
   imports: [AuthModule, AccessModule],
   controllers: [AccountAdminController, EnrollmentController],
   providers: [AccountRepository, AccountService, AccountVerificationDelivery],
+  exports: [AccountService],
 })
 export class AccountModule {}
