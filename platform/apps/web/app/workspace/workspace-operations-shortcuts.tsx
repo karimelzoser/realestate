@@ -12,6 +12,7 @@ export default function WorkspaceOperationsShortcuts() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showProjectSetup, setShowProjectSetup] = useState(false);
   const [showAccounts, setShowAccounts] = useState(false);
+  const [showAllocation, setShowAllocation] = useState(false);
   const [showRefunds, setShowRefunds] = useState(false);
   const [showDocumentPolicy, setShowDocumentPolicy] = useState(false);
   const [showDocumentTemplates, setShowDocumentTemplates] = useState(false);
@@ -33,6 +34,12 @@ export default function WorkspaceOperationsShortcuts() {
         setShowAccounts(workspace.projects.some((project) => project.roles.some((role) =>
           roleHasPermission(role, 'tenant.users.manage') || roleHasPermission(role, 'broker.users.manage'),
         )));
+        setShowAllocation(workspace.projects.some((project) => {
+          const assist = project.roles.some((role) => roleHasPermission(role, 'allocation.assist'));
+          const lock = project.roles.some((role) => roleHasPermission(role, 'unit.lock'));
+          const queue = project.roles.some((role) => roleHasPermission(role, 'queue.read'));
+          return assist && lock && queue;
+        }));
         setShowRefunds(workspace.projects.some((project) => project.roles.some((role) =>
           roleHasPermission(role, 'refund.read') || roleHasPermission(role, 'refund.request'),
         )));
@@ -59,13 +66,14 @@ export default function WorkspaceOperationsShortcuts() {
     };
   }, []);
 
-  if (!showAdmin && !showProjectSetup && !showAccounts && !showRefunds && !showDocumentPolicy && !showDocumentTemplates && !showCommissions && !showReminders && !showAi) return null;
+  if (!showAdmin && !showProjectSetup && !showAccounts && !showAllocation && !showRefunds && !showDocumentPolicy && !showDocumentTemplates && !showCommissions && !showReminders && !showAi) return null;
 
   return (
     <nav className={styles.shortcuts} aria-label="Additional operations">
       {showAdmin ? <a href="/admin">Platform Admin</a> : null}
       {showAdmin ? <a href="/admin/support">Support View</a> : null}
       {showProjectSetup ? <a href="/workspace/project-setup">Project Setup</a> : null}
+      {showAllocation ? <a href="/workspace/allocation">Allocation</a> : null}
       {showAi ? <a href="/workspace/ai">AI Workspace</a> : null}
       {showAccounts ? <a href="/workspace/accounts">Accounts</a> : null}
       {showRefunds ? <a href="/workspace/refunds">Refunds</a> : null}
