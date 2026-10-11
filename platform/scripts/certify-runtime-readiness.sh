@@ -62,7 +62,7 @@ DO $$
 BEGIN
   BEGIN
     UPDATE platform_runtime_contract
-    SET schema_version = 41
+    SET schema_version = schema_version - 1
     WHERE singleton_key = 'production';
     RAISE EXCEPTION 'schema downgrade unexpectedly succeeded';
   EXCEPTION WHEN OTHERS THEN
@@ -71,7 +71,7 @@ BEGIN
 
   BEGIN
     UPDATE platform_runtime_contract
-    SET minimum_runtime_version = 39
+    SET minimum_runtime_version = minimum_runtime_version - 1
     WHERE singleton_key = 'production';
     RAISE EXCEPTION 'runtime compatibility downgrade unexpectedly succeeded';
   EXCEPTION WHEN OTHERS THEN
@@ -181,7 +181,7 @@ certify_api_current() {
 certify_api_stale() {
   local log_file=/tmp/preneura-api-stale.log
   NODE_ENV=test PORT=4101 WEB_ORIGIN=http://localhost:3000 \
-  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/preneura_stale" \
+  DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGPORT/preneura_stale" \
   OBJECT_STORAGE_BUCKET=readiness-test \
     pnpm --filter @preneura/api start >"$log_file" 2>&1 &
   local pid=$!
