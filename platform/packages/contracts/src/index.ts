@@ -1,6 +1,7 @@
 export * from './auth.js';
 export * from './access.js';
 export * from './accounts.js';
+export * from './identity.js';
 export * from './platform-admin.js';
 export * from './ai.js';
 export * from './catalog.js';
