@@ -1,0 +1,75 @@
+name: Render Production Blueprint Certification
+
+on:
+  pull_request:
+    paths:
+      - "render.yaml"
+      - "platform/docs/render-deployment.md"
+      - "platform/package.json"
+      - "platform/pnpm-lock.yaml"
+      - "platform/apps/**/package.json"
+      - "platform/packages/database/**"
+      - ".github/workflows/render-blueprint-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "render.yaml"
+      - "platform/docs/render-deployment.md"
+      - "platform/package.json"
+      - "platform/pnpm-lock.yaml"
+      - "platform/apps/**/package.json"
+      - "platform/packages/database/**"
+      - ".github/workflows/render-blueprint-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-render-blueprint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install JSON Schema validator
+        run: python3 -m pip install --disable-pip-version-check check-jsonschema==0.31.3
+
+      - name: Validate Blueprint against Render schema
+        run: >-
+          check-jsonschema
+          --schemafile https://render.com/schema/render.yaml.json
+          render.yaml
+
+      - name: Enforce PRENEURA deployment invariants
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          text = Path('render.yaml').read_text()
+          required = [
+              'name: aipreneura-realestate-web',
+              'name: aipreneura-realestate-api',
+              'name: aipreneura-realestate-worker',
+              'name: aipreneura-realestate-notify',
+              'name: aipreneura-realestate-db',
+              'healthCheckPath: /v1/health/ready',
+              'healthCheckPath: /api/health',
+              'healthCheckPath: /health',
+              'preDeployCommand: pnpm --filter @preneura/database migrate',
+              'autoDeployTrigger: checksPass',
+              'pnpm install --frozen-lockfile',
+              'postgresMajorVersion: "18"',
+              'region: frankfurt',
+          ]
+          missing = [item for item in required if item not in text]
+          if missing:
+              raise SystemExit('Render Blueprint invariant(s) missing: ' + ', '.join(missing))
+
+          if 'plan: free' in text:
+              raise SystemExit('Production Render Blueprint must not use free-tier services/databases.')
+          if '--no-frozen-lockfile' in text:
+              raise SystemExit('Render builds must not permit dependency drift.')
+          PY
