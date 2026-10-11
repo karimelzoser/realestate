@@ -6,7 +6,7 @@
   "baselineProductionSha": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "planningHeadSha": "446cfe4803bedc9868ee28799ff4b376277c0d91",
   "demoMainSha": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "activeTaskId": "E05.2",
+  "activeTaskId": "E07.1",
   "taskDefaults": {
     "actorScope": "execution-agent using existing RBAC/domain boundaries",
     "requiredEvidence": [
@@ -336,7 +336,12 @@
           "deliverable": "Authorized exact physical-unit selection and quote confirmation",
           "acceptance": "Buyer explicitly selects one eligible available apartment; no silent substitution.",
           "existingImplementation": "Physical hierarchy stored internally. Production UI locks unit type; exact eligible apartment selection is missing.",
-          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da",
+          "dependencyEvidence": [
+            "Schema46 chosen apartment-type EOI local/CI certification",
+            "Existing schema18 physical unit-to-slot hierarchy and schema21 certified pricing",
+            "Existing schema40 called buyer/allocator session ownership plus schema41 durable expiry"
+          ]
         },
         {
           "id": "E07.2",
@@ -742,7 +747,7 @@
     "reason": "Software and deployment package must be complete before separate user authorization",
     "deploymentAuthorized": false
   },
-  "currentCandidateSha": "e8f5216e0964be01b2f2aa754944df9423c390da",
+  "currentCandidateSha": "a3583bd802d515f9acb6298ebf1414e488a3105a",
   "activeBranch": "codex/egypt-platform-completion",
   "activePr": 90,
   "currentRuntimeSchemaVersion": 46

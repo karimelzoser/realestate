@@ -8,10 +8,10 @@
   "observedHeadBeforeCheckpoint": "36941e74f1b0edba40a41947106720a459010b8e",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "activeTaskId": "E05.2",
+  "activeTaskId": "E07.1",
   "activeTaskStatus": "IN_PROGRESS",
   "completedCheckpoint": "Schema46 EOI software and CI fixes published; explicit cookie mutation Origin/Referer protection now passes local normal/security/emitted full-stack tests. Hosted browser/provider acceptance remains.",
-  "nextAction": "Publish and verify Origin protection exact-head CI, then implement exact physical apartment selection/quote/idempotent lock and end-to-end identity propagation (E07), alongside public EOI UX.",
+  "nextAction": "Implement ADR-EXACT-ALLOCATION: immutable exact quote, requested-slot/idempotent lock, frozen reservation identity/price and scoped read models/UI; monitor schema46/Origin CI.",
   "changedFiles": [
     "platform/apps/api/src/auth",
     "platform/apps/api/src/access",
@@ -103,7 +103,7 @@
     "railwayRequired": false
   },
   "taskPr": 90,
-  "taskImplementationHead": "36941e74f1b0edba40a41947106720a459010b8e",
+  "taskImplementationHead": "a3583bd802d515f9acb6298ebf1414e488a3105a",
   "runtimeSchemaVersion": 46,
   "migrationMarker": "0046_eoi_apartment_type_choice.sql",
   "localWorkPreservation": "Unfinished pre-sync locale expansion preserved in named git stash; reuse selectively with canonical locale provider, never duplicate it."

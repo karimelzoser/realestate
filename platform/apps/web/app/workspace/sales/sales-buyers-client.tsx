@@ -284,7 +284,7 @@ export default function SalesBuyersClient() {
                       {selectedType ? <small>{copy.current}: {selectedType.currentTotalPrice ? formatAmount(selectedType.currentTotalPrice, selectedType.currency) : copy.noPrice}</small> : null}
                       <label className={styles.acceptPolicy}><input type="checkbox" required checked={choice?.accepted ?? false}
                         onChange={(event) => setEoiChoices((current) => ({ ...current, [buyer.buyerProfileId]: { unitTypeId: choice?.unitTypeId ?? '', accepted: event.target.checked } }))} />{copy.accept}</label>
-                      <button type="submit" disabled={!eoiPolicy || !choice?.accepted || !choice.unitTypeId || busy !== null || buyer.accountStatus !== 'ACTIVE' || buyer.membershipStatus !== 'ACTIVE'}>
+                      <button type="submit" disabled={!eoiPolicy || !choice?.accepted || !choice.unitTypeId || busy !== null}>
                         {busy === `eoi:${buyer.buyerProfileId}` ? copy.creating : copy.create}
                       </button>
                     </form>
