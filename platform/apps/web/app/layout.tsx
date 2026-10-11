@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { LocaleProvider } from './locale-provider';
 import './globals.css';
+import './locale.css';
 
 export const metadata: Metadata = {
   title: 'PRENEURA Real Estate OS',
