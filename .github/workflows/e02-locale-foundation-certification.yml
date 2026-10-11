@@ -1,0 +1,67 @@
+name: E02 Locale Foundation Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/web/app/layout.tsx"
+      - "platform/apps/web/app/locale-provider.tsx"
+      - "platform/apps/web/app/locale.css"
+      - "platform/apps/web/lib/locale.ts"
+      - "platform/apps/web/scripts/certify-locale-foundation.mjs"
+      - "platform/apps/web/package.json"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/e02-locale-foundation-certification.yml"
+  push:
+    branches:
+      - "codex/egypt-platform-completion"
+    paths:
+      - "platform/apps/web/app/layout.tsx"
+      - "platform/apps/web/app/locale-provider.tsx"
+      - "platform/apps/web/app/locale.css"
+      - "platform/apps/web/lib/locale.ts"
+      - "platform/apps/web/scripts/certify-locale-foundation.mjs"
+      - "platform/apps/web/package.json"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/e02-locale-foundation-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Certify locale contract
+        working-directory: platform
+        run: node apps/web/scripts/certify-locale-foundation.mjs
+
+      - name: Strict web typecheck
+        working-directory: platform
+        run: pnpm --filter @preneura/web... typecheck
+
+      - name: Production web build
+        working-directory: platform
+        env:
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:4100
+        run: pnpm --filter @preneura/web... build
