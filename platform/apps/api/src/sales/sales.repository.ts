@@ -5,6 +5,7 @@ import type {
   CheckInQueueInput,
   CreateBuyerProfileInput,
   CreateEoiRefundPolicyInput,
+  EoiPolicySnapshot,
   QueueEntrySnapshot,
   ReservationResult,
   TransactionMilestoneCode,
@@ -208,9 +209,15 @@ export class SalesRepository {
     tenantId: string;
     projectId: string;
     buyerProfileId: string;
+    unitTypeId: string;
+    refundPolicyId: string;
     now: Date;
   }): Promise<{ eoiId: string; amount: string; currency: string }> {
     return this.db.transaction().execute(async (trx) => {
+      const project = await trx.selectFrom('projects').select('id')
+        .where('id', '=', input.projectId).where('tenant_id', '=', input.tenantId)
+        .where('status', '=', 'ACTIVE').forShare().executeTakeFirst();
+      if (!project) throw new ConflictException('This project is not open for EOI.');
       const policy = await trx
         .selectFrom('eoi_refund_policies')
         .select(['id', 'eoi_amount', 'currency'])
@@ -220,8 +227,15 @@ export class SalesRepository {
         .where('effective_at', '<=', input.now)
         .orderBy('effective_at', 'desc')
         .orderBy('version_number', 'desc')
+        .forShare()
         .executeTakeFirst();
       if (!policy) throw new ConflictException('No active EOI refund policy is effective for this project.');
+      if (policy.id !== input.refundPolicyId) throw new ConflictException('The EOI policy changed. Review the current policy before continuing.');
+      const unitType = await trx.selectFrom('catalog_unit_types').select('id')
+        .where('id', '=', input.unitTypeId).where('tenant_id', '=', input.tenantId)
+        .where('project_id', '=', input.projectId).where('status', '=', 'ACTIVE')
+        .forShare().executeTakeFirst();
+      if (!unitType) throw new NotFoundException('Active apartment type not found in this project.');
 
       const row = await trx
         .insertInto('buyer_eois')
@@ -230,6 +244,8 @@ export class SalesRepository {
           project_id: input.projectId,
           buyer_profile_id: input.buyerProfileId,
           refund_policy_id: policy.id,
+          selected_unit_type_id: input.unitTypeId,
+          policy_accepted_by: input.actorUserId,
           amount: policy.eoi_amount as string,
           currency: policy.currency,
           status: 'PAYMENT_PENDING',
@@ -241,8 +257,20 @@ export class SalesRepository {
           expires_at: null,
           created_by: input.actorUserId,
         })
+        .onConflict((oc) => oc.columns(['buyer_profile_id', 'project_id'])
+          .where(sql<boolean>`status IN ('PAYMENT_PENDING','PAID','APPLIED','REFUND_REQUESTED')`).doNothing())
         .returning(['id', 'amount', 'currency'])
-        .executeTakeFirstOrThrow();
+        .executeTakeFirst();
+      if (!row) {
+        const existing = await trx.selectFrom('buyer_eois').select(['id', 'amount', 'currency', 'selected_unit_type_id', 'refund_policy_id'])
+          .where('buyer_profile_id', '=', input.buyerProfileId).where('tenant_id', '=', input.tenantId)
+          .where('project_id', '=', input.projectId).where('status', 'in', ['PAYMENT_PENDING','PAID','APPLIED','REFUND_REQUESTED'])
+          .executeTakeFirst();
+        if (existing?.selected_unit_type_id === input.unitTypeId && existing.refund_policy_id === input.refundPolicyId) {
+          return { eoiId: existing.id, amount: String(existing.amount), currency: existing.currency };
+        }
+        throw new ConflictException('A live EOI already exists with a different selection or policy.');
+      }
 
       await trx
         .insertInto('domain_outbox_events')
@@ -252,7 +280,8 @@ export class SalesRepository {
           aggregate_type: 'EOI',
           aggregate_id: row.id,
           event_type: 'eoi.created',
-          payload: { buyerProfileId: input.buyerProfileId, actorUserId: input.actorUserId },
+          payload: { buyerProfileId: input.buyerProfileId, actorUserId: input.actorUserId,
+            selectedUnitTypeId: input.unitTypeId, refundPolicyId: policy.id },
           published_at: null,
           attempts: 0,
         })
@@ -260,6 +289,21 @@ export class SalesRepository {
 
       return { eoiId: row.id, amount: row.amount as string, currency: row.currency };
     });
+  }
+
+  async activeEoiPolicy(input: { tenantId: string; projectId: string; now: Date }): Promise<EoiPolicySnapshot | null> {
+    const row = await this.db.selectFrom('eoi_refund_policies')
+      .select(['id', 'version_number', 'name', 'eoi_amount', 'currency',
+        'before_reservation_refund_percent', 'after_reservation_before_contract_refund_percent',
+        'after_contract_refund_percent', 'processing_fee'])
+      .where('tenant_id', '=', input.tenantId).where('project_id', '=', input.projectId)
+      .where('status', '=', 'ACTIVE').where('effective_at', '<=', input.now)
+      .orderBy('effective_at', 'desc').orderBy('version_number', 'desc').executeTakeFirst();
+    return row ? { refundPolicyId: row.id, versionNumber: row.version_number, name: row.name,
+      amount: String(row.eoi_amount), currency: row.currency,
+      beforeReservationRefundPercent: String(row.before_reservation_refund_percent),
+      afterReservationBeforeContractRefundPercent: String(row.after_reservation_before_contract_refund_percent),
+      afterContractRefundPercent: String(row.after_contract_refund_percent), processingFee: String(row.processing_fee) } : null;
   }
 
   async markEoiPaid(input: {

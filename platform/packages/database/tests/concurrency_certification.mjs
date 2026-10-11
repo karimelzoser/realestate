@@ -149,7 +149,7 @@ async function seedQueueEntries(count) {
       `INSERT INTO buyer_eois (
          id, tenant_id, project_id, buyer_profile_id, refund_policy_id,
          amount, currency, status, payment_reference, paid_at, created_by
-       ) VALUES ($1,$2,$3,$4,$5,1000,'EGP','PAID',$6,now(),$7)`,
+       , selected_unit_type_id, policy_accepted_by) VALUES ($1,$2,$3,$4,$5,1000,'EGP','PAID',$6,now(),$7, '00000000-0000-0000-0000-000000004000', $7)`,
       [eoiId, TENANT_ID, PROJECT_ID, buyerProfileId, EOI_POLICY_ID, `CONC-EOI-${index}`, ACTOR_ID],
     );
     await pool.query(

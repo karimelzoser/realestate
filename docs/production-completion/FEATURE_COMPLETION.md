@@ -1,5 +1,7 @@
 # Feature completion — reconciled production candidate
 
+Latest local implementation advances to **schema46** (0046_eoi_apartment_type_choice.sql): required apartment-type EOI, immutable type/policy acceptance, safe concurrent retries, scoped summaries and bilingual staff selection are locally certified. The cited schema45 CI snapshot remains the inspected prior exact head; schema46 exact-head CI is pending publication. Public buyer eligibility/payment and exact-unit allocation remain open.
+
 Inspected head: e8f5216e0964be01b2f2aa754944df9423c390da, PR90, schema45. Code plus task-specific tests are authority. Existing tests certify their implemented contracts; they do not establish final accepted exact-apartment/voice/bilingual/public-provider parity.
 
 | Feature | Present in production candidate | Remaining for final product |

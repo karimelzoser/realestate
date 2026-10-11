@@ -11,6 +11,7 @@ DECLARE
   v_buyer uuid;
   v_buyer_2 uuid;
   v_policy uuid;
+  v_eoi_type uuid;
   v_eoi_1 uuid;
   v_eoi_2 uuid;
   v_refund_1 uuid;
@@ -54,19 +55,22 @@ BEGIN
     v_user, v_user
   ) RETURNING id INTO v_policy;
 
-  INSERT INTO buyer_eois (
-    tenant_id, project_id, buyer_profile_id, refund_policy_id, amount, currency,
-    status, created_by
-  ) VALUES (
-    v_tenant, v_project, v_buyer, v_policy, 100, 'EGP', 'PAYMENT_PENDING', v_user
-  ) RETURNING id INTO v_eoi_1;
+  INSERT INTO catalog_unit_types (tenant_id, project_id, code, name, indoor_area_sqm, status)
+  VALUES (v_tenant, v_project, 'EOI-TYPE', 'EOI selected apartment type', 100, 'ACTIVE') RETURNING id INTO v_eoi_type;
 
   INSERT INTO buyer_eois (
     tenant_id, project_id, buyer_profile_id, refund_policy_id, amount, currency,
     status, created_by
-  ) VALUES (
+  , selected_unit_type_id, policy_accepted_by) VALUES (
+    v_tenant, v_project, v_buyer, v_policy, 100, 'EGP', 'PAYMENT_PENDING', v_user
+  , v_eoi_type, v_user) RETURNING id INTO v_eoi_1;
+
+  INSERT INTO buyer_eois (
+    tenant_id, project_id, buyer_profile_id, refund_policy_id, amount, currency,
+    status, created_by
+  , selected_unit_type_id, policy_accepted_by) VALUES (
     v_tenant, v_project, v_buyer_2, v_policy, 100, 'EGP', 'PAYMENT_PENDING', v_user
-  ) RETURNING id INTO v_eoi_2;
+  , v_eoi_type, v_user) RETURNING id INTO v_eoi_2;
 
   -- Settlement fixtures must enter refund processing through immutable EOI
   -- receipt authority. Fabricating payment_reference/paid_at is no longer valid.

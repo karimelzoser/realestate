@@ -66,6 +66,23 @@ export function formatEgp(
   }).format(value);
 }
 
+/** Display immutable decimal money without losing precision through a float. */
+export function formatDecimalCurrency(value: string, currency: string, locale: AppLocale): string {
+  if (!/^-?\d+(?:\.\d{1,2})?$/.test(value) || !/^[A-Z]{3}$/.test(currency)) throw new Error('Invalid money display value.');
+  const [whole = '0', fraction = ''] = value.split('.');
+  const integer = BigInt(whole);
+  const negativeZero = value.startsWith('-') && integer === 0n;
+  const formatter = new Intl.NumberFormat(getIntlLocale(locale), { style: 'currency', currency,
+    minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const digitFormatter = new Intl.NumberFormat(getIntlLocale(locale), { useGrouping: false });
+  const digits = `${fraction}00`.slice(0, 2).split('').map((digit) => digitFormatter.format(Number(digit))).join('');
+  return formatter.formatToParts(negativeZero ? -1n : integer).map((part) => {
+    if (part.type === 'fraction') return digits;
+    if (negativeZero && part.type === 'integer') return digitFormatter.format(0);
+    return part.value;
+  }).join('');
+}
+
 export function formatEgyptNumber(
   value: number | bigint,
   locale: AppLocale,

@@ -15,6 +15,7 @@ import {
   formatCairoDate,
   formatCairoDateTime,
   formatEgp,
+  formatDecimalCurrency,
   formatEgyptNumber,
   getLocaleDirection,
   isAppLocale,
@@ -26,6 +27,7 @@ interface LocaleContextValue {
   direction: 'ltr' | 'rtl';
   setLocale: (locale: AppLocale) => void;
   formatCurrency: (value: number | bigint) => string;
+  formatAmount: (value: string, currency: string) => string;
   formatNumber: (value: number | bigint, options?: Intl.NumberFormatOptions) => string;
   formatDate: (value: Date | string | number) => string;
   formatDateTime: (value: Date | string | number) => string;
@@ -64,6 +66,7 @@ export function LocaleProvider({ children }: Readonly<{ children: ReactNode }>) 
       direction,
       setLocale: persistLocale,
       formatCurrency: (value) => formatEgp(value, locale),
+      formatAmount: (value, currency) => formatDecimalCurrency(value, currency, locale),
       formatNumber: (value, options) => formatEgyptNumber(value, locale, options),
       formatDate: (value) => formatCairoDate(value, locale),
       formatDateTime: (value) => formatCairoDateTime(value, locale),

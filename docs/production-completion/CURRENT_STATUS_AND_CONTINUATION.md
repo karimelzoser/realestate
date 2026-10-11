@@ -1,5 +1,7 @@
 # PRENEURA — verified status and public-production completion brief
 
+Latest local implementation advances to **schema46** (0046_eoi_apartment_type_choice.sql): required apartment-type EOI, immutable type/policy acceptance, safe concurrent retries, scoped summaries and bilingual staff selection are locally certified. The cited schema45 CI snapshot remains the inspected prior exact head; schema46 exact-head CI is pending publication. Public buyer eligibility/payment and exact-unit allocation remain open.
+
 ## Authority
 
 Continue from `codex/egypt-platform-completion`, draft [PR #90](https://github.com/karimelzoser/realestate/pull/90), not `main`. Inspected application head: `e8f5216e0964be01b2f2aa754944df9423c390da`. Runtime schema **45**, marker `0045_brokerage_b2b_onboarding.sql`; Node 24, pnpm 12.9.1, PostgreSQL 18. Recheck remote HEAD before each continuation and preserve concurrent/uncommitted work.

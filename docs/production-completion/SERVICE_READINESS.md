@@ -1,5 +1,7 @@
 # Service readiness ledger
 
+Latest local implementation advances to **schema46** (0046_eoi_apartment_type_choice.sql): required apartment-type EOI, immutable type/policy acceptance, safe concurrent retries, scoped summaries and bilingual staff selection are locally certified. The cited schema45 CI snapshot remains the inspected prior exact head; schema46 exact-head CI is pending publication. Public buyer eligibility/payment and exact-unit allocation remain open.
+
 Candidate authority: PR #90, codex/egypt-platform-completion; inspected application head e8f5216e0964be01b2f2aa754944df9423c390da, schema45. See CURRENT_STATUS_AND_CONTINUATION.md and evidence/current-reconciliation.json. LIVE_VERIFIED always requires real target/provider evidence.
 
 | Service | Implemented/tested software | Remaining product or live acceptance |

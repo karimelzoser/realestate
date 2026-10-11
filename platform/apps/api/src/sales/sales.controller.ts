@@ -8,6 +8,7 @@ import {
   createEoiRefundPolicySchema,
   markEoiPaidSchema,
   type QueueEntrySnapshot,
+  type EoiPolicySnapshot,
   type ReservationResult,
   type TransactionProgressSnapshot,
 } from '@preneura/contracts/sales';
@@ -53,11 +54,23 @@ export class SalesController {
     @Param('tenantId') tenantId: string,
     @Param('projectId') projectId: string,
     @Param('buyerProfileId') buyerProfileId: string,
+    @Body() body: unknown,
     @CurrentSession() session: ResolvedSession,
   ): Promise<{ eoiId: string; amount: string; currency: string }> {
-    const parsed = createBuyerEoiSchema.safeParse({ tenantId, projectId, buyerProfileId });
+    const parsed = createBuyerEoiSchema.safeParse({ ...this.objectBody(body), tenantId, projectId, buyerProfileId });
     if (!parsed.success) throw new BadRequestException('Invalid EOI request.');
     return this.sales.createEoi({ actorUserId: session.userId, data: parsed.data });
+  }
+
+  @Get('eoi-policy')
+  eoiPolicy(
+    @Param('tenantId') tenantId: string,
+    @Param('projectId') projectId: string,
+    @CurrentSession() session: ResolvedSession,
+  ): Promise<EoiPolicySnapshot | null> {
+    this.assertUuid(tenantId, 'tenantId');
+    this.assertUuid(projectId, 'projectId');
+    return this.sales.eoiPolicy({ actorUserId: session.userId, tenantId, projectId });
   }
 
   @Post('eois/:eoiId/mark-paid')

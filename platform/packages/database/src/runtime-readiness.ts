@@ -1,8 +1,8 @@
 import { sql, type Kysely } from 'kysely';
 import type { Database } from './index.js';
 
-export const RUNTIME_SCHEMA_VERSION = 45;
-export const RUNTIME_MIGRATION_MARKER = '0045_brokerage_b2b_onboarding';
+export const RUNTIME_SCHEMA_VERSION = 46;
+export const RUNTIME_MIGRATION_MARKER = '0046_eoi_apartment_type_choice';
 
 export type RuntimeReadinessErrorCode =
   | 'DATABASE_UNAVAILABLE'

@@ -51,7 +51,7 @@
       "dependencies": [
         "E00"
       ],
-      "status": "TESTED",
+      "status": "IN_PROGRESS",
       "tasks": [
         {
           "id": "E01.1",
@@ -103,6 +103,18 @@
             "Local 14 unit/runtime regressions passed",
             "Local emitted full-stack acceptance passed on PostgreSQL 18.6"
           ]
+        },
+        {
+          "id": "E01.4",
+          "title": "Enforce trusted-origin/CSRF boundary and certify hosted cookie behavior",
+          "priority": "P0",
+          "dependencies": [
+            "E01.3"
+          ],
+          "status": "NOT_STARTED",
+          "deliverable": "Explicit trusted-origin protection for all cookie-authenticated unsafe actions plus same-origin/hosted cross-origin browser tests",
+          "acceptance": "Requests from an untrusted origin cannot mutate authenticated state, including endpoints without JSON bodies; selected deployment login/cookies/credentialed SSE works without disabling protection.",
+          "existingImplementation": "Signed session cookies, configured credentialed CORS and cookie SameSite exist; SessionAuthGuard has no explicit Origin/CSRF check. Review revealed this missing defense, especially for bodyless POST routes or deployments across sites."
         }
       ]
     },
@@ -250,8 +262,16 @@
           "status": "IN_PROGRESS",
           "deliverable": "EOI type selection independent from exact apartment capacity",
           "acceptance": "EOI cannot lock exact inventory or invent eligibility and paid policy history is immutable.",
-          "existingImplementation": "EOI policy/payment/refund evidence exists. Required chosen apartment type and policy acceptance/eligibility UX are missing; active implementation.",
-          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
+          "existingImplementation": "Schema46: required chosen apartment type, immutable server-derived type/policy acceptance, scope/status/current-policy guards, concurrent retry returning one live EOI, scoped read models and bilingual staff selection/policy form. Complete public buyer EOI/payment/eligibility UX and exact allocation remain.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da",
+          "evidence": [
+            "Local normal tests: 18 API + 4 exact-money/locale + 4 runtime tests",
+            "All nine-package type/lint/build checks; Next production build",
+            "PostgreSQL18.6 upgrade42-to46 and zero-to46 migrations; real repository concurrent/policy/ownership/no-hold certification",
+            "Existing pricing/document/finance/settlement/allocator/identity/developer/brokerage/lock certification passed",
+            "Dedicated 500-way lock, queue, payment allocation/compensation and 100 replay concurrency passed",
+            "Emitted API/worker/gateway/web FULL_STACK_ACCEPTANCE_OK including new EOI HTTP boundary"
+          ]
         }
       ]
     },
@@ -720,5 +740,6 @@
   },
   "currentCandidateSha": "e8f5216e0964be01b2f2aa754944df9423c390da",
   "activeBranch": "codex/egypt-platform-completion",
-  "activePr": 90
+  "activePr": 90,
+  "currentRuntimeSchemaVersion": 46
 }

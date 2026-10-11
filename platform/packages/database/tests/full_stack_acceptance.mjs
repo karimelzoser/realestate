@@ -36,6 +36,7 @@ const db = new Pool({ connectionString: databaseUrl, max: 3 });
 try {
   await certifyHealthAndPublicSurfaces();
   await certifyAuthorizationAndIsolation();
+  await certifyEoiChoiceHttpBoundary();
   await certifyLifecycleRevocation();
   await certifyBrokerRedaction();
   await certifyProjectStreamMembershipRevocation();
@@ -48,6 +49,33 @@ try {
   console.log('FULL_STACK_ACCEPTANCE_OK');
 } finally {
   await db.end();
+}
+
+async function certifyEoiChoiceHttpBoundary() {
+  const path = `${apiBase}/v1/tenants/${TENANT}/projects/${PROJECT}`;
+  const policy = await requestJson(`${path}/eoi-policy`, session(tokens.buyer));
+  assert.equal(policy.response.status, 200);
+  assert.equal(policy.body.refundPolicyId, 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee');
+  const headers = { ...session(tokens.buyer).headers, 'content-type': 'application/json' };
+  const choice = { unitTypeId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', refundPolicyId: policy.body.refundPolicyId, acceptedPolicy: true };
+  const missing = await requestJson(`${path}/buyers/10000000-0000-4000-8000-000000000001/eois`, {
+    method: 'POST', headers, body: JSON.stringify({ refundPolicyId: policy.body.refundPolicyId, acceptedPolicy: true }),
+  });
+  assert.equal(missing.response.status, 400, 'missing apartment type must fail at HTTP boundary');
+  const otherBuyer = await requestJson(`${path}/buyers/20000000-0000-4000-8000-000000000002/eois`, {
+    method: 'POST', headers, body: JSON.stringify(choice),
+  });
+  assert.equal(otherBuyer.response.status, 403, 'buyer may not create another buyer EOI');
+  const retry = await requestJson(`${path}/buyers/10000000-0000-4000-8000-000000000001/eois`, {
+    method: 'POST', headers, body: JSON.stringify(choice),
+  });
+  assert.equal(retry.response.status, 201);
+  assert.equal(retry.body.eoiId, '10000000-0000-4000-8000-000000000011');
+  const list = await requestJson(`${path}/eois`, session(tokens.buyer));
+  assert.equal(list.response.status, 200);
+  assert.equal(list.body.length, 1, 'buyer EOI list must remain ownership-scoped');
+  assert.equal(list.body[0].selectedUnitTypeId, choice.unitTypeId);
+  assert.equal(list.body[0].policyVersionNumber, 1);
 }
 
 async function certifyHealthAndPublicSurfaces() {

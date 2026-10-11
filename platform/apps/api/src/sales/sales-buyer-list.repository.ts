@@ -20,6 +20,8 @@ export class SalesBuyerListRepository {
       contact_verified_at: Date | null;
       created_at: Date;
       eoi_id: string | null;
+      eoi_selected_type_id: string | null;
+      eoi_selected_type_name: string | null;
       eoi_status: NonNullable<ProjectBuyerSnapshot['latestEoi']>['status'] | null;
       eoi_amount: string | number | null;
       eoi_currency: string | null;
@@ -37,6 +39,8 @@ export class SalesBuyerListRepository {
         contact.verified_at AS contact_verified_at,
         bp.created_at,
         eoi.id AS eoi_id,
+        eoi.selected_unit_type_id AS eoi_selected_type_id,
+        eoi.selected_unit_type_snapshot->>'name' AS eoi_selected_type_name,
         eoi.status AS eoi_status,
         eoi.amount AS eoi_amount,
         eoi.currency AS eoi_currency,
@@ -56,7 +60,7 @@ export class SalesBuyerListRepository {
         LIMIT 1
       ) contact ON true
       LEFT JOIN LATERAL (
-        SELECT id, status, amount, currency, paid_at, created_at
+        SELECT id, status, amount, currency, paid_at, created_at, selected_unit_type_id, selected_unit_type_snapshot
         FROM buyer_eois
         WHERE tenant_id = bp.tenant_id
           AND project_id = ${input.projectId}::uuid
@@ -95,6 +99,8 @@ export class SalesBuyerListRepository {
       latestEoi: row.eoi_id && row.eoi_status && row.eoi_amount !== null && row.eoi_currency && row.eoi_created_at
         ? {
             eoiId: row.eoi_id,
+            selectedUnitTypeId: row.eoi_selected_type_id,
+            selectedUnitTypeName: row.eoi_selected_type_name,
             status: row.eoi_status,
             amount: String(row.eoi_amount),
             currency: row.eoi_currency,

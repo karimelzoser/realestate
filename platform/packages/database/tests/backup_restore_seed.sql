@@ -85,7 +85,7 @@ INSERT INTO eoi_refund_policies (
 INSERT INTO buyer_eois (
   id, tenant_id, project_id, buyer_profile_id, refund_policy_id,
   amount, currency, status, payment_reference, paid_at, created_by
-) VALUES (
+, selected_unit_type_id, policy_accepted_by) VALUES (
   '00000000-0000-0000-0000-000000008000',
   '00000000-0000-0000-0000-000000001000',
   '00000000-0000-0000-0000-000000002000',
@@ -93,7 +93,7 @@ INSERT INTO buyer_eois (
   '00000000-0000-0000-0000-000000007000',
   1000, 'EGP', 'PAID', 'BACKUP-EOI', '2025-12-15T00:00:00+00',
   '00000000-0000-0000-0000-000000000001'
-);
+, '00000000-0000-0000-0000-000000004000', '00000000-0000-0000-0000-000000000001');
 
 INSERT INTO queue_entries (
   id, tenant_id, project_id, buyer_profile_id, eoi_id, channel,

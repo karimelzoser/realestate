@@ -178,7 +178,7 @@ INSERT INTO eoi_refund_policies (
 INSERT INTO buyer_eois (
   id, tenant_id, project_id, buyer_profile_id, refund_policy_id, amount, currency,
   status, payment_reference, paid_at, expires_at, created_by
-) VALUES (
+, selected_unit_type_id, policy_accepted_by) VALUES (
   '34000000-0000-0000-0005-000000000001',
   '34000000-0000-0000-0000-000000000010',
   '34000000-0000-0000-0000-000000000020',
@@ -186,7 +186,7 @@ INSERT INTO buyer_eois (
   '34000000-0000-0000-0004-000000000001',
   1000, 'EGP', 'PAID', 'LOCK-CERT-PAID', now() - interval '1 hour', now() + interval '1 day',
   '34000000-0000-0000-0000-000000000003'
-);
+, '34000000-0000-0000-0000-000000000030', '34000000-0000-0000-0000-000000000003');
 
 INSERT INTO queue_entries (
   id, tenant_id, project_id, buyer_profile_id, eoi_id, channel, priority_group,

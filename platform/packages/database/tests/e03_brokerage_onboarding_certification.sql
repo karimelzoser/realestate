@@ -172,8 +172,8 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM platform_runtime_contract
     WHERE singleton_key = 'production'
-      AND schema_version = 45
-      AND migration_marker = '0045_brokerage_b2b_onboarding'
+      AND schema_version >= 45
+      AND (schema_version > 45 OR migration_marker = '0045_brokerage_b2b_onboarding')
   ) THEN
     RAISE EXCEPTION 'runtime schema contract did not advance to E03.2';
   END IF;

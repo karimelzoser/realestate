@@ -10,8 +10,8 @@
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
   "activeTaskId": "E05.2",
   "activeTaskStatus": "IN_PROGRESS",
-  "completedCheckpoint": "Reconciled latest PR90 schema45; all32 distinct workflows pass. Identity/locale/developer/brokerage foundations already implemented; complete product acceptance remains.",
-  "nextAction": "Add required chosen apartment type to new EOI with immutable scope-safe DB enforcement, API/UI propagation and focused certification; then exact physical allocation.",
+  "completedCheckpoint": "Selected-type EOI slice implemented and locally certified on schema46; exact-head CI pending commit. Full task E05.2 remains open for public buyer eligibility/payment UX.",
+  "nextAction": "Verify exact-head CI for schema46 EOI slice, then implement E07.1/E07.2 exact apartment quote/selection/atomic lock and propagation; complete buyer EOI UX alongside it.",
   "changedFiles": [
     "platform/apps/api/src/auth",
     "platform/apps/api/src/access",
@@ -56,6 +56,10 @@
     {
       "action": "E01 final software verification",
       "result": "28 exact-head workflows success, local real PostgreSQL 18.6 migrations and FULL_STACK_ACCEPTANCE_OK, 14 unit/runtime tests pass"
+    },
+    {
+      "action": "Schema46 EOI choice local verification",
+      "result": "26 normal tests; strict types/lint/all app builds; zero/upgrade migrations; actual repository and domain regression; dedicated concurrency; emitted FULL_STACK_ACCEPTANCE_OK"
     }
   ],
   "evidencePaths": [
@@ -68,9 +72,9 @@
     ".github/workflows/e01-privileged-assurance-certification.yml"
   ],
   "remainingTests": [
-    "Selected-type EOI positive/negative and migration certification",
-    "Exact-unit allocation ownership/type/price/expiry/concurrency and propagation",
-    "All remaining product/provider/UAT/live release acceptance"
+    "Exact-head schema46 CI and browser selection/RTL acceptance",
+    "Exact-unit EOI/type/session/quote/expiry/concurrency and propagation",
+    "All remaining public-product/provider/UAT/live release acceptance"
   ],
   "externalBlockerIds": [
     "PROVIDER_SETUP_PENDING",
@@ -96,7 +100,7 @@
   },
   "taskPr": 90,
   "taskImplementationHead": "e8f5216e0964be01b2f2aa754944df9423c390da",
-  "runtimeSchemaVersion": 45,
-  "migrationMarker": "0045_brokerage_b2b_onboarding.sql",
+  "runtimeSchemaVersion": 46,
+  "migrationMarker": "0046_eoi_apartment_type_choice.sql",
   "localWorkPreservation": "Unfinished pre-sync locale expansion preserved in named git stash; reuse selectively with canonical locale provider, never duplicate it."
 }

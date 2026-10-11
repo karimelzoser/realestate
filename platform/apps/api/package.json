@@ -9,7 +9,7 @@
     "build:deps": "pnpm --filter @preneura/contracts build && pnpm --filter @preneura/database build && pnpm --filter @preneura/security build && pnpm --filter @preneura/observability build",
     "start": "node --import @preneura/observability/register dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "pnpm run build:deps && tsx --test test/auth-assurance.test.ts test/identity-enrollment.test.ts test/developer-onboarding.test.ts",
+    "test": "pnpm run build:deps && tsx --test test/auth-assurance.test.ts test/identity-enrollment.test.ts test/developer-onboarding.test.ts test/eoi-choice.test.ts",
     "lint": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

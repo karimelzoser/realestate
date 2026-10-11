@@ -71,15 +71,20 @@ BEGIN
     v_now - interval '1 day', v_now - interval '1 day', v_allocator_1, v_allocator_1
   ) RETURNING id INTO v_policy;
 
+  INSERT INTO catalog_unit_types (
+    tenant_id, project_id, code, name, indoor_area_sqm, roof_area_sqm, garden_area_sqm, status, sort_order
+  ) VALUES (v_tenant, v_project, 'TYPE-A', 'Type A', 50, 0, 0, 'ACTIVE', 1)
+  RETURNING id INTO v_unit_type;
+
   INSERT INTO buyer_eois (
     tenant_id, project_id, buyer_profile_id, refund_policy_id,
     amount, currency, status, created_by
-  ) VALUES (v_tenant, v_project, v_buyer_1, v_policy, 25000, 'EGP', 'PAYMENT_PENDING', v_allocator_1)
+  , selected_unit_type_id, policy_accepted_by) VALUES (v_tenant, v_project, v_buyer_1, v_policy, 25000, 'EGP', 'PAYMENT_PENDING', v_allocator_1, v_unit_type, v_allocator_1)
   RETURNING id INTO v_eoi_1;
   INSERT INTO buyer_eois (
     tenant_id, project_id, buyer_profile_id, refund_policy_id,
     amount, currency, status, created_by
-  ) VALUES (v_tenant, v_project, v_buyer_2, v_policy, 25000, 'EGP', 'PAYMENT_PENDING', v_allocator_1)
+  , selected_unit_type_id, policy_accepted_by) VALUES (v_tenant, v_project, v_buyer_2, v_policy, 25000, 'EGP', 'PAYMENT_PENDING', v_allocator_1, v_unit_type, v_allocator_1)
   RETURNING id INTO v_eoi_2;
 
   INSERT INTO queue_entries (
@@ -117,10 +122,7 @@ BEGIN
     RAISE EXCEPTION 'allocator two did not claim the remaining called buyer';
   END IF;
 
-  INSERT INTO catalog_unit_types (
-    tenant_id, project_id, code, name, indoor_area_sqm, roof_area_sqm, garden_area_sqm, status, sort_order
-  ) VALUES (v_tenant, v_project, 'TYPE-A', 'Type A', 50, 0, 0, 'ACTIVE', 1)
-  RETURNING id INTO v_unit_type;
+
 
   INSERT INTO pricing_versions (
     tenant_id, project_id, version_number, label, status, effective_at, created_by

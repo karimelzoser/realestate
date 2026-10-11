@@ -12,6 +12,7 @@ import type {
   CreateBuyerEoiInput,
   CreateBuyerProfileInput,
   CreateEoiRefundPolicyInput,
+  EoiPolicySnapshot,
   MarkEoiPaidInput,
   QueueEntrySnapshot,
   ReservationResult,
@@ -142,8 +143,17 @@ export class SalesService {
       tenantId: input.data.tenantId,
       projectId: input.data.projectId,
       buyerProfileId: input.data.buyerProfileId,
+      unitTypeId: input.data.unitTypeId,
+      refundPolicyId: input.data.refundPolicyId,
       now: new Date(),
     });
+  }
+
+  async eoiPolicy(input: { actorUserId: string; tenantId: string; projectId: string }): Promise<EoiPolicySnapshot | null> {
+    await this.requireProject(input.tenantId, input.projectId);
+    await this.access.assert({ userId: input.actorUserId, permission: 'inventory.read',
+      context: { tenantId: input.tenantId, projectId: input.projectId } });
+    return this.repository.activeEoiPolicy({ ...input, now: new Date() });
   }
 
   async markEoiPaid(input: {

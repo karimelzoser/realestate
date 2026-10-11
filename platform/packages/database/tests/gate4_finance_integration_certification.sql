@@ -9,6 +9,7 @@ DECLARE
   v_project uuid;
   v_buyer uuid;
   v_policy uuid;
+  v_eoi_type uuid;
   v_eoi uuid;
   v_receipt uuid;
   v_refund uuid;
@@ -45,13 +46,16 @@ BEGIN
     v_user, v_user
   ) RETURNING id INTO v_policy;
 
+  INSERT INTO catalog_unit_types (tenant_id, project_id, code, name, indoor_area_sqm, status)
+  VALUES (v_tenant, v_project, 'EOI-TYPE', 'EOI selected apartment type', 100, 'ACTIVE') RETURNING id INTO v_eoi_type;
+
   INSERT INTO buyer_eois (
     tenant_id, project_id, buyer_profile_id, refund_policy_id,
     amount, currency, status, created_by
-  ) VALUES (
+  , selected_unit_type_id, policy_accepted_by) VALUES (
     v_tenant, v_project, v_buyer, v_policy,
     10000, 'EGP', 'PAYMENT_PENDING', v_user
-  ) RETURNING id INTO v_eoi;
+  , v_eoi_type, v_user) RETURNING id INTO v_eoi;
 
   v_receipt := preneura_post_eoi_payment(
     v_tenant, v_project, v_eoi, 'G4-EOI-RECEIPT-001', v_user,

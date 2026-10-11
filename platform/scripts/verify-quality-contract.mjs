@@ -11,6 +11,9 @@ const mandatoryTests = [
     path: 'apps/api/test/identity-enrollment.test.ts',
     minimumDeclaredTests: 5,
   },
+  { path: 'apps/api/test/developer-onboarding.test.ts', minimumDeclaredTests: 4 },
+  { path: 'apps/api/test/eoi-choice.test.ts', minimumDeclaredTests: 4 },
+  { path: 'apps/web/scripts/locale-money.test.mjs', minimumDeclaredTests: 4 },
 ];
 const workspaceManifests = [
   'apps/api/package.json',
@@ -53,6 +56,11 @@ if (!String(rootPackage.scripts?.lint ?? '').includes('static-policy-lint.mjs'))
 if (!String(apiPackage.scripts?.test ?? '').includes('auth-assurance.test.ts')) {
   throw new Error('API test command must execute the privileged-assurance suite explicitly.');
 }
+for (const file of ['identity-enrollment.test.ts', 'developer-onboarding.test.ts', 'eoi-choice.test.ts']) {
+  if (!String(apiPackage.scripts?.test ?? '').includes(file)) throw new Error(`API test command must execute ${file}.`);
+}
+const webPackage = JSON.parse(await readFile(resolve(root, 'apps/web/package.json'), 'utf8'));
+if (!String(webPackage.scripts?.test ?? '').includes('locale-money.test.mjs')) throw new Error('Web tests must execute exact money and bilingual EOI regressions.');
 
 for (const relative of workspaceManifests) {
   const manifest = JSON.parse(await readFile(resolve(root, relative), 'utf8'));
