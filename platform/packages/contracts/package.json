@@ -11,6 +11,7 @@
     "./auth": { "types": "./src/auth.ts", "default": "./dist/auth.js" },
     "./access": { "types": "./src/access.ts", "default": "./dist/access.js" },
     "./accounts": { "types": "./src/accounts.ts", "default": "./dist/accounts.js" },
+    "./identity": { "types": "./src/identity.ts", "default": "./dist/identity.js" },
     "./platform-admin": { "types": "./src/platform-admin.ts", "default": "./dist/platform-admin.js" },
     "./management": { "types": "./src/management.ts", "default": "./dist/management.js" },
     "./ai": { "types": "./src/ai.ts", "default": "./dist/ai.js" },
