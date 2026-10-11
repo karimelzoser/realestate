@@ -4,6 +4,30 @@ import type { Database } from '@preneura/database';
 import type { TransactionListItemSnapshot } from '@preneura/contracts/sales';
 import { DATABASE } from '../database/database.module.js';
 
+type TransactionStatus = TransactionListItemSnapshot['status'];
+type BuyerSource = TransactionListItemSnapshot['buyerSource'];
+
+interface TransactionListRow {
+  transaction_id: string;
+  reservation_id: string;
+  buyer_profile_id: string;
+  status: TransactionStatus;
+  opened_at: Date;
+  buyer_user_id: string;
+  buyer_display_name: string;
+  buyer_source: BuyerSource;
+  broker_company_id: string | null;
+  broker_company_name: string | null;
+  broker_agent_user_id: string | null;
+  broker_agent_display_name: string | null;
+  unit_type_id: string;
+  quoted_total: string | null;
+  currency: string;
+  unit_type_code: string;
+  unit_type_name: string;
+  completion_percent: string;
+}
+
 @Injectable()
 export class TransactionListRepository {
   constructor(@Inject(DATABASE) private readonly db: Kysely<Database>) {}
@@ -27,77 +51,72 @@ export class TransactionListRepository {
     brokerAgentUserId?: string | null;
     limit?: number;
   }): Promise<TransactionListItemSnapshot[]> {
-    let query = this.db
-      .selectFrom('transactions as t')
-      .innerJoin('reservations as r', (join) =>
-        join
-          .onRef('r.id', '=', 't.reservation_id')
-          .onRef('r.tenant_id', '=', 't.tenant_id')
-          .onRef('r.project_id', '=', 't.project_id'),
-      )
-      .innerJoin('buyer_profiles as b', (join) =>
-        join
-          .onRef('b.id', '=', 't.buyer_profile_id')
-          .onRef('b.tenant_id', '=', 't.tenant_id'),
-      )
-      .innerJoin('users as buyer_user', 'buyer_user.id', 'b.user_id')
-      .leftJoin('broker_companies as broker_company', (join) =>
-        join
-          .onRef('broker_company.id', '=', 'b.broker_company_id')
-          .onRef('broker_company.tenant_id', '=', 't.tenant_id'),
-      )
-      .leftJoin('users as broker_agent', 'broker_agent.id', 'b.broker_agent_user_id')
-      .innerJoin('catalog_unit_types as u', (join) =>
-        join
-          .onRef('u.id', '=', 'r.unit_type_id')
-          .onRef('u.tenant_id', '=', 't.tenant_id')
-          .onRef('u.project_id', '=', 't.project_id'),
-      )
-      .select([
-        't.id as transaction_id',
-        't.reservation_id',
-        't.buyer_profile_id',
-        't.status',
-        't.opened_at',
-        'b.user_id as buyer_user_id',
-        'buyer_user.display_name as buyer_display_name',
-        'b.source as buyer_source',
-        'b.broker_company_id',
-        'broker_company.name as broker_company_name',
-        'b.broker_agent_user_id',
-        'broker_agent.display_name as broker_agent_display_name',
-        'r.unit_type_id',
-        'r.quoted_total',
-        'r.currency',
-        'u.code as unit_type_code',
-        'u.name as unit_type_name',
-        sql<string>`COALESCE((
+    if (input.brokerCompanyIds && input.brokerCompanyIds.length === 0) return [];
+
+    const buyerFilter = input.buyerUserId
+      ? sql`AND b.user_id = ${input.buyerUserId}::uuid`
+      : sql``;
+    const brokerFilter = input.brokerCompanyIds
+      ? sql`AND t.buyer_source = 'BROKER' AND t.broker_company_id IN (${sql.join(
+          input.brokerCompanyIds.map((id) => sql`${id}::uuid`),
+        )})`
+      : sql``;
+    const agentFilter = input.brokerAgentUserId
+      ? sql`AND t.broker_agent_user_id = ${input.brokerAgentUserId}::uuid`
+      : sql``;
+    const limit = Math.min(Math.max(input.limit ?? 200, 1), 500);
+
+    const result = await sql<TransactionListRow>`
+      SELECT
+        t.id AS transaction_id,
+        t.reservation_id,
+        t.buyer_profile_id,
+        t.status,
+        t.opened_at,
+        b.user_id AS buyer_user_id,
+        buyer_user.display_name AS buyer_display_name,
+        t.buyer_source,
+        t.broker_company_id,
+        broker_company.name AS broker_company_name,
+        t.broker_agent_user_id,
+        broker_agent.display_name AS broker_agent_display_name,
+        r.unit_type_id,
+        r.quoted_total::text,
+        r.currency,
+        u.code AS unit_type_code,
+        u.name AS unit_type_name,
+        COALESCE((
           SELECT SUM(CASE WHEN m.status IN ('COMPLETED','WAIVED') THEN m.weight_percent ELSE 0 END)
           FROM transaction_milestones m
           WHERE m.transaction_id = t.id
-        ), 0)::text`.as('completion_percent'),
-      ])
-      .where('t.tenant_id', '=', input.tenantId)
-      .where('t.project_id', '=', input.projectId);
+        ), 0)::text AS completion_percent
+      FROM transactions t
+      JOIN reservations r
+        ON r.id = t.reservation_id
+       AND r.tenant_id = t.tenant_id
+       AND r.project_id = t.project_id
+      JOIN buyer_profiles b
+        ON b.id = t.buyer_profile_id
+       AND b.tenant_id = t.tenant_id
+      JOIN users buyer_user ON buyer_user.id = b.user_id
+      LEFT JOIN broker_companies broker_company
+        ON broker_company.id = t.broker_company_id
+       AND broker_company.tenant_id = t.tenant_id
+      LEFT JOIN users broker_agent ON broker_agent.id = t.broker_agent_user_id
+      JOIN catalog_unit_types u
+        ON u.id = r.unit_type_id
+       AND u.tenant_id = t.tenant_id
+       AND u.project_id = t.project_id
+      WHERE t.tenant_id = ${input.tenantId}::uuid
+        AND t.project_id = ${input.projectId}::uuid
+        ${buyerFilter}
+        ${brokerFilter}
+        ${agentFilter}
+      ORDER BY t.opened_at DESC, t.id DESC
+      LIMIT ${limit}
+    `.execute(this.db);
 
-    if (input.buyerUserId) {
-      query = query.where('b.user_id', '=', input.buyerUserId);
-    }
-    if (input.brokerCompanyIds) {
-      if (input.brokerCompanyIds.length === 0) return [];
-      query = query.where('b.source', '=', 'BROKER').where('b.broker_company_id', 'in', input.brokerCompanyIds);
-    }
-    if (input.brokerAgentUserId) {
-      query = query.where('b.broker_agent_user_id', '=', input.brokerAgentUserId);
-    }
-
-    const rows = await query
-      .orderBy('t.opened_at', 'desc')
-      .orderBy('t.id', 'desc')
-      .limit(Math.min(Math.max(input.limit ?? 200, 1), 500))
-      .execute();
-
-    return rows.map((row) => ({
+    return result.rows.map((row) => ({
       transactionId: row.transaction_id,
       reservationId: row.reservation_id,
       buyerProfileId: row.buyer_profile_id,
@@ -112,9 +131,9 @@ export class TransactionListRepository {
       unitTypeCode: row.unit_type_code,
       unitTypeName: row.unit_type_name,
       status: row.status,
-      quotedTotal: row.quoted_total === null ? null : String(row.quoted_total),
+      quotedTotal: row.quoted_total,
       currency: row.currency,
-      openedAt: (row.opened_at as Date).toISOString(),
+      openedAt: row.opened_at.toISOString(),
       completionPercent: Number(row.completion_percent).toFixed(2),
     }));
   }
