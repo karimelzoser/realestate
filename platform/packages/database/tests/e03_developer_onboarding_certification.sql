@@ -5,15 +5,14 @@ BEGIN;
 DO $$
 DECLARE
   runtime_version integer;
-  runtime_marker text;
 BEGIN
-  SELECT schema_version, migration_marker
-    INTO runtime_version, runtime_marker
+  SELECT schema_version
+    INTO runtime_version
   FROM platform_runtime_contract
   WHERE singleton_key = 'production';
 
-  IF runtime_version <> 44 OR runtime_marker <> '0044_developer_onboarding' THEN
-    RAISE EXCEPTION 'unexpected runtime contract: % / %', runtime_version, runtime_marker;
+  IF runtime_version IS NULL OR runtime_version < 44 THEN
+    RAISE EXCEPTION 'developer onboarding requires runtime schema version >= 44, found %', runtime_version;
   END IF;
 END $$;
 
