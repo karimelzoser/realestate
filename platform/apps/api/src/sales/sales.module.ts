@@ -1,16 +1,23 @@
 import { Module } from '@nestjs/common';
 import { AccessModule } from '../access/access.module.js';
 import { AuthModule } from '../auth/auth.module.js';
+import { EoiCommandService } from './eoi-command.service.js';
 import { EoiListController } from './eoi-list.controller.js';
 import { EoiListRepository } from './eoi-list.repository.js';
 import { EoiListService } from './eoi-list.service.js';
 import { EoiRefundController } from './eoi-refund.controller.js';
 import { EoiRefundRepository } from './eoi-refund.repository.js';
 import { EoiRefundService } from './eoi-refund.service.js';
+import { EoiWriteRepository } from './eoi-write.repository.js';
+import { ExactAllocationController } from './exact-allocation.controller.js';
+import { ExactAllocationRepository } from './exact-allocation.repository.js';
+import { ExactAllocationService } from './exact-allocation.service.js';
 import { MilestoneEvidenceService } from './milestone-evidence.service.js';
 import { QueueDispatchController } from './queue-dispatch.controller.js';
 import { QueueDispatchRepository } from './queue-dispatch.repository.js';
 import { QueueDispatchService } from './queue-dispatch.service.js';
+import { ReservationConversionRepository } from './reservation-conversion.repository.js';
+import { ReservationConversionService } from './reservation-conversion.service.js';
 import { SalesController } from './sales.controller.js';
 import { SalesRepository } from './sales.repository.js';
 import { SalesService } from './sales.service.js';
@@ -28,6 +35,7 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
   imports: [AuthModule, AccessModule],
   controllers: [
     SalesController,
+    ExactAllocationController,
     EoiListController,
     EoiRefundController,
     QueueDispatchController,
@@ -39,6 +47,12 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
     SalesRepository,
     MilestoneEvidenceService,
     SalesService,
+    EoiWriteRepository,
+    EoiCommandService,
+    ExactAllocationRepository,
+    ExactAllocationService,
+    ReservationConversionRepository,
+    ReservationConversionService,
     EoiListRepository,
     EoiListService,
     EoiRefundRepository,
@@ -52,6 +66,13 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
     TransactionTimelineRepository,
     TransactionTimelineService,
   ],
-  exports: [SalesService, EoiListService, EoiRefundService, TransactionListService, TransactionTimelineService],
+  exports: [
+    SalesService,
+    ExactAllocationService,
+    EoiListService,
+    EoiRefundService,
+    TransactionListService,
+    TransactionTimelineService,
+  ],
 })
 export class SalesModule {}
