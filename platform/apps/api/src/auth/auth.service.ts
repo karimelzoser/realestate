@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -12,7 +11,6 @@ import {
   randomInt,
   randomUUID,
 } from 'node:crypto';
-import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import {
   genericLoginMessage,
   startLoginSchema,
@@ -28,6 +26,10 @@ import {
 } from './auth.repository.js';
 import { otpAssurance, type SessionAssuranceEvidence } from './auth-assurance.js';
 import { OtpDeliveryPort } from './otp-delivery.js';
+import {
+  normalizeEgyptPhone,
+  normalizeIdentityDocument,
+} from '../identity/identity-normalization.js';
 
 export interface VerifiedLogin {
   userId: string;
@@ -231,19 +233,8 @@ export class AuthService {
   }
 
   private normalizeIdentifier(method: StartLoginInput['method'], value: string): string {
-    if (method === 'phone') {
-      const phone = parsePhoneNumberFromString(value, 'EG');
-      if (!phone?.isValid()) {
-        throw new BadRequestException('Enter a valid phone number.');
-      }
-      return phone.number;
-    }
-
-    const nationalId = value.replace(/\D/g, '');
-    if (!/^\d{14}$/.test(nationalId)) {
-      throw new BadRequestException('Enter a valid 14-digit National ID.');
-    }
-    return nationalId;
+    if (method === 'phone') return normalizeEgyptPhone(value);
+    return normalizeIdentityDocument({ kind: 'NATIONAL_ID', identifier: value }).normalizedIdentifier;
   }
 
   private identifierHmac(normalizedIdentifier: string): Buffer {
