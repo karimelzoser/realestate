@@ -11,14 +11,17 @@ import type {
   TenantBrandingInput,
 } from '@preneura/contracts/onboarding';
 import type { ProvisionedAccountSnapshot } from '@preneura/contracts/accounts';
+import type { CreateProjectInput } from '@preneura/contracts/platform-admin';
 import { AccessService } from '../access/access.service.js';
 import { AccountBootstrapService } from '../accounts/account-bootstrap.service.js';
+import { OnboardingProjectRepository } from './onboarding-project.repository.js';
 import { OnboardingRepository } from './onboarding.repository.js';
 
 @Injectable()
 export class OnboardingService {
   constructor(
     private readonly repository: OnboardingRepository,
+    private readonly projects: OnboardingProjectRepository,
     private readonly access: AccessService,
     private readonly accountBootstrap: AccountBootstrapService,
   ) {}
@@ -36,6 +39,30 @@ export class OnboardingService {
     await this.assertCanManageTenant(actorUserId, tenantId);
     await this.requireSnapshot(tenantId);
     await this.repository.upsertTenantBranding({ tenantId, actorUserId, data });
+    return this.requireSnapshot(tenantId);
+  }
+
+  async createProject(
+    actorUserId: string,
+    tenantId: string,
+    data: CreateProjectInput,
+  ): Promise<{ projectId: string; onboarding: DeveloperOnboardingSnapshot }> {
+    await this.assertCanManageTenant(actorUserId, tenantId);
+    await this.requireSnapshot(tenantId);
+    const created = await this.projects.createProject({ tenantId, actorUserId, data });
+    return { ...created, onboarding: await this.requireSnapshot(tenantId) };
+  }
+
+  async setProjectStatus(
+    actorUserId: string,
+    tenantId: string,
+    projectId: string,
+    status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'CLOSED' | 'ARCHIVED',
+  ): Promise<DeveloperOnboardingSnapshot> {
+    await this.assertCanManageTenant(actorUserId, tenantId);
+    if (!await this.projects.setProjectStatus({ tenantId, projectId, actorUserId, status })) {
+      throw new NotFoundException('Project not found in this tenant.');
+    }
     return this.requireSnapshot(tenantId);
   }
 
