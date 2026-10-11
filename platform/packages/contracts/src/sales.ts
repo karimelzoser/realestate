@@ -38,6 +38,7 @@ export const createBuyerEoiSchema = z.object({
   tenantId: z.uuid(),
   projectId: z.uuid(),
   buyerProfileId: z.uuid(),
+  unitTypeId: z.uuid(),
 });
 export type CreateBuyerEoiInput = z.infer<typeof createBuyerEoiSchema>;
 
@@ -143,6 +144,9 @@ export interface EoiListItemSnapshot {
   buyerSource: BuyerSource;
   brokerCompanyId: string | null;
   brokerAgentUserId: string | null;
+  unitTypeId: string | null;
+  unitTypeCode: string | null;
+  unitTypeName: string | null;
   amount: string;
   currency: string;
   status: 'PAYMENT_PENDING' | 'PAID' | 'APPLIED' | 'REFUND_REQUESTED' | 'REFUNDED' | 'CANCELLED' | 'EXPIRED';
@@ -190,6 +194,10 @@ export interface ReservationResult {
   reservationId: string;
   transactionId: string;
   unitTypeId: string;
+  physicalUnitId: string;
+  physicalUnitReference: string;
+  buildingCode: string;
+  floorCode: string;
   quotedTotal: string | null;
   currency: string;
   reservedAt: string;
@@ -209,6 +217,10 @@ export interface TransactionListItemSnapshot {
   unitTypeId: string;
   unitTypeCode: string;
   unitTypeName: string;
+  physicalUnitId: string | null;
+  physicalUnitReference: string | null;
+  buildingCode: string | null;
+  floorCode: string | null;
   status: 'IN_PROGRESS' | 'READY_FOR_COMPLETION' | 'COMPLETED' | 'CANCELLED';
   quotedTotal: string | null;
   currency: string;
