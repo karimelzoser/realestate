@@ -3,7 +3,9 @@
 BEGIN;
 
 INSERT INTO users (id, display_name, status)
-VALUES ('e0100000-0000-4000-8000-000000000001', 'E01 Assurance User', 'ACTIVE');
+VALUES
+  ('e0100000-0000-4000-8000-000000000001', 'E01 Assurance User', 'ACTIVE'),
+  ('e0100000-0000-4000-8000-000000000004', 'E01 Other User', 'ACTIVE');
 
 INSERT INTO auth_sessions (id, user_id, token_digest, expires_at)
 VALUES (
@@ -50,6 +52,42 @@ BEGIN
   IF NOT accepted THEN
     RAISE EXCEPTION 'OIDC AAL2 evidence was not persisted';
   END IF;
+END $$;
+
+INSERT INTO auth_external_identities (
+  user_id, provider, provider_subject, email_at_link_time
+) VALUES (
+  'e0100000-0000-4000-8000-000000000001',
+  'google', 'google-subject-primary', 'primary@example.invalid'
+);
+
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO auth_external_identities (
+      user_id, provider, provider_subject, email_at_link_time
+    ) VALUES (
+      'e0100000-0000-4000-8000-000000000001',
+      'google', 'google-subject-competing', 'competing@example.invalid'
+    );
+    RAISE EXCEPTION 'One PRENEURA account acquired two Google subjects';
+  EXCEPTION
+    WHEN unique_violation THEN
+      NULL;
+  END;
+
+  BEGIN
+    INSERT INTO auth_external_identities (
+      user_id, provider, provider_subject, email_at_link_time
+    ) VALUES (
+      'e0100000-0000-4000-8000-000000000004',
+      'google', 'google-subject-primary', 'reuse@example.invalid'
+    );
+    RAISE EXCEPTION 'One Google subject was linked to two PRENEURA accounts';
+  EXCEPTION
+    WHEN unique_violation THEN
+      NULL;
+  END;
 END $$;
 
 ROLLBACK;
