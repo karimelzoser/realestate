@@ -1,6 +1,6 @@
 # Production completion progress
 
-## Checkpoint — E01.2 long-lived access revocation certified
+## Checkpoint — E01.3 implemented, exact-head certification pending
 
 Date: 11 October 2026.
 
@@ -8,49 +8,76 @@ Date: 11 October 2026.
 
 - Canonical completion track remains `completion/egypt-full-platform` with focused stacked task branches.
 - Published `main` / GitHub Pages demo remains unchanged.
-- E01.1 is implemented in PR #86 (`task/e01-tenant-lifecycle`).
-- E01.2 is implemented in PR #87 (`task/e01-session-stream-revocation`).
+- E01.1 is implemented and exact-head certified in PR #86 (`task/e01-tenant-lifecycle`).
+- E01.2 is implemented and exact-head certified in PR #87 (`task/e01-session-stream-revocation`).
+- E01.3 is implemented in PR #89 (`task/e01-privileged-assurance`) and remains draft until the complete exact-head release matrix passes.
 
 ### Completed / verified task IDs
 
 - **E00.1 — INTEGRATED:** repository authority reverified and canonical completion branch created.
 - **E00.2 — INTEGRATED:** interruption-safe task ledger and resume controls persisted.
-- **E01.1 — VERIFIED:** direct API authorization now centrally enforces tenant, membership and project lifecycle state with explicit paused/historical-read policy.
+- **E01.1 — VERIFIED:** direct API authorization centrally enforces tenant, membership and project lifecycle state with explicit paused/historical-read policy.
 - **E01.2 — VERIFIED:** project, broker and user-notification SSE streams revalidate active session and scope during long-lived connections; revoked sessions, suspended memberships/broker access and expired support access terminate promptly with `access_revoked`.
+- **E01.3 — IMPLEMENTED:** privileged assurance/step-up, release/build identity pinning and truthful non-empty quality commands are implemented; exact-head cross-gate evidence is still pending.
 
-### E01.2 acceptance defect and correction
+### E01.3 implementation
 
-The first emitted full-stack run exposed a test-fixture defect, not a production authorization defect: the support-expiry scenario forced `expires_at` before `started_at`, correctly violating `platform_support_access_sessions` database constraints.
+The E01.3 branch now provides:
 
-The fixture now shortens the live support session to a valid near-future expiry and allows normal expiry plus SSE revalidation to terminate the stream. This preserves the production invariant instead of bypassing it for CI.
+- server-side session assurance levels (`AAL1` / `AAL2`);
+- OTP login fixed at AAL1, including a PostgreSQL guard against OTP-created AAL2 sessions;
+- OIDC AAL2 derived only from validated ID-token ACR/AMR evidence;
+- centralized privileged-role step-up enforcement for PRENEURA Super Admin, Operations Director, Manager, Allocator, Transaction Operator, Broker Manager and Broker Finance;
+- Buyer and Broker Agent remaining valid AAL1 roles;
+- step-up identity linking bound to the current recent PRENEURA session;
+- bidirectional uniqueness for provider subject / PRENEURA user identity ownership;
+- emitted build identity plus production expected-release SHA readiness enforcement;
+- root `pnpm test` and `pnpm lint` quality contracts that reject missing/empty mandatory suites and invalid placeholder test commands;
+- focused assurance tests and PostgreSQL E01 negative/positive certification.
 
-### Exact-head evidence
+### Evidence already obtained
 
-Functional E01.2 head `747e9a3b54e8e12946d1b99294e9a9f0f7a9d4a4` passed:
+Functional head `b5327a716628c88d8ddcff30a6d5803222a61c8f` passed:
 
+- E01 Privileged Assurance Certification
 - Production Platform Foundation
+- Full Stack Acceptance Certification
 - Gate 4-5 Product Parity Certification
+- Gate 6 Non-Functional Certification
+- Gate 4 Integrated Finance Certification
+- Gate 2 Pricing Certification
+- Gate 2 Inventory Lock Durability Certification
+- Gate 3 Document & Contract Trust Certification
+- Gate 3 Finance Ledger Certification
+- Gate 5 Buyer / Sales / Transaction Operator / Manager / Broker / Full Role Parity certifications
+- Release Dependency Reproducibility
+- HTTP Security Certification
+- Backup Restore Certification
+- Concurrency Certification
+
+That same head exposed secondary failures in Runtime Readiness, Observability, Gate 6 Security, Gate 5 Reception/Allocator and Gate 7. Follow-up commits repaired those areas and refreshed the patched dependency lockfile.
+
+The resulting bot-authored lockfile head `a68e3bd835c628811368775889659b2d16fe46f4` produced `action_required` pull-request workflow records with zero jobs. Those records are not accepted as verification evidence.
+
+### Current exact-head action
+
+A normal user-authored checkpoint commit now follows the bot lockfile commit specifically to retrigger the exact-head matrix. E01.3 must not be promoted to TESTED/VERIFIED and E02 must not start until the required workflows execute and pass on the same current head.
+
+Required completion evidence:
+
+- E01 Privileged Assurance Certification
+- Production Platform Foundation
+- Full Stack Acceptance Certification
 - Gate 6 Security Scan
 - Gate 6 Non-Functional Certification
-- Full Stack Acceptance Certification
-- Gate 7 Production Go-No-Go
+- Gate 7 Production Go-No-Go software-side path
 
-Historical evidence from older SHAs remains context only and is not substituted for these exact-head results.
-
-### Current task
-
-- **E01.3 — READY:** enforce privileged assurance/step-up, release correctness/build identity, and truthful non-empty normal test/lint commands.
-
-Initial audit already confirms:
-
-- ordinary phone/National-ID OTP login currently issues the same generic session shape as Google OIDC;
-- privileged assurance is not represented independently on the session;
-- workspace `test` / `lint` delegate through Turborepo, while several package lint scripts are only TypeScript checks and some `node --test` commands can succeed without meaningful package tests.
+Additional inherited gates that trigger on the current head must remain green; failures are repaired rather than waived.
 
 ### Deployment boundary
 
-Server deployment remains intentionally deferred. No server, DNS, production secrets, provider credentials or production data were touched.
+Server deployment remains intentionally deferred. No server, DNS, production secrets, live provider credentials or production customer data are part of E01.3 certification.
 
 ### Exact next action
 
-Create `task/e01-privileged-assurance` from the verified E01.2 checkpoint. Implement a server-authoritative privileged assurance model so low-assurance phone/National-ID OTP cannot exercise privileged roles without step-up; add machine-verifiable build/release identity checks; then make normal workspace test/lint commands fail if mandatory suites are absent or empty. Run focused negative tests plus all affected existing gates before advancing to E02.
+Monitor the user-authored E01.3 checkpoint head until its release workflows complete. If all required exact-head checks pass, update `TASKS.json`, `TASKS.md`, `WORK_STATE.json`, `PROGRESS.md` and `CONTINUE.md` to mark E01.3 tested/verified and begin E02.1/E02.2 from the certified E01.3 head. If any check fails, repair that failure on the same focused E01.3 branch and rerun; do not advance the dependency graph prematurely.
