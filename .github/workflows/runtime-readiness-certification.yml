@@ -19,6 +19,7 @@ on:
       - "platform/packages/database/package.json"
       - "platform/scripts/certify-runtime-readiness.sh"
       - "platform/docs/runtime-readiness.md"
+      - "platform/docs/production-deployment-runbook.md"
       - "platform/README.md"
       - ".github/workflows/runtime-readiness-certification.yml"
   push:
@@ -42,6 +43,7 @@ on:
       - "platform/packages/database/package.json"
       - "platform/scripts/certify-runtime-readiness.sh"
       - "platform/docs/runtime-readiness.md"
+      - "platform/docs/production-deployment-runbook.md"
       - "platform/README.md"
       - ".github/workflows/runtime-readiness-certification.yml"
 
