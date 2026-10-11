@@ -6,6 +6,7 @@ import { GoogleOidcService } from './google-oidc.service.js';
 
 const STATE_COOKIE = 'preneura_oidc_state';
 const VERIFIER_COOKIE = 'preneura_oidc_verifier';
+const ASSURANCE_COOKIE = 'preneura_oidc_assurance';
 
 @Controller('auth/google')
 export class GoogleAuthController {
@@ -15,13 +16,18 @@ export class GoogleAuthController {
   ) {}
 
   @Get('start')
-  async start(@Res() reply: FastifyReply): Promise<void> {
+  async start(
+    @Query('assurance') requestedAssurance: string | undefined,
+    @Res() reply: FastifyReply,
+  ): Promise<void> {
     this.requireCookieSecurity();
-    const authorization = this.google.createAuthorizationRequest();
+    const requireAal2 = requestedAssurance?.toLowerCase() === 'aal2';
+    const authorization = this.google.createAuthorizationRequest({ requireAal2 });
     const cookieOptions = this.oidcCookieOptions();
 
     reply.setCookie(STATE_COOKIE, authorization.state, cookieOptions);
     reply.setCookie(VERIFIER_COOKIE, authorization.codeVerifier, cookieOptions);
+    reply.setCookie(ASSURANCE_COOKIE, requireAal2 ? 'aal2' : 'aal1', cookieOptions);
     await reply.redirect(authorization.url);
   }
 
@@ -40,14 +46,20 @@ export class GoogleAuthController {
 
     const expectedState = this.readProtectedCookie(request, STATE_COOKIE);
     const codeVerifier = this.readProtectedCookie(request, VERIFIER_COOKIE);
+    const requestedAssurance = this.readProtectedCookie(request, ASSURANCE_COOKIE);
     if (!expectedState || !codeVerifier || !this.sameSecret(expectedState, returnedState)) {
       throw new UnauthorizedException('Google authentication state is invalid.');
     }
 
     reply.clearCookie(STATE_COOKIE, { path: '/v1/auth/google' });
     reply.clearCookie(VERIFIER_COOKIE, { path: '/v1/auth/google' });
+    reply.clearCookie(ASSURANCE_COOKIE, { path: '/v1/auth/google' });
 
-    const result = await this.google.completeAuthorization({ code, codeVerifier });
+    const result = await this.google.completeAuthorization({
+      code,
+      codeVerifier,
+      requireAal2: requestedAssurance === 'aal2',
+    });
     reply.setCookie(
       process.env.SESSION_COOKIE_NAME ?? 'preneura_session',
       result.login.sessionToken,
