@@ -33,7 +33,7 @@ export function assertExpectedBuildIdentity(): BuildIdentity {
 
 function readIdentityFile(): { gitSha: string; builtAt: string | null } | null {
   try {
-    const url = new URL('../../build-identity.json', import.meta.url);
+    const url = new URL('../build-identity.json', import.meta.url);
     const parsed = JSON.parse(readFileSync(url, 'utf8')) as {
       gitSha?: unknown;
       builtAt?: unknown;
