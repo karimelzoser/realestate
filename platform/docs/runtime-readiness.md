@@ -225,4 +225,6 @@ The certification proves:
 14. concurrent migrators serialize under the PostgreSQL advisory lock and converge on one migration history;
 15. strict TypeScript and the complete deployable runtime graph build successfully.
 
+The final certified branch head is `f210e8b6cd540775f88ab50ee143f01269766070`. On that exact SHA, Runtime Readiness Certification and the inherited production release gates complete without failures.
+
 The runtime script can also be run against an isolated PostgreSQL 18 instance outside GitHub Actions after the production workspace is built. It creates and destroys only its named certification databases and does not target a production database.
