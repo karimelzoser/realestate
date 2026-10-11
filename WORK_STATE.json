@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "project": "PRENEURA Real Estate OS",
+  "repository": "karimelzoser/realestate",
+  "continuation_branch": "integration/software-ready-for-deployment",
+  "source_checkpoint": {
+    "branch": "feature/production-runtime-readiness",
+    "pull_request": 52,
+    "commit": "6c52336435c8670e8dff4cd4343a9d01ecc64e5d"
+  },
+  "target": "SOFTWARE_READY_FOR_DEPLOYMENT",
+  "live_production_go": false,
+  "server_access_allowed": false,
+  "hosting_environment_selected": false,
+  "github_pages_role": "synthetic_demo_only",
+  "portable_deployment_authority": "docker_compose",
+  "hosting_dependencies": {
+    "railway_required": false,
+    "hosting_mcp_required": false,
+    "coolify_required": false,
+    "coolify_optional": true,
+    "existing_railway_resources_preserve": true
+  },
+  "product_scope": {
+    "market": "Egypt",
+    "organizations": ["developers", "brokerages"],
+    "end_users": ["buyers", "developer_staff", "broker_staff", "preneura_admin"],
+    "eoi_inventory_level": "UNIT_TYPE",
+    "allocation_inventory_level": "EXACT_PHYSICAL_UNIT",
+    "ui_locales_initial": ["en", "ar"],
+    "voice_locales_initial": ["en"]
+  },
+  "certified_foundation": [
+    "identity_and_otp",
+    "google_oidc_boundary",
+    "scoped_rbac",
+    "catalog_hierarchy_imports",
+    "pricing_certification",
+    "buyer_eoi_queue_transaction_core",
+    "document_contract_trust",
+    "immutable_finance_ledger",
+    "broker_commissions",
+    "notifications_and_sse",
+    "super_admin_support_access",
+    "optional_ai_boundary",
+    "frozen_dependency_graph",
+    "serialized_migrations",
+    "runtime_readiness_and_schema_compatibility",
+    "github_pages_synthetic_demo_regression"
+  ],
+  "active_task": {
+    "id": "B1",
+    "title": "EOI unit type to exact physical apartment allocation",
+    "status": "IN_PROGRESS",
+    "reason": "Latest settled product rule requires type-level EOI and exact-apartment allocation; this must be corrected/certified before further workflow and deployment packaging work."
+  },
+  "next_action": "Inspect current EOI, physical-unit, inventory-slot and lock schema/API paths; add EOI unit_type snapshot and exact-physical-unit allocation/locking with PostgreSQL concurrency certification and allocator UI.",
+  "external_dependencies_not_blocking_software": [
+    "production SSH/server details",
+    "production DNS/domains",
+    "production TLS issuance",
+    "live Meta WhatsApp credentials",
+    "live SMS/email credentials",
+    "live payment provider credentials",
+    "live e-sign provider credentials",
+    "live malware scanner credentials if external",
+    "live AI provider credentials if external"
+  ],
+  "software_ready_for_deployment": false,
+  "last_updated_utc": "2026-10-11T00:10:00Z"
+}
