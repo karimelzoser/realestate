@@ -1,0 +1,151 @@
+name: Gate 4 Broker Notification Refund Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/gate4_broker_notification_refund_seed.sql"
+      - "platform/packages/contracts/src/commissions.ts"
+      - "platform/packages/contracts/src/notifications.ts"
+      - "platform/packages/contracts/src/sales.ts"
+      - "platform/apps/api/src/commissions/**"
+      - "platform/apps/api/src/sales/eoi-refund*"
+      - "platform/apps/api/src/certifications/gate4-api-certification.ts"
+      - "platform/apps/worker/src/milestone-reminders.ts"
+      - "platform/apps/worker/src/installment-reminders.ts"
+      - "platform/apps/worker/src/notification-recipients.ts"
+      - "platform/apps/worker/src/notifications.ts"
+      - "platform/apps/worker/src/certifications/gate4-reminder-certification.ts"
+      - ".github/workflows/gate4-broker-notification-refund-certification.yml"
+  push:
+    branches:
+      - "feature/production-*"
+      - "release/**"
+    paths:
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/gate4_broker_notification_refund_seed.sql"
+      - "platform/packages/contracts/src/commissions.ts"
+      - "platform/packages/contracts/src/notifications.ts"
+      - "platform/packages/contracts/src/sales.ts"
+      - "platform/apps/api/src/commissions/**"
+      - "platform/apps/api/src/sales/eoi-refund*"
+      - "platform/apps/api/src/certifications/gate4-api-certification.ts"
+      - "platform/apps/worker/src/milestone-reminders.ts"
+      - "platform/apps/worker/src/installment-reminders.ts"
+      - "platform/apps/worker/src/notification-recipients.ts"
+      - "platform/apps/worker/src/notifications.ts"
+      - "platform/apps/worker/src/certifications/gate4-reminder-certification.ts"
+      - ".github/workflows/gate4-broker-notification-refund-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  gate4-certification:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations from zero
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          for migration in platform/packages/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 -f "${migration}"
+          done
+
+      - name: Seed Gate 4 authoritative scenario
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 \
+            -f platform/packages/database/tests/gate4_broker_notification_refund_seed.sql
+
+      - name: Build API and worker emitted runtime
+        working-directory: platform
+        run: |
+          pnpm --filter @preneura/api build
+          pnpm --filter @preneura/worker build
+
+      - name: Certify commission projection and historical refund policy
+        working-directory: platform
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
+        run: node apps/api/dist/certifications/gate4-api-certification.js
+
+      - name: Certify reminder idempotency and authoritative-state reconciliation
+        working-directory: platform
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
+        run: node apps/worker/dist/certifications/gate4-reminder-certification.js
+
+      - name: Verify final Gate 4 projections
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -d preneura -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF (SELECT count(*) FROM broker_commission_cases) <> 2 THEN
+              RAISE EXCEPTION 'expected exactly two broker commission cases';
+            END IF;
+            IF EXISTS (
+              SELECT 1
+              FROM broker_commission_cases c
+              WHERE c.commission_plan_id = '40000000-0000-0000-0000-000000001101'::uuid
+                AND c.transaction_id IN (
+                  '40000000-0000-0000-0000-000000001000'::uuid,
+                  '40000000-0000-0000-0000-000000001001'::uuid
+                )
+            ) THEN
+              RAISE EXCEPTION 'historical January transaction bound to future February commission policy';
+            END IF;
+            IF (SELECT status FROM eoi_refund_requests LIMIT 1) <> 'APPROVED' THEN
+              RAISE EXCEPTION 'refund approval projection missing';
+            END IF;
+            IF (SELECT paid_at FROM eoi_refund_requests LIMIT 1) IS NOT NULL THEN
+              RAISE EXCEPTION 'refund approval incorrectly recorded payout';
+            END IF;
+            IF (SELECT count(*) FROM notification_jobs WHERE idempotency_key LIKE 'milestone:v3:%' AND status='CANCELLED') <> 2 THEN
+              RAISE EXCEPTION 'milestone reminder reconciliation did not cancel both audience jobs';
+            END IF;
+            IF (SELECT count(*) FROM notification_jobs WHERE idempotency_key LIKE 'installment:v1:%' AND status='CANCELLED') <> 2 THEN
+              RAISE EXCEPTION 'installment reminder reconciliation did not cancel both audience jobs';
+            END IF;
+          END $$;
+          SQL
