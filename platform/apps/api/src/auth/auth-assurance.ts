@@ -20,8 +20,13 @@ export const PRIVILEGED_ROLE_CODES = new Set<AccessRoleCode>([
   'BROKER_FINANCE',
 ]);
 
-const MFA_AMR_VALUES = new Set(['mfa', 'otp', 'hwk', 'swk']);
-
+/**
+ * PRENEURA treats an IdP session as privileged AAL2 only when the provider has
+ * made an explicit multi-factor assertion. A bare `otp`, `hwk` or `swk` AMR
+ * value is authentication-method evidence, but it does not by itself prove that
+ * two factors were used. Deployments that rely on an IdP-specific MFA flow
+ * should map it to one of OIDC_AAL2_ACR_VALUES or emit the standard `mfa` AMR.
+ */
 export function oidcAssuranceFromClaims(input: {
   acr?: unknown;
   amr?: unknown;
@@ -35,11 +40,13 @@ export function oidcAssuranceFromClaims(input: {
   const acrApproved = Boolean(
     providerAcr && input.approvedAcrValues.includes(providerAcr),
   );
-  const mfaObserved = providerAmr.some((value) => MFA_AMR_VALUES.has(value.toLowerCase()));
+  const explicitMfaObserved = providerAmr.some(
+    (value) => value.toLowerCase() === 'mfa',
+  );
 
   return {
     authMethod: 'OIDC_GOOGLE',
-    assuranceLevel: acrApproved || mfaObserved ? 'AAL2' : 'AAL1',
+    assuranceLevel: acrApproved || explicitMfaObserved ? 'AAL2' : 'AAL1',
     providerAcr,
     providerAmr,
   };
