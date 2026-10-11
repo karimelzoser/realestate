@@ -4,6 +4,13 @@ import type { Database } from '@preneura/database';
 import type { AllocationQueueEntrySnapshot } from '@preneura/contracts/allocation';
 import { DATABASE } from '../database/database.module.js';
 
+type AllocationQueueStatus = AllocationQueueEntrySnapshot['status'];
+
+function allocationQueueStatus(value: string): AllocationQueueStatus {
+  if (value === 'WAITING' || value === 'CALLED' || value === 'LOCKED') return value;
+  throw new Error(`Unexpected terminal queue status in allocation read model: ${value}`);
+}
+
 @Injectable()
 export class AllocationOperationsRepository {
   constructor(@Inject(DATABASE) private readonly db: Kysely<Database>) {}
@@ -61,7 +68,7 @@ export class AllocationOperationsRepository {
         channel: row.channel,
         priorityGroup: row.priority_group,
         priorityScore: row.priority_score,
-        status: row.status,
+        status: allocationQueueStatus(row.status),
         checkedInAt: (row.checked_in_at as Date).toISOString(),
         calledAt: row.called_at ? (row.called_at as Date).toISOString() : null,
         activeLock:
