@@ -4,6 +4,20 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readRuntimeContract } from './runtime-contract.mjs';
+import { spawnSync } from 'node:child_process';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+test('a development manifest cannot run the live certification network probes', () => {
+  const platform = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const result = spawnSync(process.execPath, ['scripts/certify-gate7-live.mjs'], {
+    cwd: platform,
+    encoding: 'utf8',
+    env: { ...process.env, DEPLOYED_RELEASE_SHA: '8750f94180b89cf58a1963f739c24aa0a56babbd' },
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Live GO requires a frozen/);
+});
 
 function fixture(files, source) {
   const root = mkdtempSync(join(tmpdir(), 'preneura-contract-'));

@@ -1,5 +1,16 @@
 import type { FastifyInstance } from 'fastify';
 
+export function safeRequestLog(request: unknown) {
+  const record = request && typeof request === 'object'
+    ? request as { id?: unknown; method?: unknown; url?: unknown }
+    : {};
+  return {
+    id: typeof record.id === 'string' ? record.id : '',
+    method: typeof record.method === 'string' ? record.method : 'UNKNOWN',
+    url: typeof record.url === 'string' ? record.url.split('?')[0] ?? '/' : '/',
+  };
+}
+
 const DEFAULT_BODY_LIMIT_BYTES = 8 * 1024 * 1024;
 const MIN_BODY_LIMIT_BYTES = 64 * 1024;
 const MAX_BODY_LIMIT_BYTES = 16 * 1024 * 1024;

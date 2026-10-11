@@ -5,6 +5,13 @@ import {
   oidcAssuranceFromClaims,
   otpAssurance,
 } from '../src/auth/auth-assurance.js';
+import { safeRequestLog } from '../src/security/http-security.js';
+
+test('request logs never include OAuth codes or query secrets', () => {
+  const log = safeRequestLog({ id: 'request', method: 'GET', url: '/v1/auth/google/callback?code=secret-code&state=secret-state' });
+  assert.equal(log.url, '/v1/auth/google/callback');
+  assert.equal(JSON.stringify(log).includes('secret'), false);
+});
 
 test('OTP is always AAL1', () => {
   const assurance = otpAssurance();
