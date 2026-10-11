@@ -3,8 +3,11 @@ import cookie from '@fastify/cookie';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module.js';
+import { validateApiRuntimeConfig } from './config/runtime-config.js';
 
 async function bootstrap(): Promise<void> {
+  validateApiRuntimeConfig();
+
   const adapter = new FastifyAdapter({
     logger: process.env.NODE_ENV !== 'test',
     trustProxy: true,
@@ -23,6 +26,9 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks();
 
   const port = Number(process.env.PORT ?? 4100);
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error('PORT must be a valid TCP port.');
+  }
   await app.listen({ port, host: '0.0.0.0' });
 }
 
