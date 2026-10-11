@@ -146,6 +146,7 @@ jobs:
           WEB_ORIGIN=https://app.preneura.example \
           TRUST_PROXY_HOPS=1 \
           API_BODY_LIMIT_BYTES=8388608 \
+          PRENEURA_EXPECTED_RELEASE_SHA="$GITHUB_SHA" \
           AUTH_IDENTIFIER_HMAC_KEY="$COMMON_TOKEN" \
           AUTH_OTP_PEPPER="$COMMON_TOKEN" \
           COOKIE_SIGNING_SECRET="$COMMON_TOKEN" \
