@@ -4,35 +4,40 @@
   "stage": "IMPLEMENTATION_STARTED",
   "planningBranch": "plan/egypt-platform-completion",
   "integrationBranch": "completion/egypt-full-platform",
-  "taskBranch": null,
-  "observedHeadBeforeCheckpoint": "446cfe4803bedc9868ee28799ff4b376277c0d91",
+  "taskBranch": "task/e01-session-stream-revocation",
+  "observedHeadBeforeCheckpoint": "747e9a3b54e8e12946d1b99294e9a9f0f7a9d4a4",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "activeTaskId": "E01.1",
-  "activeTaskStatus": "IN_PROGRESS",
-  "completedCheckpoint": "E00.1/E00.2 repository authority and resumable execution controls established on canonical integration branch",
-  "nextAction": "Create focused E01.1 branch from the canonical checkpoint; inspect central access lifecycle checks and negative tests; reproduce suspended-tenant direct-request authorization gap",
+  "activeTaskId": "E01.3",
+  "activeTaskStatus": "READY",
+  "completedCheckpoint": "E01.1 direct-request lifecycle enforcement and E01.2 long-lived SSE/session/support revocation are implemented and exact-head certified",
+  "nextAction": "Create task/e01-privileged-assurance from the verified E01.2 head; implement privileged session assurance/step-up, release identity pinning, and truthful non-empty test/lint commands with focused negative tests",
   "changedFiles": [
-    "docs/production-completion/TASKS.json",
-    "docs/production-completion/TASKS.md",
+    "platform/apps/api/src/access/access.service.ts",
+    "platform/apps/api/src/auth/session-activity.service.ts",
+    "platform/apps/api/src/realtime/realtime.service.ts",
+    "platform/apps/api/src/notifications/user-notification.service.ts",
+    "platform/packages/database/tests/full_stack_acceptance.mjs",
     "docs/production-completion/PROGRESS.md",
     "docs/production-completion/WORK_STATE.json",
-    "docs/production-completion/CONTINUE.md",
-    "docs/production-completion/SERVICE_READINESS.md"
+    "docs/production-completion/CONTINUE.md"
   ],
   "commandsAndResults": [
-    {"action":"verify planning branch","result":"plan/egypt-platform-completion = 446cfe4803bedc9868ee28799ff4b376277c0d91; parent c2746523eb434898cbb4c46cf5df452d122ba78f"},
-    {"action":"verify PR #81 candidate","result":"head remains c2746523eb434898cbb4c46cf5df452d122ba78f"},
-    {"action":"verify main/demo","result":"main remains 1a6e61c891e040221f09c773e6de589928a9a0b7"},
-    {"action":"create integration branch","result":"completion/egypt-full-platform created from planning head"}
+    {"action":"E01.1 lifecycle enforcement","result":"PR #86 implements central tenant/membership/project lifecycle checks for direct requests"},
+    {"action":"E01.2 long-lived authorization revalidation","result":"PR #87 revalidates sessions/project/broker/support scope during SSE and emits access_revoked on loss"},
+    {"action":"fix emitted support-expiry acceptance fixture","result":"support session now expires naturally within its database validity constraint instead of forcing expires_at before started_at"},
+    {"action":"exact-head certification 747e9a3","result":"Production Foundation, Gate 4-5, Gate 6 Security, Gate 6 Non-Functional, Full Stack Acceptance and Gate 7 all PASS"}
   ],
   "evidencePaths": [
     "docs/production-completion/PLAN.md",
     "docs/production-completion/TASKS.json",
-    "docs/production-completion/PROGRESS.md"
+    "docs/production-completion/PROGRESS.md",
+    "platform/packages/database/tests/full_stack_acceptance.mjs"
   ],
   "remainingTests": [
-    "E01.1 reproduction and task-specific API/database negative tests"
+    "E01.3 privileged-assurance negative tests",
+    "E01.3 release/build identity checks",
+    "E01.3 truthful test/lint command certification"
   ],
   "externalBlockerIds": [
     "DEPLOYMENT_DEFERRED",

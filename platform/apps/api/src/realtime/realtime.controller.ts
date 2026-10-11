@@ -29,6 +29,7 @@ export class RealtimeController {
     this.assertUuid(tenantId, 'tenantId');
     this.assertUuid(projectId, 'projectId');
     return this.realtime.projectStream({
+      sessionId: session.sessionId,
       userId: session.userId,
       tenantId,
       projectId,
@@ -49,6 +50,7 @@ export class RealtimeController {
     this.assertUuid(projectId, 'projectId');
     this.assertUuid(brokerCompanyId, 'brokerCompanyId');
     return this.realtime.brokerCommissionStream({
+      sessionId: session.sessionId,
       userId: session.userId,
       tenantId,
       projectId,

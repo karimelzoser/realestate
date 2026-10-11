@@ -1,36 +1,51 @@
 # Production completion progress
 
-## Checkpoint — E00 repository authority established
+## Checkpoint — E01.2 long-lived access revocation certified
 
 Date: 11 October 2026.
 
 ### Verified authority
 
-- Reviewed integrated production candidate remains PR #81 / `feature/production-full-stack-acceptance` at `c2746523eb434898cbb4c46cf5df452d122ba78f`.
-- Planning branch `plan/egypt-platform-completion` is at `446cfe4803bedc9868ee28799ff4b376277c0d91` and is a direct child of that candidate.
-- Published `main` / GitHub Pages demo remains `1a6e61c891e040221f09c773e6de589928a9a0b7`.
-- Canonical completion branch `completion/egypt-full-platform` was created from the verified planning head. The published demo was not changed.
+- Canonical completion track remains `completion/egypt-full-platform` with focused stacked task branches.
+- Published `main` / GitHub Pages demo remains unchanged.
+- E01.1 is implemented in PR #86 (`task/e01-tenant-lifecycle`).
+- E01.2 is implemented in PR #87 (`task/e01-session-stream-revocation`).
 
-### Completed task IDs
+### Completed / verified task IDs
 
-- **E00.1 — INTEGRATED:** reverified planning/candidate/demo heads and created the canonical completion integration branch.
-- **E00.2 — INTEGRATED:** expanded E00–E17 into stable dependency-aware implementation tasks and persisted the resume controls.
+- **E00.1 — INTEGRATED:** repository authority reverified and canonical completion branch created.
+- **E00.2 — INTEGRATED:** interruption-safe task ledger and resume controls persisted.
+- **E01.1 — VERIFIED:** direct API authorization now centrally enforces tenant, membership and project lifecycle state with explicit paused/historical-read policy.
+- **E01.2 — VERIFIED:** project, broker and user-notification SSE streams revalidate active session and scope during long-lived connections; revoked sessions, suspended memberships/broker access and expired support access terminate promptly with `access_revoked`.
+
+### E01.2 acceptance defect and correction
+
+The first emitted full-stack run exposed a test-fixture defect, not a production authorization defect: the support-expiry scenario forced `expires_at` before `started_at`, correctly violating `platform_support_access_sessions` database constraints.
+
+The fixture now shortens the live support session to a valid near-future expiry and allows normal expiry plus SSE revalidation to terminate the stream. This preserves the production invariant instead of bypassing it for CI.
+
+### Exact-head evidence
+
+Functional E01.2 head `747e9a3b54e8e12946d1b99294e9a9f0f7a9d4a4` passed:
+
+- Production Platform Foundation
+- Gate 4-5 Product Parity Certification
+- Gate 6 Security Scan
+- Gate 6 Non-Functional Certification
+- Full Stack Acceptance Certification
+- Gate 7 Production Go-No-Go
+
+Historical evidence from older SHAs remains context only and is not substituted for these exact-head results.
 
 ### Current task
 
-- **E01.1 — IN_PROGRESS:** reproduce and repair direct-request tenant/membership/project lifecycle enforcement.
+- **E01.3 — READY:** enforce privileged assurance/step-up, release correctness/build identity, and truthful non-empty normal test/lint commands.
 
-### Evidence
+Initial audit already confirms:
 
-- `docs/production-completion/PLAN.md`
-- `docs/production-completion/DECISIONS.md`
-- `docs/production-completion/TASKS.json`
-- `docs/production-completion/TASKS.md`
-- `docs/production-completion/WORK_STATE.json`
-- `docs/production-completion/CONTINUE.md`
-- PR #81 metadata and current `main` / planning branch heads.
-
-Historical build/test evidence from earlier branches is baseline context only; it is not claimed as evidence for future changed SHAs.
+- ordinary phone/National-ID OTP login currently issues the same generic session shape as Google OIDC;
+- privileged assurance is not represented independently on the session;
+- workspace `test` / `lint` delegate through Turborepo, while several package lint scripts are only TypeScript checks and some `node --test` commands can succeed without meaningful package tests.
 
 ### Deployment boundary
 
@@ -38,4 +53,4 @@ Server deployment remains intentionally deferred. No server, DNS, production sec
 
 ### Exact next action
 
-Create a focused E01.1 task branch from the canonical completion checkpoint, inspect central access/assignment lifecycle enforcement and its current negative tests, reproduce the known suspended-tenant direct-request gap, then implement the smallest central fix with HTTP/database tests before changing adjacent E01 concerns.
+Create `task/e01-privileged-assurance` from the verified E01.2 checkpoint. Implement a server-authoritative privileged assurance model so low-assurance phone/National-ID OTP cannot exercise privileged roles without step-up; add machine-verifiable build/release identity checks; then make normal workspace test/lint commands fail if mandatory suites are absent or empty. Run focused negative tests plus all affected existing gates before advancing to E02.

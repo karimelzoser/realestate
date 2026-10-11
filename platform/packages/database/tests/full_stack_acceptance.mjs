@@ -18,6 +18,11 @@ const OTHER_BUYER_TRANSACTION = '20000000-0000-4000-8000-000000000062';
 const OUTBOX_EVENT = '61000000-0000-4000-8000-000000000001';
 const NOTIFICATION_JOB = '62000000-0000-4000-8000-000000000001';
 const EXPIRED_LOCK = '64000000-0000-4000-8000-000000000001';
+const SUPPORT_USER = '36000000-0000-4000-8000-000000000001';
+const SUPPORT_ASSIGNMENT = '36000000-0000-4000-8000-000000000002';
+const SUPPORT_AUTH_SESSION = '36000000-0000-4000-8000-000000000003';
+const SUPPORT_ACCESS_SESSION = '36000000-0000-4000-8000-000000000004';
+const SUPPORT_TOKEN = 'acceptance-super-admin-token-000000001';
 
 const tokens = {
   buyer: 'acceptance-buyer-token-0000000000000001',
@@ -33,6 +38,9 @@ try {
   await certifyAuthorizationAndIsolation();
   await certifyLifecycleRevocation();
   await certifyBrokerRedaction();
+  await certifyProjectStreamMembershipRevocation();
+  await certifyBrokerStreamAccessRevocation();
+  await certifySupportStreamExpiry();
   await certifyWorkerEffects();
   await certifyAuthenticatedNotificationProjection();
   await certifySessionRevocation();
@@ -182,6 +190,100 @@ async function certifyBrokerRedaction() {
   assert.ok(Object.hasOwn(manager.body[0], 'basisAmount'));
 }
 
+async function certifyProjectStreamMembershipRevocation() {
+  const stream = await openSse(
+    `${apiBase}/v1/tenants/${TENANT}/projects/${PROJECT}/events`,
+    tokens.manager,
+  );
+  try {
+    await db.query(
+      `UPDATE tenant_memberships SET status = 'SUSPENDED' WHERE tenant_id = $1::uuid AND user_id = $2::uuid`,
+      [TENANT, MANAGER_USER],
+    );
+    await waitForSseEvent(stream, 'access_revoked', 7_000);
+  } finally {
+    await db.query(
+      `UPDATE tenant_memberships SET status = 'ACTIVE' WHERE tenant_id = $1::uuid AND user_id = $2::uuid`,
+      [TENANT, MANAGER_USER],
+    );
+    await closeSse(stream);
+  }
+}
+
+async function certifyBrokerStreamAccessRevocation() {
+  const stream = await openSse(
+    `${apiBase}/v1/tenants/${TENANT}/projects/${PROJECT}/brokers/${BROKER}/events`,
+    tokens.brokerAgent,
+  );
+  try {
+    await db.query(
+      `UPDATE broker_project_access SET status = 'SUSPENDED' WHERE tenant_id = $1::uuid AND project_id = $2::uuid AND broker_company_id = $3::uuid`,
+      [TENANT, PROJECT, BROKER],
+    );
+    await waitForSseEvent(stream, 'access_revoked', 7_000);
+  } finally {
+    await db.query(
+      `UPDATE broker_project_access SET status = 'ACTIVE' WHERE tenant_id = $1::uuid AND project_id = $2::uuid AND broker_company_id = $3::uuid`,
+      [TENANT, PROJECT, BROKER],
+    );
+    await closeSse(stream);
+  }
+}
+
+async function certifySupportStreamExpiry() {
+  await createTemporarySupportFixture();
+  const stream = await openSse(
+    `${apiBase}/v1/tenants/${TENANT}/projects/${PROJECT}/events`,
+    SUPPORT_TOKEN,
+  );
+  try {
+    await db.query(
+      `UPDATE platform_support_access_sessions SET expires_at = now() + interval '2 seconds' WHERE id = $1::uuid`,
+      [SUPPORT_ACCESS_SESSION],
+    );
+    await waitForSseEvent(stream, 'access_revoked', 7_000);
+  } finally {
+    await closeSse(stream);
+    await deleteTemporarySupportFixture();
+  }
+}
+
+async function createTemporarySupportFixture() {
+  await db.query(
+    `INSERT INTO users (id, display_name, status)
+     VALUES ($1::uuid, 'Acceptance Support Admin', 'ACTIVE')
+     ON CONFLICT (id) DO UPDATE SET display_name = EXCLUDED.display_name, status = 'ACTIVE'`,
+    [SUPPORT_USER],
+  );
+  await db.query(
+    `INSERT INTO access_role_assignments (
+       id, user_id, role_code, scope_type, tenant_id, project_id, broker_company_id, status
+     ) VALUES ($1::uuid, $2::uuid, 'PRENEURA_SUPER_ADMIN', 'PLATFORM', NULL, NULL, NULL, 'ACTIVE')
+     ON CONFLICT (id) DO UPDATE SET status = 'ACTIVE', revoked_at = NULL`,
+    [SUPPORT_ASSIGNMENT, SUPPORT_USER],
+  );
+  await db.query(
+    `INSERT INTO auth_sessions (id, user_id, token_digest, expires_at)
+     VALUES ($1::uuid, $2::uuid, digest($3, 'sha256'), now() + interval '1 hour')
+     ON CONFLICT (id) DO UPDATE SET revoked_at = NULL, expires_at = EXCLUDED.expires_at`,
+    [SUPPORT_AUTH_SESSION, SUPPORT_USER, SUPPORT_TOKEN],
+  );
+  await db.query(
+    `INSERT INTO platform_support_access_sessions (
+       id, operator_user_id, tenant_id, project_id, reason, status, expires_at
+     ) VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, 'Full-stack support expiry certification', 'ACTIVE', now() + interval '10 minutes')
+     ON CONFLICT (id) DO UPDATE SET status = 'ACTIVE', ended_at = NULL, expires_at = EXCLUDED.expires_at`,
+    [SUPPORT_ACCESS_SESSION, SUPPORT_USER, TENANT, PROJECT],
+  );
+}
+
+async function deleteTemporarySupportFixture() {
+  await db.query(`DELETE FROM platform_support_access_sessions WHERE id = $1::uuid`, [SUPPORT_ACCESS_SESSION]);
+  await db.query(`DELETE FROM auth_sessions WHERE id = $1::uuid`, [SUPPORT_AUTH_SESSION]);
+  await db.query(`DELETE FROM access_role_assignments WHERE id = $1::uuid`, [SUPPORT_ASSIGNMENT]);
+  await db.query(`DELETE FROM users WHERE id = $1::uuid`, [SUPPORT_USER]);
+}
+
 async function certifyWorkerEffects() {
   await waitFor(async () => {
     const result = await db.query(
@@ -229,17 +331,79 @@ async function certifyAuthenticatedNotificationProjection() {
 }
 
 async function certifySessionRevocation() {
-  const logout = await fetch(`${apiBase}/v1/auth/logout`, {
-    ...session(tokens.buyer),
-    method: 'POST',
-  });
-  assert.ok([200, 204].includes(logout.status));
+  const stream = await openSse(`${apiBase}/v1/me/notifications/events`, tokens.buyer);
+  try {
+    const logout = await fetch(`${apiBase}/v1/auth/logout`, {
+      ...session(tokens.buyer),
+      method: 'POST',
+    });
+    assert.ok([200, 204].includes(logout.status));
+    await waitForSseEvent(stream, 'access_revoked', 7_000);
+  } finally {
+    await closeSse(stream);
+  }
   const after = await fetch(`${apiBase}/v1/me/workspace`, session(tokens.buyer));
   assert.equal(after.status, 401, 'revoked session must not remain authorized');
 }
 
 function session(token) {
   return { headers: { cookie: `preneura_session=${token}` } };
+}
+
+async function openSse(url, token) {
+  const controller = new AbortController();
+  const response = await fetch(url, {
+    headers: {
+      cookie: `preneura_session=${token}`,
+      accept: 'text/event-stream',
+    },
+    signal: controller.signal,
+  });
+  if (response.status !== 200) {
+    const text = await response.text();
+    controller.abort();
+    throw new Error(`SSE open failed ${response.status} ${url}: ${text.slice(0, 500)}`);
+  }
+  assert.ok(response.body, `SSE response body missing for ${url}`);
+  return {
+    url,
+    controller,
+    reader: response.body.getReader(),
+    decoder: new TextDecoder(),
+    buffer: '',
+  };
+}
+
+async function waitForSseEvent(stream, eventType, timeoutMs) {
+  const timeout = setTimeout(() => stream.controller.abort(), timeoutMs);
+  try {
+    while (true) {
+      const { value, done } = await stream.reader.read();
+      if (done) throw new Error(`SSE stream ${stream.url} closed before ${eventType}`);
+      stream.buffer += stream.decoder.decode(value, { stream: true });
+      const blocks = stream.buffer.split(/\r?\n\r?\n/);
+      stream.buffer = blocks.pop() ?? '';
+      for (const block of blocks) {
+        const eventLine = block
+          .split(/\r?\n/)
+          .find((line) => line.startsWith('event:'));
+        if (eventLine?.slice('event:'.length).trim() === eventType) return;
+      }
+      if (stream.buffer.length > 32_000) stream.buffer = stream.buffer.slice(-8_000);
+    }
+  } catch (error) {
+    if (stream.controller.signal.aborted) {
+      throw new Error(`Timed out waiting ${timeoutMs}ms for SSE event ${eventType} from ${stream.url}`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function closeSse(stream) {
+  if (!stream.controller.signal.aborted) stream.controller.abort();
+  await stream.reader.cancel().catch(() => undefined);
 }
 
 async function requestJson(url, init = undefined) {
