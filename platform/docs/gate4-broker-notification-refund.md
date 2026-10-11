@@ -78,4 +78,14 @@ The scenario proves:
 9. installment reminders provide the same logical idempotency;
 10. changing authoritative transaction state causes still-pending milestone/installment reminders to be cancelled.
 
-Gate 4 does not certify external provider credentials. Production WhatsApp/SMS/email credentials and endpoints are verified separately at Gate 7 using the same durable job/idempotency contract.
+## Release gate usage
+
+A Gate 4 release candidate is acceptable only when the same commit is green on:
+
+- **Gate 4 Broker Notification Refund Certification** — the cross-domain authoritative scenario above;
+- **Production Platform Foundation** — frozen dependency install, strict TypeScript, emitted production builds and migrations from zero;
+- **Validate PRENEURA** — product/static consistency plus the full Chromium regression suite.
+
+Gate 2 pricing and both Gate 3 certifications are inherited from the already-certified stacked base unless this branch changes their authoritative surfaces. Any future change to pricing, document/contract trust or finance-ledger authority must rerun the corresponding dedicated certification before Gate 4 may be accepted.
+
+Gate 4 does not certify live external provider credentials. Production WhatsApp/SMS/email credentials and endpoints are verified separately at Gate 7 using the same durable job/idempotency contract.
