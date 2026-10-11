@@ -97,25 +97,59 @@ export class TransactionListRepository {
       .limit(Math.min(Math.max(input.limit ?? 200, 1), 500))
       .execute();
 
-    return rows.map((row) => ({
-      transactionId: row.transaction_id,
-      reservationId: row.reservation_id,
-      buyerProfileId: row.buyer_profile_id,
-      buyerUserId: row.buyer_user_id,
-      buyerDisplayName: row.buyer_display_name,
-      buyerSource: row.buyer_source,
-      brokerCompanyId: row.broker_company_id,
-      brokerCompanyName: row.broker_company_name,
-      brokerAgentUserId: row.broker_agent_user_id,
-      brokerAgentDisplayName: row.broker_agent_display_name,
-      unitTypeId: row.unit_type_id,
-      unitTypeCode: row.unit_type_code,
-      unitTypeName: row.unit_type_name,
-      status: row.status,
-      quotedTotal: row.quoted_total === null ? null : String(row.quoted_total),
-      currency: row.currency,
-      openedAt: (row.opened_at as Date).toISOString(),
-      completionPercent: Number(row.completion_percent).toFixed(2),
-    }));
+    if (rows.length === 0) return [];
+
+    const exactResult = await sql<{
+      reservation_id: string;
+      physical_unit_id: string | null;
+      physical_unit_reference: string | null;
+      building_code: string | null;
+      floor_code: string | null;
+    }>`
+      SELECT
+        r.id AS reservation_id,
+        r.physical_unit_id,
+        COALESCE(u.display_reference, u.internal_reference) AS physical_unit_reference,
+        bld.code AS building_code,
+        fl.code AS floor_code
+      FROM reservations r
+      LEFT JOIN physical_units u
+        ON u.id = r.physical_unit_id
+       AND u.tenant_id = r.tenant_id
+       AND u.project_id = r.project_id
+       AND u.unit_type_id = r.unit_type_id
+      LEFT JOIN project_buildings bld ON bld.id = u.building_id
+      LEFT JOIN project_floors fl ON fl.id = u.floor_id
+      WHERE r.id IN (${sql.join(rows.map((row) => sql`${row.reservation_id}::uuid`))})
+    `.execute(this.db);
+    const exactByReservation = new Map(exactResult.rows.map((row) => [row.reservation_id, row]));
+
+    return rows.map((row) => {
+      const exact = exactByReservation.get(row.reservation_id);
+      return {
+        transactionId: row.transaction_id,
+        reservationId: row.reservation_id,
+        buyerProfileId: row.buyer_profile_id,
+        buyerUserId: row.buyer_user_id,
+        buyerDisplayName: row.buyer_display_name,
+        buyerSource: row.buyer_source,
+        brokerCompanyId: row.broker_company_id,
+        brokerCompanyName: row.broker_company_name,
+        brokerAgentUserId: row.broker_agent_user_id,
+        brokerAgentDisplayName: row.broker_agent_display_name,
+        unitTypeId: row.unit_type_id,
+        unitTypeCode: row.unit_type_code,
+        unitTypeName: row.unit_type_name,
+        physicalUnitId: exact?.physical_unit_id ?? null,
+        physicalUnitReference: exact?.physical_unit_reference ?? null,
+        buildingCode: exact?.building_code ?? null,
+        floorCode: exact?.floor_code ?? null,
+        status: row.status,
+        quotedTotal: row.quoted_total === null ? null : String(row.quoted_total),
+        currency: row.currency,
+        openedAt: (row.opened_at as Date).toISOString(),
+        completionPercent: Number(row.completion_percent).toFixed(2),
+      };
+    });
   }
 }
