@@ -123,6 +123,28 @@ INSERT INTO auth_sessions (id, user_id, token_digest, expires_at) VALUES
     now() + interval '2 hours'
   );
 
+-- Acceptance uses explicit assurance evidence. Manager/finance-like roles are
+-- synthetic AAL2 OIDC sessions; ordinary buyer/broker-agent sessions remain AAL1.
+INSERT INTO auth_session_assurance (
+  session_id, auth_method, assurance_level, provider_acr, provider_amr
+) VALUES
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'OTP', 'AAL1', NULL, '[]'::jsonb
+  ),
+  (
+    '51000000-0000-4000-8000-000000000002',
+    'OIDC_GOOGLE', 'AAL2', 'urn:preneura:aal2', '["mfa"]'::jsonb
+  ),
+  (
+    '51000000-0000-4000-8000-000000000003',
+    'OIDC_GOOGLE', 'AAL2', 'urn:preneura:aal2', '["mfa"]'::jsonb
+  ),
+  (
+    '51000000-0000-4000-8000-000000000004',
+    'OTP', 'AAL1', NULL, '[]'::jsonb
+  );
+
 -- Runtime worker probes: one outbox event, one in-app notification and one
 -- expired lock that must be reclaimed by the emitted production worker.
 INSERT INTO domain_outbox_events (
