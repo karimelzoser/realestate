@@ -187,6 +187,11 @@ export class CatalogService {
     if (!lock) {
       throw new ConflictException('No inventory is currently available for this unit type.');
     }
+    if (lock.unitTypeId !== input.data.unitTypeId) {
+      throw new ConflictException(
+        'This buyer already has an active allocation lock. Release it before selecting another unit type.',
+      );
+    }
     return lock;
   }
 
