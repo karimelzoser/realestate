@@ -48,6 +48,7 @@ async function main(): Promise<void> {
     databaseSchemaVersion: readiness.databaseSchemaVersion,
     minimumRuntimeVersion: readiness.minimumRuntimeVersion,
     migrationMarker: readiness.migrationMarker,
+    migrationLedgerVersion: readiness.migrationLedgerVersion,
     databaseLatencyMs: readiness.latencyMs,
   });
 
