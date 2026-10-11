@@ -1,0 +1,76 @@
+name: Exact Apartment Allocation Certification
+
+on:
+  push:
+    branches:
+      - "feature/production-*"
+      - "integration/software-ready-for-deployment"
+    paths:
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/exact_apartment_allocation_fixture.sql"
+      - "platform/scripts/certify-exact-apartment-allocation.sh"
+      - "platform/apps/api/src/sales/**"
+      - "platform/packages/contracts/src/allocation.ts"
+      - "platform/packages/contracts/src/sales.ts"
+      - ".github/workflows/exact-allocation-certification.yml"
+  pull_request:
+    paths:
+      - "platform/packages/database/migrations/**"
+      - "platform/packages/database/tests/exact_apartment_allocation_fixture.sql"
+      - "platform/scripts/certify-exact-apartment-allocation.sh"
+      - "platform/apps/api/src/sales/**"
+      - "platform/packages/contracts/src/allocation.ts"
+      - "platform/packages/contracts/src/sales.ts"
+      - ".github/workflows/exact-allocation-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  exact-allocation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Apply production migrations from zero
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for migration in platform/packages/database/migrations/*.sql; do
+            echo "Applying $migration"
+            psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d preneura -f "$migration"
+          done
+      - name: Certify exact apartment allocation
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura
+        run: bash platform/scripts/certify-exact-apartment-allocation.sh
+      - name: Verify runtime allocation contract
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d preneura <<'SQL'
+          SELECT schema_version = 34 AS schema_34,
+                 minimum_runtime_version = 34 AS runtime_floor_34,
+                 migration_marker = '0034_exact_apartment_allocation' AS marker_ok
+          FROM platform_runtime_contract
+          WHERE singleton_key = 'production';
+
+          SELECT to_regclass('public.inventory_locks_one_active_per_physical_unit') IS NOT NULL
+            AS physical_lock_unique_exists;
+          SELECT to_regclass('public.reservations_one_active_per_physical_unit') IS NOT NULL
+            AS physical_reservation_unique_exists;
+          SQL
