@@ -19,8 +19,8 @@ DECLARE
   agreement_b uuid := gen_random_uuid();
   agreement_target uuid := gen_random_uuid();
   buyer_profile uuid := gen_random_uuid();
-  transfer_id uuid := gen_random_uuid();
-  stale_transfer_id uuid := gen_random_uuid();
+  v_transfer_id uuid := gen_random_uuid();
+  v_stale_transfer_id uuid := gen_random_uuid();
   row_count integer;
 BEGIN
   INSERT INTO users (id, display_name, status) VALUES
@@ -111,12 +111,12 @@ BEGIN
     to_broker_company_id, to_broker_agent_user_id,
     reason, requested_by
   ) VALUES (
-    transfer_id, tenant_a, project_a, buyer_profile,
+    v_transfer_id, tenant_a, project_a, buyer_profile,
     company_a, agent_a, company_target, agent_b,
     'Buyer reassigned under approved B2B process', admin_user
   );
 
-  PERFORM preneura_approve_brokerage_attribution_transfer(transfer_id, admin_user, 'Approved in certification');
+  PERFORM preneura_approve_brokerage_attribution_transfer(v_transfer_id, admin_user, 'Approved in certification');
 
   IF NOT EXISTS (
     SELECT 1 FROM buyer_profiles
@@ -127,15 +127,15 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM brokerage_attribution_transfers
-    WHERE id = transfer_id AND status = 'APPROVED' AND reviewed_by = admin_user AND reviewed_at IS NOT NULL
+    WHERE id = v_transfer_id AND status = 'APPROVED' AND reviewed_by = admin_user AND reviewed_at IS NOT NULL
   ) THEN
     RAISE EXCEPTION 'approved transfer did not retain review evidence';
   END IF;
 
   IF NOT EXISTS (
-    SELECT 1 FROM brokerage_attribution_history
-    WHERE transfer_id = transfer_id AND event_type = 'TRANSFER_APPROVED'
-      AND broker_company_id = company_target AND broker_agent_user_id = agent_b
+    SELECT 1 FROM brokerage_attribution_history h
+    WHERE h.transfer_id = v_transfer_id AND h.event_type = 'TRANSFER_APPROVED'
+      AND h.broker_company_id = company_target AND h.broker_agent_user_id = agent_b
   ) THEN
     RAISE EXCEPTION 'approved transfer did not append attribution history';
   END IF;
@@ -155,14 +155,14 @@ BEGIN
     to_broker_company_id, to_broker_agent_user_id,
     reason, requested_by
   ) VALUES (
-    stale_transfer_id, tenant_a, project_a, buyer_profile,
+    v_stale_transfer_id, tenant_a, project_a, buyer_profile,
     company_target, agent_b, company_a, agent_a,
     'Certification stale request', admin_user
   );
 
   UPDATE buyer_profiles SET broker_agent_user_id = NULL WHERE id = buyer_profile;
   BEGIN
-    PERFORM preneura_approve_brokerage_attribution_transfer(stale_transfer_id, admin_user, NULL);
+    PERFORM preneura_approve_brokerage_attribution_transfer(v_stale_transfer_id, admin_user, NULL);
     RAISE EXCEPTION 'stale transfer unexpectedly approved';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM = 'stale transfer unexpectedly approved' THEN RAISE; END IF;
