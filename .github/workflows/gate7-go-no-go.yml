@@ -131,8 +131,9 @@ jobs:
           OPERATIONAL_OWNER: ${{ inputs.operational_owner }}
           GATE7_EVIDENCE_JSON: ${{ inputs.evidence_json }}
           GATE7_TLS_MIN_REMAINING_DAYS: ${{ inputs.tls_min_remaining_days }}
-          REPORT_PATH: gate7-live-evidence.json
-        run: node scripts/certify-gate7-live.mjs
+        run: |
+          umask 077
+          node scripts/certify-gate7-live.mjs > gate7-live-evidence.json
 
       - name: Publish evidence summary
         run: |

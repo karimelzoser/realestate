@@ -1,5 +1,5 @@
 import { lookup } from 'node:dns/promises';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { connect as tlsConnect } from 'node:tls';
 import { readRuntimeContract } from './runtime-contract.mjs';
@@ -275,12 +275,10 @@ const report = {
   },
 };
 
-// Provider responses and workflow input must never select the destination path.
-// This package-owned artifact name is also the workflow upload contract.
-const reportPath = resolve(process.cwd(), 'gate7-live-evidence.json');
-await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 });
-console.log('GATE7_FINAL_DECISION=GO');
-console.log(`DEPLOYED_BUNDLE_SHA=${deployedBundleSha}`);
-console.log(`APPLICATION_RUNTIME_SHA=${applicationRuntimeSha}`);
-console.log(`RUNTIME_SCHEMA_VERSION=${EXPECTED_RUNTIME_SCHEMA}`);
-console.log(`EVIDENCE_REPORT=${reportPath}`);
+// Emit structured evidence only. The operator/workflow owns the fixed artifact
+// destination; network-returned data cannot initiate filesystem operations.
+process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+console.error('GATE7_FINAL_DECISION=GO');
+console.error(`DEPLOYED_BUNDLE_SHA=${deployedBundleSha}`);
+console.error(`APPLICATION_RUNTIME_SHA=${applicationRuntimeSha}`);
+console.error(`RUNTIME_SCHEMA_VERSION=${EXPECTED_RUNTIME_SCHEMA}`);
