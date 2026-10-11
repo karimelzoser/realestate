@@ -8,6 +8,16 @@ const mandatoryTests = [
     minimumDeclaredTests: 4,
   },
 ];
+const workspaceManifests = [
+  'apps/api/package.json',
+  'apps/notification-gateway/package.json',
+  'apps/web/package.json',
+  'apps/worker/package.json',
+  'packages/contracts/package.json',
+  'packages/database/package.json',
+  'packages/observability/package.json',
+  'packages/security/package.json',
+];
 
 let declaredTests = 0;
 for (const suite of mandatoryTests) {
@@ -39,6 +49,16 @@ if (!String(rootPackage.scripts?.lint ?? '').includes('static-policy-lint.mjs'))
 }
 if (!String(apiPackage.scripts?.test ?? '').includes('auth-assurance.test.ts')) {
   throw new Error('API test command must execute the privileged-assurance suite explicitly.');
+}
+
+for (const relative of workspaceManifests) {
+  const manifest = JSON.parse(await readFile(resolve(root, relative), 'utf8'));
+  const testCommand = String(manifest.scripts?.test ?? '').trim();
+  if (testCommand === 'node --test') {
+    throw new Error(
+      `${relative} advertises a bare node --test command that can pass with zero tests. Remove it or point it at a real suite.`,
+    );
+  }
 }
 
 console.log(
