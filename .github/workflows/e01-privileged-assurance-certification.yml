@@ -1,0 +1,194 @@
+name: E01 Privileged Assurance Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/api/src/auth/**"
+      - "platform/apps/api/src/health/**"
+      - "platform/apps/api/src/release/**"
+      - "platform/apps/api/test/**"
+      - "platform/apps/api/scripts/**"
+      - "platform/apps/api/package.json"
+      - "platform/packages/database/migrations/0042_auth_session_assurance.sql"
+      - "platform/packages/database/tests/e01_privileged_assurance_certification.sql"
+      - "platform/packages/database/tests/full_stack_acceptance_seed.sql"
+      - "platform/scripts/**"
+      - "platform/package.json"
+      - ".github/workflows/e01-privileged-assurance-certification.yml"
+  push:
+    branches:
+      - "task/e01-privileged-assurance"
+      - "completion/egypt-full-platform"
+    paths:
+      - "platform/apps/api/src/auth/**"
+      - "platform/apps/api/src/health/**"
+      - "platform/apps/api/src/release/**"
+      - "platform/apps/api/test/**"
+      - "platform/apps/api/scripts/**"
+      - "platform/apps/api/package.json"
+      - "platform/packages/database/migrations/0042_auth_session_assurance.sql"
+      - "platform/packages/database/tests/e01_privileged_assurance_certification.sql"
+      - "platform/packages/database/tests/full_stack_acceptance_seed.sql"
+      - "platform/scripts/**"
+      - "platform/package.json"
+      - ".github/workflows/e01-privileged-assurance-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Certify truthful normal quality commands
+        working-directory: platform
+        run: |
+          set -euo pipefail
+          pnpm test
+          pnpm lint
+
+      - name: Build API with exact release identity
+        working-directory: platform
+        env:
+          PRENEURA_BUILD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          pnpm --filter @preneura/api... build
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const identity = JSON.parse(fs.readFileSync('apps/api/dist/build-identity.json', 'utf8'));
+          if (identity.gitSha !== process.env.GITHUB_SHA.toLowerCase()) {
+            throw new Error(`build identity ${identity.gitSha} != ${process.env.GITHUB_SHA}`);
+          }
+          console.log(`BUILD_IDENTITY_OK ${identity.gitSha}`);
+          NODE
+
+      - name: Migrate and certify database assurance invariant
+        working-directory: platform
+        env:
+          PGPASSWORD: postgres
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/e01_assurance
+        run: |
+          set -euo pipefail
+          createdb -h 127.0.0.1 -U postgres e01_assurance
+          MIGRATION_ACTOR=e01-privileged-assurance pnpm --filter @preneura/database migrate
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/database/tests/e01_privileged_assurance_certification.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/database/tests/full_stack_acceptance_seed.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO auth_sessions (id, user_id, token_digest, expires_at)
+          VALUES (
+            'e0100000-0000-4000-8000-000000000003',
+            '31000000-0000-4000-8000-000000000001',
+            digest('acceptance-manager-aal1-token-000001', 'sha256'),
+            now() + interval '1 hour'
+          );
+          INSERT INTO auth_session_assurance (
+            session_id, auth_method, assurance_level, provider_acr, provider_amr
+          ) VALUES (
+            'e0100000-0000-4000-8000-000000000003',
+            'OTP', 'AAL1', NULL, '[]'::jsonb
+          );
+          SQL
+
+      - name: Certify privileged AAL1 denial and matching release readiness
+        working-directory: platform
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/e01_assurance
+          OBJECT_STORAGE_BUCKET: e01-private-bucket
+          PRENEURA_EXPECTED_RELEASE_SHA: ${{ github.sha }}
+          OTEL_TRACES_EXPORTER: none
+          OTEL_METRICS_EXPORTER: none
+        run: |
+          set -Eeuo pipefail
+          NODE_ENV=test PORT=4100 WEB_ORIGIN=http://127.0.0.1:3000 \
+            pnpm --filter @preneura/api start >/tmp/e01-api.log 2>&1 &
+          API_PID=$!
+          trap 'kill "$API_PID" 2>/dev/null || true' EXIT
+
+          for _ in $(seq 1 60); do
+            if curl --silent --fail http://127.0.0.1:4100/v1/health/ready >/tmp/e01-ready.json; then break; fi
+            if ! kill -0 "$API_PID" 2>/dev/null; then cat /tmp/e01-api.log; exit 1; fi
+            sleep 0.5
+          done
+
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const ready = JSON.parse(fs.readFileSync('/tmp/e01-ready.json', 'utf8'));
+          if (ready.build?.gitSha !== process.env.GITHUB_SHA.toLowerCase()) throw new Error('readiness build SHA mismatch');
+          if (ready.build?.matchesExpected !== true) throw new Error('readiness did not certify expected release SHA');
+          NODE
+
+          status=$(curl -sS -o /tmp/e01-aal1.json -w '%{http_code}' \
+            -H 'Cookie: preneura_session=acceptance-manager-aal1-token-000001' \
+            http://127.0.0.1:4100/v1/me/workspace)
+          test "$status" = "403"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync('/tmp/e01-aal1.json', 'utf8'));
+          if (body.error !== 'STEP_UP_REQUIRED') throw new Error(`expected STEP_UP_REQUIRED, got ${JSON.stringify(body)}`);
+          if (body.requiredAssurance !== 'AAL2') throw new Error('required assurance is not AAL2');
+          NODE
+
+      - name: Certify release mismatch fails readiness
+        working-directory: platform
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/e01_assurance
+          OBJECT_STORAGE_BUCKET: e01-private-bucket
+          PRENEURA_EXPECTED_RELEASE_SHA: ffffffffffffffffffffffffffffffffffffffff
+          OTEL_TRACES_EXPORTER: none
+          OTEL_METRICS_EXPORTER: none
+        run: |
+          set -Eeuo pipefail
+          NODE_ENV=test PORT=4101 WEB_ORIGIN=http://127.0.0.1:3000 \
+            pnpm --filter @preneura/api start >/tmp/e01-api-mismatch.log 2>&1 &
+          API_PID=$!
+          trap 'kill "$API_PID" 2>/dev/null || true' EXIT
+
+          for _ in $(seq 1 60); do
+            if curl --silent --fail http://127.0.0.1:4101/v1/health/live >/dev/null; then break; fi
+            if ! kill -0 "$API_PID" 2>/dev/null; then cat /tmp/e01-api-mismatch.log; exit 1; fi
+            sleep 0.5
+          done
+
+          status=$(curl -sS -o /tmp/e01-mismatch.json -w '%{http_code}' http://127.0.0.1:4101/v1/health/ready)
+          test "$status" = "503"
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const body = JSON.parse(fs.readFileSync('/tmp/e01-mismatch.json', 'utf8'));
+          if (body.checks?.code !== 'RELEASE_IDENTITY_MISMATCH') {
+            throw new Error(`expected RELEASE_IDENTITY_MISMATCH, got ${JSON.stringify(body)}`);
+          }
+          NODE
