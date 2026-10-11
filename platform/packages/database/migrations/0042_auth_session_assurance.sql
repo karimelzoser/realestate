@@ -23,8 +23,15 @@ CREATE INDEX auth_session_assurance_level_time
 COMMENT ON TABLE auth_session_assurance IS
   'Server-side authentication assurance evidence. Sessions without a row are treated as AAL1 for backward-safe fail-closed behavior.';
 
--- Runtime 42 depends on this table for privileged authorization. The migration is
--- additive, so the previous runtime may continue during a rolling deployment.
+-- One PRENEURA account may have only one identity per external provider. Combined
+-- with the existing (provider, provider_subject) uniqueness, this closes both sides
+-- of concurrent factor enrollment: one provider subject cannot own two accounts and
+-- one account cannot acquire two competing Google subjects.
+CREATE UNIQUE INDEX auth_external_identities_one_subject_per_user_provider
+  ON auth_external_identities(user_id, provider);
+
+-- Runtime 42 depends on this table/index for privileged authorization. The migration
+-- is additive, so the previous runtime may continue during a rolling deployment.
 UPDATE platform_runtime_contract
 SET
   schema_version = 42,
