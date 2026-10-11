@@ -7,8 +7,8 @@
     "applicationRuntimeSource": "PR #81 emitted full-stack acceptance",
     "deploymentBundleSha": "8750f94180b89cf58a1963f739c24aa0a56babbd",
     "deploymentBundleSource": "PR #82 self-hosted deployment bundle",
-    "runtimeSchemaVersion": 42,
-    "migrationMarker": "0042_auth_session_assurance.sql",
+    "runtimeSchemaVersion": 45,
+    "migrationMarker": "0045_brokerage_b2b_onboarding.sql",
     "status": "DEVELOPMENT"
   },
   "deployment": {
