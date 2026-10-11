@@ -3,7 +3,7 @@ name: Production Configuration Certification
 on:
   pull_request:
     paths:
-      - "platform/apps/api/src/runtime-config.ts"
+      - "platform/apps/api/src/config/**"
       - "platform/apps/api/src/main.ts"
       - "platform/apps/worker/src/runtime-config.ts"
       - "platform/apps/worker/src/main.ts"
@@ -23,7 +23,7 @@ on:
       - "feature/production-*"
       - "release/**"
     paths:
-      - "platform/apps/api/src/runtime-config.ts"
+      - "platform/apps/api/src/config/**"
       - "platform/apps/api/src/main.ts"
       - "platform/apps/worker/src/runtime-config.ts"
       - "platform/apps/worker/src/main.ts"
