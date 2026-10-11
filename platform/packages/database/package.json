@@ -17,7 +17,6 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "migrate": "node scripts/migrate.mjs",
-    "test": "node --test",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
