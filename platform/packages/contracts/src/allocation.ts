@@ -34,18 +34,6 @@ export interface ExactAllocationUnitSnapshot {
   inventoryUpdatedAt: string;
 }
 
-export interface ExactAllocationContextSnapshot {
-  queueEntryId: string;
-  buyerProfileId: string;
-  buyerUserId: string;
-  eoiId: string;
-  eoiUnitTypeId: string;
-  eoiUnitTypeCode: string;
-  eoiUnitTypeName: string;
-  queueStatus: 'CALLED' | 'LOCKED';
-  units: ExactAllocationUnitSnapshot[];
-}
-
 export interface ExactAllocationLockResult {
   lockId: string;
   buyerUserId: string;
@@ -62,4 +50,17 @@ export interface ExactAllocationLockResult {
   floorId: string;
   floorCode: string;
   floorName: string;
+}
+
+export interface ExactAllocationContextSnapshot {
+  queueEntryId: string;
+  buyerProfileId: string;
+  buyerUserId: string;
+  eoiId: string;
+  eoiUnitTypeId: string;
+  eoiUnitTypeCode: string;
+  eoiUnitTypeName: string;
+  queueStatus: 'CALLED' | 'LOCKED';
+  activeLock: ExactAllocationLockResult | null;
+  units: ExactAllocationUnitSnapshot[];
 }
