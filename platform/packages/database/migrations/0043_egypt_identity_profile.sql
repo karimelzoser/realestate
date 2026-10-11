@@ -119,4 +119,14 @@ CREATE TRIGGER identity_verification_events_immutable
 BEFORE UPDATE OR DELETE ON identity_verification_events
 FOR EACH ROW EXECUTE FUNCTION preneura_identity_evidence_immutable();
 
+-- Identity/profile storage is additive. Runtime 42 can continue serving during a rolling
+-- migration, while runtime 43 requires this schema before exposing the new identity API.
+UPDATE platform_runtime_contract
+SET
+  schema_version = 43,
+  minimum_runtime_version = LEAST(minimum_runtime_version, 42),
+  migration_marker = '0043_egypt_identity_profile',
+  updated_at = now()
+WHERE singleton_key = 'production';
+
 COMMIT;
