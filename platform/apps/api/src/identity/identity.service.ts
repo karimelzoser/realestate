@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   ForbiddenException,
   HttpException,
@@ -180,8 +179,22 @@ export class IdentityService {
       at: new Date(),
     });
     if (!recovered) {
+      const context = await this.repository.recoveryChallengeContext(input.challengeId);
+      if (context?.userId) {
+        await this.repository.recordVerificationEvent({
+          tenantId: context.tenantId,
+          userId: context.userId,
+          assertionType: 'RECOVERY_CHALLENGE_REJECTED',
+          evidenceSource: 'TENANT_SCOPED_DOCUMENT_RECOVERY',
+          metadata: { challengeId: input.challengeId },
+        });
+      }
       throw new UnauthorizedException('The recovery code is invalid or expired.');
     }
+
+    // Membership, tenant and user status can change after the code is issued. Recovery must not
+    // reactivate a suspended account merely because a previously issued OTP is still valid.
+    await this.requireMembership({ tenantId: recovered.tenantId, userId: recovered.userId });
 
     await this.repository.recordVerificationEvent({
       tenantId: recovered.tenantId,
