@@ -14,6 +14,7 @@ OPERATOR='a0000000-0000-4000-8000-000000000001'
 QUEUE1='ad000000-0000-4000-8000-000000000001'
 QUEUE2='ad000000-0000-4000-8000-000000000002'
 UNIT_A1='a8000000-0000-4000-8000-000000000001'
+UNIT_A2='a8000000-0000-4000-8000-000000000002'
 UNIT_B1='a8000000-0000-4000-8000-000000000003'
 
 # An EOI for TYPE-A must never lock a TYPE-B physical apartment.
@@ -46,7 +47,7 @@ if [[ $mutation_status -eq 0 ]]; then
   exit 1
 fi
 
-# Anonymous locks are no longer valid in runtime schema 34.
+# Anonymous locks are no longer valid in runtime schema 34+.
 set +e
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
   INSERT INTO inventory_locks (
@@ -107,6 +108,78 @@ if [[ "$active_count" != '1' ]]; then
   echo "ERROR: physical apartment has $active_count active locks; expected 1." >&2
   exit 1
 fi
+
+# The losing buyer must be able to lock a different apartment of the same EOI
+# type. Expiry must automatically free that exact apartment, and an explicit
+# release must allow reacquisition without mutating the physical inventory slot.
+if [[ $status1 -eq 0 ]]; then
+  LOSER_QUEUE="$QUEUE2"
+else
+  LOSER_QUEUE="$QUEUE1"
+fi
+
+first_a2_lock="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -Atc "
+  SELECT lock_id FROM preneura_lock_exact_physical_unit(
+    '$TENANT'::uuid, '$PROJECT'::uuid, '$LOSER_QUEUE'::uuid, '$UNIT_A2'::uuid,
+    '$OPERATOR'::uuid, 30, now()
+  );
+")"
+
+second_a2_lock="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -Atc "
+  SELECT lock_id FROM preneura_lock_exact_physical_unit(
+    '$TENANT'::uuid, '$PROJECT'::uuid, '$LOSER_QUEUE'::uuid, '$UNIT_A2'::uuid,
+    '$OPERATOR'::uuid, 30, now() + interval '31 seconds'
+  );
+")"
+
+if [[ "$first_a2_lock" == "$second_a2_lock" ]]; then
+  echo 'ERROR: expired exact-unit lock was reused instead of replaced.' >&2
+  exit 1
+fi
+
+expired_count="$(psql "$DATABASE_URL" -Atc "
+  SELECT count(*) FROM inventory_locks
+  WHERE id = '$first_a2_lock'::uuid AND status = 'EXPIRED';
+")"
+if [[ "$expired_count" != '1' ]]; then
+  echo 'ERROR: prior exact-unit lock was not marked EXPIRED.' >&2
+  exit 1
+fi
+
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
+  UPDATE inventory_locks
+  SET status = 'RELEASED',
+      released_at = now(),
+      release_reason = 'allocation certification explicit release',
+      updated_at = now()
+  WHERE id = '$second_a2_lock'::uuid AND status = 'ACTIVE';
+" >/dev/null
+
+third_a2_lock="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -Atc "
+  SELECT lock_id FROM preneura_lock_exact_physical_unit(
+    '$TENANT'::uuid, '$PROJECT'::uuid, '$LOSER_QUEUE'::uuid, '$UNIT_A2'::uuid,
+    '$OPERATOR'::uuid, 30, now() + interval '32 seconds'
+  );
+")"
+if [[ -z "$third_a2_lock" || "$third_a2_lock" == "$second_a2_lock" ]]; then
+  echo 'ERROR: released exact apartment could not be reacquired.' >&2
+  exit 1
+fi
+
+slot_state="$(psql "$DATABASE_URL" -Atc "
+  SELECT state FROM inventory_slots
+  WHERE physical_unit_id = '$UNIT_A2'::uuid;
+")"
+if [[ "$slot_state" != 'AVAILABLE' ]]; then
+  echo "ERROR: lock expiry/release mutated the saleable slot to $slot_state." >&2
+  exit 1
+fi
+
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "
+  UPDATE inventory_locks
+  SET status = 'RELEASED', released_at = now(), release_reason = 'test cleanup', updated_at = now()
+  WHERE id = '$third_a2_lock'::uuid AND status = 'ACTIVE';
+" >/dev/null
 
 # Convert the winning exact lock into a reservation and prove the exact unit and
 # canonical price are snapshotted. The losing buyer remains uncommitted.
