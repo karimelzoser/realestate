@@ -123,7 +123,7 @@ jobs:
           );
           SQL
 
-      - name: Certify privileged AAL1 denial and matching release readiness
+      - name: Certify privileged step-up boundary and matching release readiness
         working-directory: platform
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/e01_assurance
@@ -151,6 +151,7 @@ jobs:
           if (ready.build?.matchesExpected !== true) throw new Error('readiness did not certify expected release SHA');
           NODE
 
+          # A privileged Manager authenticated only with possession OTP must be denied.
           status=$(curl -sS -o /tmp/e01-aal1.json -w '%{http_code}' \
             -H 'Cookie: preneura_session=acceptance-manager-aal1-token-000001' \
             http://127.0.0.1:4100/v1/me/workspace)
@@ -161,6 +162,18 @@ jobs:
           if (body.error !== 'STEP_UP_REQUIRED') throw new Error(`expected STEP_UP_REQUIRED, got ${JSON.stringify(body)}`);
           if (body.requiredAssurance !== 'AAL2') throw new Error('required assurance is not AAL2');
           NODE
+
+          # The same Manager with explicit AAL2 OIDC evidence must retain legitimate access.
+          status=$(curl -sS -o /tmp/e01-manager-aal2.json -w '%{http_code}' \
+            -H 'Cookie: preneura_session=acceptance-manager-token-00000000000001' \
+            http://127.0.0.1:4100/v1/me/workspace)
+          test "$status" = "200"
+
+          # Ordinary Buyer OTP is valid AAL1 and must not be blocked by the privileged-account policy.
+          status=$(curl -sS -o /tmp/e01-buyer-aal1.json -w '%{http_code}' \
+            -H 'Cookie: preneura_session=acceptance-buyer-token-0000000000000001' \
+            http://127.0.0.1:4100/v1/me/workspace)
+          test "$status" = "200"
 
       - name: Certify release mismatch fails readiness
         working-directory: platform
