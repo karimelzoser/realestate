@@ -6,7 +6,11 @@ on:
       - "platform/apps/web/app/layout.tsx"
       - "platform/apps/web/app/locale-provider.tsx"
       - "platform/apps/web/app/locale.css"
+      - "platform/apps/web/app/login/page.tsx"
+      - "platform/apps/web/app/access-pending/page.tsx"
+      - "platform/apps/web/app/verify-account/verify-account-client.tsx"
       - "platform/apps/web/lib/locale.ts"
+      - "platform/apps/web/lib/messages.ts"
       - "platform/apps/web/scripts/certify-locale-foundation.mjs"
       - "platform/apps/web/package.json"
       - "platform/pnpm-lock.yaml"
@@ -18,7 +22,11 @@ on:
       - "platform/apps/web/app/layout.tsx"
       - "platform/apps/web/app/locale-provider.tsx"
       - "platform/apps/web/app/locale.css"
+      - "platform/apps/web/app/login/page.tsx"
+      - "platform/apps/web/app/access-pending/page.tsx"
+      - "platform/apps/web/app/verify-account/verify-account-client.tsx"
       - "platform/apps/web/lib/locale.ts"
+      - "platform/apps/web/lib/messages.ts"
       - "platform/apps/web/scripts/certify-locale-foundation.mjs"
       - "platform/apps/web/package.json"
       - "platform/pnpm-lock.yaml"
@@ -52,7 +60,7 @@ jobs:
         working-directory: platform
         run: pnpm install --frozen-lockfile
 
-      - name: Certify locale contract
+      - name: Certify locale contract and bilingual critical auth journeys
         working-directory: platform
         run: node apps/web/scripts/certify-locale-foundation.mjs
 
