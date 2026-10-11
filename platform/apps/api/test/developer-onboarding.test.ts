@@ -105,11 +105,17 @@ test('first-director bootstrap closes after any Operations Director assignment e
   const repository = {
     snapshot: async () => onboardingSnapshot({ operationsDirectors: 1 }),
   };
+  const projects = {};
   const access = { assert: async () => ({ allowed: true }), can: async () => ({ allowed: true }) };
   const bootstrap = {
     provisionOperationsDirector: async () => { bootstrapCalled = true; throw new Error('SHOULD_NOT_RUN'); },
   };
-  const service = new OnboardingService(repository as never, access as never, bootstrap as never);
+  const service = new OnboardingService(
+    repository as never,
+    projects as never,
+    access as never,
+    bootstrap as never,
+  );
 
   await assert.rejects(
     service.bootstrapOperationsDirector(actorUserId, tenantId, {
@@ -126,8 +132,14 @@ test('onboarding completion is rejected until derived prerequisites are ready', 
     snapshot: async () => onboardingSnapshot(),
     complete: async () => { completeCalled = true; return true; },
   };
+  const projects = {};
   const access = { can: async () => ({ allowed: true }), assert: async () => ({ allowed: true }) };
-  const service = new OnboardingService(repository as never, access as never, {} as never);
+  const service = new OnboardingService(
+    repository as never,
+    projects as never,
+    access as never,
+    {} as never,
+  );
 
   await assert.rejects(service.complete(actorUserId, tenantId), /prerequisites are incomplete/);
   assert.equal(completeCalled, false);
