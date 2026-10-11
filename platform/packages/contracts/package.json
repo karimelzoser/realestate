@@ -32,6 +32,10 @@
       "types": "./src/catalog.ts",
       "default": "./dist/catalog.js"
     },
+    "./allocation": {
+      "types": "./src/allocation.ts",
+      "default": "./dist/allocation.js"
+    },
     "./project-catalog": {
       "types": "./src/project-catalog.ts",
       "default": "./dist/project-catalog.js"
