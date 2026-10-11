@@ -17,6 +17,7 @@ export interface AuthLoginAliasesTable { id: Generated<string>; user_id: string;
 export interface AuthExternalIdentitiesTable { id: Generated<string>; user_id: string; provider: string; provider_subject: string; email_at_link_time: string | null; linked_at: Generated<Date>; }
 export interface AuthOtpChallengesTable { id: Generated<string>; user_id: string | null; requested_kind: 'PHONE' | 'NATIONAL_ID'; requested_identifier_hmac: Uint8Array; otp_digest: Uint8Array; delivery_channel: 'SMS' | 'WHATSAPP'; delivery_attempted: Generated<boolean>; attempts_remaining: number; expires_at: Timestamp; consumed_at: Timestamp | null; created_at: Generated<Date>; }
 export interface AuthSessionsTable { id: Generated<string>; user_id: string; token_digest: Uint8Array; expires_at: Timestamp; revoked_at: Timestamp | null; created_at: Generated<Date>; last_seen_at: Generated<Date>; }
+export interface AuthSessionAssuranceTable { session_id: string; auth_method: 'OTP' | 'OIDC_GOOGLE'; assurance_level: 'AAL1' | 'AAL2'; provider_acr: string | null; provider_amr: JsonValue; verified_at: Generated<Date>; created_at: Generated<Date>; }
 export interface AuthSecurityEventsTable { id: Generated<string>; user_id: string | null; event_type: string; result: 'SUCCESS' | 'REJECTED' | 'FAILED'; challenge_id: string | null; session_id: string | null; request_id: string | null; ip_digest: Uint8Array | null; user_agent_digest: Uint8Array | null; metadata: JsonValue; created_at: Generated<Date>; }
 export interface TenantsTable { id: Generated<string>; code: string; name: string; status: 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED'; default_currency: string; default_timezone: string; created_at: Generated<Date>; updated_at: Generated<Date>; }
 export interface TenantMembershipsTable { tenant_id: string; user_id: string; status: 'ACTIVE' | 'SUSPENDED' | 'INVITED'; joined_at: Generated<Date>; }
@@ -67,6 +68,7 @@ export interface Database {
   auth_external_identities: AuthExternalIdentitiesTable;
   auth_otp_challenges: AuthOtpChallengesTable;
   auth_sessions: AuthSessionsTable;
+  auth_session_assurance: AuthSessionAssuranceTable;
   auth_security_events: AuthSecurityEventsTable;
   tenants: TenantsTable;
   tenant_memberships: TenantMembershipsTable;

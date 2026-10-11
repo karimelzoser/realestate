@@ -81,3 +81,7 @@ Server deployment remains intentionally deferred. No server, DNS, production sec
 ### Exact next action
 
 Monitor the user-authored E01.3 checkpoint head until its release workflows complete. If all required exact-head checks pass, update `TASKS.json`, `TASKS.md`, `WORK_STATE.json`, `PROGRESS.md` and `CONTINUE.md` to mark E01.3 tested/verified and begin E02.1/E02.2 from the certified E01.3 head. If any check fails, repair that failure on the same focused E01.3 branch and rerun; do not advance the dependency graph prematurely.
+
+## Codex takeover — 11 October 2026
+
+Working branch: codex/egypt-platform-completion, based on PR #89 with the existing PR #85 deployment/provenance line merged for integration. E01 source/runtime and packaging work are being validated together. Fixed first-factor linking for privileged step-up, file-read race, stale schema checks and deployment workspace/config omissions. Added five identity-enrollment and three runtime-contract regressions. Remote runtime/deployment and real DB checks remain pending; no production GO is claimed. Server access/deployment remains excluded.

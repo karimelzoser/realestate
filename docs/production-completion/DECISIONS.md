@@ -10,3 +10,7 @@
 - Continue means resume using the plan/checkpoint without re-asking these decisions.
 
 Unselected provider names, credentials, domain/host configuration and finance/identity/signature policy details remain explicit external dependencies. Do independent implementation/package work first. Routine technical choices are recorded as ADRs rather than recurring approval questions.
+
+## Current-stage clarification
+
+The user requires implementation and disposable local/CI validation only. No server access, configuration, installation or deployment in this stage. Prepare a portable deployment package; actual hosting/deployment remains a separate later assignment.

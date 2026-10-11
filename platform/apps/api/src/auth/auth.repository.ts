@@ -6,7 +6,7 @@ import type { SessionAssuranceEvidence } from './auth-assurance.js';
 
 export type AliasKind = 'PHONE' | 'NATIONAL_ID';
 export type DeliveryChannel = 'SMS' | 'WHATSAPP';
-export type ExternalIdentityLinkResult = 'LINKED' | 'ALREADY_LINKED' | 'CONFLICT';
+export type ExternalIdentityLinkResult = 'LINKED' | 'ALREADY_LINKED' | 'CONFLICT' | 'ENROLLMENT_REQUIRED';
 
 export interface NewChallenge {
   id: string;
@@ -56,6 +56,7 @@ export abstract class AuthRepository {
     provider: string;
     providerSubject: string;
     verifiedEmail?: string | null;
+    allowNewLink?: boolean;
   }): Promise<ExternalIdentityLinkResult>;
   abstract createChallenge(challenge: NewChallenge): Promise<void>;
   abstract markDeliveryAttempted(challengeId: string): Promise<void>;
@@ -166,6 +167,7 @@ export class PostgresAuthRepository extends AuthRepository {
     provider: string;
     providerSubject: string;
     verifiedEmail?: string | null;
+    allowNewLink?: boolean;
   }): Promise<ExternalIdentityLinkResult> {
     return this.db.transaction().execute(async (trx) => {
       const subjectOwner = await trx
@@ -189,6 +191,11 @@ export class PostgresAuthRepository extends AuthRepository {
           ? 'ALREADY_LINKED'
           : 'CONFLICT';
       }
+
+      // Possession of a phone OTP and MFA on an unrelated IdP account must not
+      // enroll a new privileged factor. Only an authorized enrollment path may
+      // permit first-time linking; ordinary step-up requires an existing binding.
+      if (input.allowNewLink !== true) return 'ENROLLMENT_REQUIRED';
 
       const inserted = await trx
         .insertInto('auth_external_identities')

@@ -41,6 +41,7 @@ try {
   await certifyProjectStreamMembershipRevocation();
   await certifyBrokerStreamAccessRevocation();
   await certifySupportStreamExpiry();
+  await certifyStreamPrivilegeEscalation();
   await certifyWorkerEffects();
   await certifyAuthenticatedNotificationProjection();
   await certifySessionRevocation();
@@ -282,6 +283,21 @@ async function deleteTemporarySupportFixture() {
   await db.query(`DELETE FROM auth_sessions WHERE id = $1::uuid`, [SUPPORT_AUTH_SESSION]);
   await db.query(`DELETE FROM access_role_assignments WHERE id = $1::uuid`, [SUPPORT_ASSIGNMENT]);
   await db.query(`DELETE FROM users WHERE id = $1::uuid`, [SUPPORT_USER]);
+}
+
+async function certifyStreamPrivilegeEscalation() {
+  const stream = await openSse(`${apiBase}/v1/me/notifications/events`, tokens.buyer);
+  const assignment = '36000000-0000-4000-8000-000000000010';
+  try {
+    const buyer = await db.query(`SELECT user_id FROM auth_sessions WHERE token_digest = digest($1, 'sha256')`, [tokens.buyer]);
+    await db.query(`INSERT INTO access_role_assignments (id, user_id, role_code, scope_type, tenant_id, project_id, status)
+      VALUES ($1::uuid, $2::uuid, 'MANAGER', 'PROJECT', $3::uuid, $4::uuid, 'ACTIVE')`,
+    [assignment, buyer.rows[0].user_id, TENANT, PROJECT]);
+    await waitForSseEvent(stream, 'access_revoked', 7_000);
+  } finally {
+    await db.query('DELETE FROM access_role_assignments WHERE id = $1::uuid', [assignment]);
+    await closeSse(stream);
+  }
 }
 
 async function certifyWorkerEffects() {

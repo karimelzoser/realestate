@@ -157,3 +157,5 @@ Cases explicitly covered include:
 - development mode remaining usable with local/default settings.
 
 A change to startup configuration, `.env.example`, this document or the certification itself must keep **Production Configuration Certification** green before merge.
+
+Privileged step-up requires a previously authorized external identity binding. Phone OTP plus MFA on a different, unbound IdP account cannot enroll a privileged sign-in factor. An authorized enrollment/provisioning process must establish that binding before step-up.

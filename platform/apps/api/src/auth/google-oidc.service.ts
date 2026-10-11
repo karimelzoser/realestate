@@ -120,7 +120,13 @@ export class GoogleOidcService {
         provider: 'google',
         providerSubject: subject,
         verifiedEmail: email,
+        allowNewLink: !await this.repository.userRequiresPrivilegedAssurance(input.targetUserId),
       });
+      if (linked === 'ENROLLMENT_REQUIRED') {
+        throw new UnauthorizedException(
+          'A privileged sign-in identity must be enrolled by an authorized administrator before step-up.',
+        );
+      }
       if (linked === 'CONFLICT') {
         throw new UnauthorizedException(
           'This Google identity is already linked to another PRENEURA account.',

@@ -1,14 +1,30 @@
 {
-  "version": 1,
+  "version": 2,
   "product": "PRENEURA Real Estate OS",
   "repository": "karimelzoser/realestate",
-  "releaseSha": "288f4afba3b87dbc123eff6b198e1720075edc7d",
-  "releaseSource": "PR #77 canonical production candidate",
+  "release": {
+    "applicationRuntimeSha": "c2746523eb434898cbb4c46cf5df452d122ba78f",
+    "applicationRuntimeSource": "PR #81 emitted full-stack acceptance",
+    "deploymentBundleSha": "8750f94180b89cf58a1963f739c24aa0a56babbd",
+    "deploymentBundleSource": "PR #82 self-hosted deployment bundle",
+    "runtimeSchemaVersion": 42,
+    "migrationMarker": "0042_auth_session_assurance.sql",
+    "status": "DEVELOPMENT"
+  },
   "deployment": {
     "mode": "self-hosted",
     "environmentName": "staging",
     "operatingSystem": "Linux",
-    "reverseProxy": "Nginx or HAProxy",
+    "reverseProxy": "Nginx",
+    "ingress": {
+      "publicService": "re-edge",
+      "bundleListenerPort": 8080,
+      "tlsTermination": "external",
+      "publicHttpsRequired": true,
+      "apiBasePath": "/api",
+      "readinessPath": "/healthz",
+      "livenessPath": "/livez"
+    },
     "database": {
       "engine": "PostgreSQL",
       "majorVersion": 18,
@@ -31,28 +47,50 @@
         "rootDirectory": "platform",
         "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/web build",
         "startCommand": "pnpm --filter @preneura/web start",
-        "public": true,
-        "healthcheckPath": "/api/health",
-        "requiredVariables": ["NODE_ENV", "NEXT_PUBLIC_API_URL"]
+        "public": false,
+        "healthcheckPath": "/login",
+        "requiredVariables": [
+          "NODE_ENV",
+          "NEXT_PUBLIC_API_URL"
+        ]
       },
       {
         "name": "re-api",
         "rootDirectory": "platform",
         "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @preneura/api build",
         "startCommand": "pnpm --filter @preneura/api start",
-        "public": true,
+        "public": false,
         "healthcheckPath": "/v1/health/ready",
         "requiredVariables": [
-          "NODE_ENV", "DATABASE_URL", "WEB_ORIGIN", "TRUST_PROXY_HOPS", "API_BODY_LIMIT_BYTES",
-          "AUTH_IDENTIFIER_HMAC_KEY", "AUTH_OTP_PEPPER", "COOKIE_SIGNING_SECRET",
-          "CONTACT_ENCRYPTION_KEY_BASE64", "CONTACT_HMAC_KEY", "CONTACT_VERIFICATION_PEPPER",
-          "OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET", "OIDC_REDIRECT_URI",
-          "OTP_PROVIDER", "AUTH_OTP_GATEWAY_URL", "CONTACT_VERIFICATION_GATEWAY_URL",
+          "NODE_ENV",
+          "DATABASE_URL",
+          "WEB_ORIGIN",
+          "TRUST_PROXY_HOPS",
+          "API_BODY_LIMIT_BYTES",
+          "AUTH_IDENTIFIER_HMAC_KEY",
+          "AUTH_OTP_PEPPER",
+          "COOKIE_SIGNING_SECRET",
+          "CONTACT_ENCRYPTION_KEY_BASE64",
+          "CONTACT_HMAC_KEY",
+          "CONTACT_VERIFICATION_PEPPER",
+          "OIDC_ISSUER",
+          "OIDC_CLIENT_ID",
+          "OIDC_CLIENT_SECRET",
+          "OIDC_REDIRECT_URI",
+          "OTP_PROVIDER",
+          "AUTH_OTP_GATEWAY_URL",
+          "CONTACT_VERIFICATION_GATEWAY_URL",
           "NOTIFICATION_GATEWAY_TOKEN",
-          "OBJECT_STORAGE_BUCKET", "OBJECT_STORAGE_REGION", "OBJECT_STORAGE_ENDPOINT",
-          "OBJECT_STORAGE_ACCESS_KEY_ID", "OBJECT_STORAGE_SECRET_ACCESS_KEY", "OBJECT_STORAGE_FORCE_PATH_STYLE",
-          "DOCUMENT_SCANNER_URL", "DOCUMENT_SCANNER_TOKEN",
-          "FINANCE_PROVIDER_INGRESS_TOKEN", "SETTLEMENT_PROVIDER_INGRESS_TOKEN",
+          "OBJECT_STORAGE_BUCKET",
+          "OBJECT_STORAGE_REGION",
+          "OBJECT_STORAGE_ENDPOINT",
+          "OBJECT_STORAGE_ACCESS_KEY_ID",
+          "OBJECT_STORAGE_SECRET_ACCESS_KEY",
+          "OBJECT_STORAGE_FORCE_PATH_STYLE",
+          "DOCUMENT_SCANNER_URL",
+          "DOCUMENT_SCANNER_TOKEN",
+          "FINANCE_PROVIDER_INGRESS_TOKEN",
+          "SETTLEMENT_PROVIDER_INGRESS_TOKEN",
           "OTEL_EXPORTER_OTLP_ENDPOINT"
         ]
       },
@@ -63,9 +101,17 @@
         "startCommand": "pnpm --filter @preneura/worker start",
         "public": false,
         "requiredVariables": [
-          "NODE_ENV", "DATABASE_URL", "NOTIFICATION_GATEWAY_URL", "NOTIFICATION_GATEWAY_TOKEN",
-          "OUTBOX_POLL_MS", "NOTIFICATION_POLL_MS", "SLA_SCAN_MS", "INSTALLMENT_REMINDER_SCAN_MS",
-          "COMMISSION_DUE_SCAN_MS", "INVENTORY_LOCK_EXPIRY_SCAN_MS", "INVENTORY_LOCK_EXPIRY_BATCH_SIZE",
+          "NODE_ENV",
+          "DATABASE_URL",
+          "NOTIFICATION_GATEWAY_URL",
+          "NOTIFICATION_GATEWAY_TOKEN",
+          "OUTBOX_POLL_MS",
+          "NOTIFICATION_POLL_MS",
+          "SLA_SCAN_MS",
+          "INSTALLMENT_REMINDER_SCAN_MS",
+          "COMMISSION_DUE_SCAN_MS",
+          "INVENTORY_LOCK_EXPIRY_SCAN_MS",
+          "INVENTORY_LOCK_EXPIRY_BATCH_SIZE",
           "OTEL_EXPORTER_OTLP_ENDPOINT"
         ]
       },
@@ -77,12 +123,29 @@
         "public": false,
         "healthcheckPath": "/health",
         "requiredVariables": [
-          "NODE_ENV", "DATABASE_URL", "NOTIFICATION_GATEWAY_TOKEN", "CONTACT_ENCRYPTION_KEY_BASE64",
-          "META_GRAPH_API_VERSION", "META_WHATSAPP_PHONE_NUMBER_ID", "META_WHATSAPP_ACCESS_TOKEN",
-          "WHATSAPP_TEMPLATE_BINDINGS_JSON", "OTEL_EXPORTER_OTLP_ENDPOINT"
+          "NODE_ENV",
+          "DATABASE_URL",
+          "NOTIFICATION_GATEWAY_TOKEN",
+          "CONTACT_ENCRYPTION_KEY_BASE64",
+          "META_GRAPH_API_VERSION",
+          "META_WHATSAPP_PHONE_NUMBER_ID",
+          "META_WHATSAPP_ACCESS_TOKEN",
+          "WHATSAPP_TEMPLATE_BINDINGS_JSON",
+          "OTEL_EXPORTER_OTLP_ENDPOINT"
         ]
       }
     ],
+    "edge": {
+      "name": "re-edge",
+      "public": true,
+      "internalPort": 8080,
+      "routes": {
+        "/": "re-web:3000",
+        "/api/": "re-api:4100",
+        "/healthz": "re-api:4100/v1/health/ready",
+        "/livez": "re-api:4100/v1/health/live"
+      }
+    },
     "migration": {
       "command": "MIGRATION_ACTOR=<release-id> pnpm --filter @preneura/database migrate",
       "runBeforeApplicationRestart": true,
@@ -90,13 +153,28 @@
     }
   },
   "gate7": {
+    "requiredEvidence": [
+      "topologyTls",
+      "oidc",
+      "objectStorage",
+      "messaging",
+      "documentScanner",
+      "financeSettlement",
+      "observability",
+      "backupRestore",
+      "migrationRehearsal",
+      "rollbackCutover",
+      "securityApproval",
+      "operationalOwnership"
+    ],
     "deployOnlyWhen": [
       "a Linux staging host or cluster with sufficient CPU, RAM, storage and network capacity is available",
       "PostgreSQL 18 and S3-compatible object storage are configured with backups",
       "real OIDC, messaging, scanner, finance/settlement and observability endpoints/secrets are configured",
       "TLS and reverse-proxy routing are configured",
       "named operational owner and cutover window are assigned",
-      "all application processes are pinned to releaseSha",
+      "all deployed application images are built from release.deploymentBundleSha",
+      "the deployed application runtime contains release.applicationRuntimeSha",
       "migration, backup/restore, monitoring and rollback rehearsals are complete"
     ]
   }

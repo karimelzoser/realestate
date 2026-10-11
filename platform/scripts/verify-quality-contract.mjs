@@ -1,4 +1,4 @@
-import { access, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const root = process.cwd();
@@ -6,6 +6,10 @@ const mandatoryTests = [
   {
     path: 'apps/api/test/auth-assurance.test.ts',
     minimumDeclaredTests: 4,
+  },
+  {
+    path: 'apps/api/test/identity-enrollment.test.ts',
+    minimumDeclaredTests: 5,
   },
 ];
 const workspaceManifests = [
@@ -22,13 +26,12 @@ const workspaceManifests = [
 let declaredTests = 0;
 for (const suite of mandatoryTests) {
   const absolute = resolve(root, suite.path);
+  let source;
   try {
-    await access(absolute);
-  } catch {
-    throw new Error(`Mandatory test suite is missing: ${suite.path}`);
+    source = await readFile(absolute, 'utf8');
+  } catch (error) {
+    throw new Error(`Mandatory test suite cannot be read: ${suite.path}`, { cause: error });
   }
-
-  const source = await readFile(absolute, 'utf8');
   const count = [...source.matchAll(/\btest\s*\(/g)].length;
   if (count < suite.minimumDeclaredTests) {
     throw new Error(

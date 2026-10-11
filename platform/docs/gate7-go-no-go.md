@@ -1,233 +1,190 @@
 # Gate 7 — Production Go / No-Go
 
-Gate 7 is the final operational release decision for PRENEURA Real Estate OS. It is intentionally separate from feature completeness and CI-only certification.
+Gate 7 is PRENEURA Real Estate OS's final deployment decision. It is intentionally stricter than feature completion or CI-only certification: **GO** requires the exact certified software bundle plus real evidence from the target production environment.
 
-A green Gate 7 means the exact release SHA has both:
+## Release identity
 
-1. the complete automated production evidence from Gates 1–6; and
-2. verified live deployment/integration/operations evidence for the target self-hosted production environment.
+Gate 7 uses two immutable release identities instead of one ambiguous SHA:
 
-## Canonical deployable candidate
+- **Application runtime SHA:** `c2746523eb434898cbb4c46cf5df452d122ba78f` — PR #81, the emitted full-stack acceptance candidate.
+- **Deployment bundle SHA:** `8750f94180b89cf58a1963f739c24aa0a56babbd` — PR #82, the self-hosted Docker/Compose/Nginx bundle built around that accepted runtime.
 
-The certified Real Estate runtime candidate is:
+The machine-readable source of truth is `platform/ops/selfhosted-gate7-staging.json`.
 
-`288f4afba3b87dbc123eff6b198e1720075edc7d`
+This separation is deliberate. Governance/evidence code may advance after the deployable artifact is frozen; it must not silently redefine what binary/source bundle is authorized for deployment.
 
-from PR #77, which integrates the Gate 4/5/6 candidate with restart-safe inventory-lock expiry.
+The certified runtime contract remains schema **41** / migration `0041_inventory_lock_expiry_durability.sql`.
 
-The Gate 7 governance branch/PR may advance independently for deployment/evidence changes. A Gate 7 GO therefore requires the operator to provide the deployed runtime SHA explicitly; the workflow rejects any runtime SHA that does not equal the pinned candidate in `platform/ops/selfhosted-gate7-staging.json`.
+## Certified self-hosted topology
 
-The runtime contract is schema 41 / migration `0041_inventory_lock_expiry_durability`.
+The PR #82 bundle is:
+
+```text
+Public HTTPS / TLS terminator
+          |
+       re-edge (Nginx)
+          |-- /        -> re-web:3000
+          |-- /api/    -> re-api:4100
+          |-- /healthz -> API readiness
+          `-- /livez   -> API liveness
+
+Private backend network
+  - re-web
+  - re-api
+  - re-worker
+  - re-notification-gateway
+  - PostgreSQL 18
+  - one-shot migration job
+  - S3-compatible object storage / Keycloak / Redis as provisioned infrastructure
+```
+
+Only the trusted edge is host/public-facing. Web, API, worker and notification gateway remain private behind that boundary. TLS termination is external to the Compose bundle and must be proven in the live environment.
 
 ## Automated evidence already available
 
-The release candidate has executable evidence for:
+The release chain has executable evidence for:
 
-- strict TypeScript and production builds;
+- strict TypeScript, frozen dependencies and production builds;
 - PostgreSQL migrations/runtime readiness;
-- project catalog, pricing and quote immutability;
-- atomic and restart-safe inventory locking;
-- buyer/EOI/queue/allocation flows;
+- deterministic pricing and immutable reservation quotes;
+- atomic/restart-safe inventory locks;
+- buyer/EOI/queue/allocation workflows;
 - trusted documents and immutable contract execution;
-- immutable finance ledger/provider idempotency/cheque history;
-- broker commissions, reminders, refunds and sensitive-field projection;
-- complete role/product parity;
-- production configuration fail-closed behavior;
-- concurrency/load baselines;
+- immutable finance, EOI/refund and settlement evidence;
+- broker commissions/reminders and confidential-field isolation;
+- complete role/product parity and governed exports;
+- production configuration fail-fast behavior;
+- concurrency/resilience/security certification;
 - backup/restore certification;
-- HTTP/security/dependency checks;
-- observability/alert-policy structure;
+- OpenTelemetry/logging/alert-policy baseline;
+- full emitted-stack acceptance;
+- executable self-hosted Compose deployment certification;
 - Chromium regression coverage.
 
-This evidence is necessary but is not sufficient to claim a production GO.
+These prove the software artifact. They do **not** prove that a real public environment has valid DNS/TLS, production credentials, monitoring, backup retention or operational ownership.
 
-## Gate 7 structural preflight
+## Structural Gate 7 preflight
 
-`.github/workflows/gate7-go-no-go.yml` runs an automatic structural preflight which verifies:
+`platform/scripts/certify-gate7-preflight.mjs` and `.github/workflows/gate7-go-no-go.yml` verify before any live decision that:
 
-- the required production certification workflows and release artifacts exist;
-- the canonical latest migration and runtime schema agree;
-- required production configuration keys are represented;
-- the deployment manifest is explicitly `self-hosted` and pinned to the certified runtime SHA;
-- PostgreSQL remains major version 18 and private;
-- S3-compatible object storage remains private by default;
-- the intended service set/build/start/health configuration remains intact;
-- worker and notification-gateway application surfaces remain private by default;
-- the migration process runs before application rollout and applications do not auto-migrate;
-- the formal Gate 7 production requirements remain present;
-- no open GitHub issue labeled `P0` or `P1` exists.
+- required Gates 1–6, full-stack and deployment certification workflows exist;
+- schema 41 / migration 0041 remain canonical;
+- application runtime SHA is a Git ancestor of the certified deployment bundle SHA;
+- Gate 7 governance descends from the certified deployment bundle;
+- PostgreSQL remains private PostgreSQL 18;
+- object storage remains private S3-compatible storage;
+- all four PRENEURA application services are private;
+- `re-edge` is the only public application ingress contract;
+- Nginx route/readiness/liveness mappings match the certified Compose bundle;
+- migrations remain one-shot-before-rollout and applications do not auto-migrate;
+- every required live evidence category remains represented;
+- no open GitHub issue labeled P0/P1 exists.
 
-This job deliberately does **not** fabricate host capacity, provider credentials, TLS certificates, monitoring, backups or human operational ownership.
+The structural job depends on both **Full Stack Acceptance Certification** and **Self-Hosted Deployment Certification**.
 
-## Final live certification
+## Final live evidence
 
-The same workflow exposes a manual `workflow_dispatch` final certification. It cannot return `GATE7_FINAL_DECISION=GO` unless the release operator explicitly provides/attests all of the following:
+The manual `Gate 7 Production Go-No-Go` workflow accepts no anonymous `verified=true` shortcuts. A final certification requires:
 
-- exact deployed Real Estate runtime SHA;
-- deployed API HTTPS origin;
-- deployed web HTTPS origin;
-- deployed OIDC issuer HTTPS URL;
+- exact deployed deployment-bundle SHA;
+- public API HTTPS base (for the certified edge this is normally `https://host/api`);
+- public web HTTPS origin;
+- exact production OIDC issuer URL;
 - named operational owner;
-- production integrations verified;
-- migration rehearsal completed on production-like data/topology;
-- backup/restore evidence reviewed;
-- monitoring dashboards and alerts live;
-- rollback path rehearsed/validated;
-- self-hosted Linux topology, TLS, reverse-proxy and private-network boundaries verified.
+- one traceable evidence reference for every required evidence category.
 
-The workflow rejects a deployed runtime SHA that does not equal the canonical SHA above, then performs live probes against:
+Evidence references must be references, **never credentials or secrets**. Accepted forms are HTTPS references or bounded references prefixed with `gh-run:`, `artifact:`, `ticket:`, `runbook:`, `change:`, `incident:` or `approval:`.
 
-- `/v1/health/live`;
-- `/v1/health/ready`;
-- the deployed web application;
-- OIDC discovery metadata.
+The `evidence_json` workflow input must contain all of these keys:
 
-Final provider-specific business smoke tests remain part of the operator evidence for `integrations_verified` and must not be replaced by placeholder credentials.
-
-## Self-hosted staging target
-
-The machine-checkable target topology is committed at:
-
-`platform/ops/selfhosted-gate7-staging.json`
-
-It defines:
-
-- Linux/self-hosted deployment mode;
-- PostgreSQL 18;
-- private S3-compatible object storage;
-- `re-web`;
-- `re-api`;
-- `re-worker`;
-- `re-notification-gateway`;
-- certified one-shot database migration before application rollout;
-- source pinning to the canonical runtime SHA;
-- public/private and health-check boundaries;
-- required variable names without storing secret values in Git.
-
-The application does not depend on any specific hosting vendor. The same contract can run on one properly sized Linux server initially or on multiple hosts/containers later without changing domain code.
-
-## Recommended host layout
-
-A practical first production topology is:
-
-```text
-Internet
-   |
-Nginx / HAProxy / TLS
-   |-- re-web
-   |-- re-api
-   `-- notification gateway callback route when required
-
-Private network / host services
-   |-- re-worker
-   |-- PostgreSQL 18
-   |-- Redis
-   |-- S3-compatible object storage
-   |-- Keycloak
-   `-- one-shot migration process during release
+```json
+{
+  "topologyTls": "change:CHG-1234",
+  "oidc": "artifact:oidc-smoke-2026-10-11",
+  "objectStorage": "ticket:OPS-201",
+  "messaging": "gh-run:123456789",
+  "documentScanner": "artifact:scanner-smoke-2026-10-11",
+  "financeSettlement": "approval:FIN-44",
+  "observability": "https://monitoring.example/evidence/release-42",
+  "backupRestore": "artifact:restore-rehearsal-42",
+  "migrationRehearsal": "runbook:release-42-migration",
+  "rollbackCutover": "runbook:release-42-rollback",
+  "securityApproval": "approval:SEC-42",
+  "operationalOwnership": "ticket:OPS-ONCALL-42"
+}
 ```
 
-Keep PostgreSQL, Redis, worker ports and object-storage administration endpoints private.
+The workflow rejects unknown or missing categories.
 
-A single Linux host may run the first deployment if sizing, disk durability and backup requirements are satisfied. Process boundaries must remain separate even on one machine so the worker/gateway/API can be restarted or scaled independently.
+## Machine-verified live probes
 
-## Process supervision
+`platform/scripts/certify-gate7-live.mjs` independently verifies the live environment before it can emit GO:
 
-Use systemd, Docker Compose, Nomad, Kubernetes or another local orchestrator/process manager.
+1. deployed bundle SHA exactly equals the certified bundle SHA;
+2. API/web/OIDC URLs are public HTTPS URLs without embedded credentials;
+3. DNS resolves for every public host;
+4. TLS validates against the system trust store with TLS 1.2+ and a configurable minimum remaining certificate lifetime (default 14 days);
+5. API liveness returns the PRENEURA API identity;
+6. API readiness reports database/schema healthy;
+7. runtime schema is exactly 41 and the database is compatible with runtime 41;
+8. migration marker is correct when database/runtime schemas are equal;
+9. the public web returns usable HTML;
+10. OIDC discovery is reachable and its `issuer` exactly matches the supplied issuer;
+11. OIDC JWKS/authorization/token endpoints are HTTPS.
 
-Required behavior:
+A successful run writes `gate7-live-evidence.json` and uploads it as a 90-day GitHub Actions artifact. The report contains the release identity, evidence **references**, probe outputs, certificate fingerprint/expiry and workflow/run identity. It does not contain provider credentials.
 
-- API is not admitted to traffic until `/v1/health/ready` returns 200;
-- worker restarts on unexpected non-zero exit but never bypasses readiness/preflight;
-- notification gateway restarts only through its package `start` command so provider/config preflight runs;
-- web is independently restartable;
-- migration is one-shot and never a long-running service;
-- no application process runs schema migrations automatically on startup.
+## Evidence meaning
 
-## Reverse proxy / TLS
+The external evidence references must substantively prove the following:
 
-The external edge must:
+- **topologyTls:** real DNS, TLS termination, reverse-proxy routing, firewall/private-network boundaries and process supervision;
+- **oidc:** production Keycloak/Google configuration and an authenticated smoke path;
+- **objectStorage:** private bucket/access policy, versioning/backup protection and restore accessibility;
+- **messaging:** real Meta WhatsApp and any enabled SMS/email delivery smoke tests;
+- **documentScanner:** real malware-scanner integration and fail-closed behavior;
+- **financeSettlement:** production finance/refund/settlement provider/webhook validation and reconciliation authority;
+- **observability:** reachable telemetry backend, dashboards and alert routing;
+- **backupRestore:** target-environment backup evidence and isolated restore rehearsal;
+- **migrationRehearsal:** migration rehearsal against production-like topology/data;
+- **rollbackCutover:** cutover and application rollback rehearsal within the schema-compatibility rules;
+- **securityApproval:** deployment/network/security review approval;
+- **operationalOwnership:** named release/on-call ownership and escalation path.
 
-- terminate HTTPS using valid certificates;
-- forward only trusted proxy headers;
-- preserve SSE connections/timeouts for realtime streams;
-- enforce request size/burst controls;
-- route public web/API traffic only;
-- expose notification-gateway callbacks only when the provider requires inbound callbacks;
-- keep internal infrastructure unreachable from the public network.
+A reference that merely says “done” without underlying evidence is not sufficient operational approval.
 
-## Database and storage requirements
+## Deployment order
 
-Before Gate 7 GO:
-
-- PostgreSQL major version is 18;
-- database storage has adequate disk headroom and monitoring;
-- automated backups exist;
-- WAL/PITR is enabled when the production RPO requires it;
-- at least one restore rehearsal has been completed against an isolated database;
-- S3-compatible business documents are private, versioned/backup-protected and restorable;
-- Redis loss does not destroy authoritative business state;
-- the migration ledger and runtime contract are verified after restore.
-
-## Production integration credentials/endpoints
-
-Real production credentials/endpoints are not stored in Git and must be supplied through protected server-side secret configuration for:
-
-- Google/Keycloak OIDC client;
-- Meta WhatsApp / messaging provider;
-- document malware scanner;
-- finance provider ingress;
-- settlement provider ingress;
-- production observability exporter where applicable.
-
-**Status:** requires deployment-owner/provider evidence before final GO.
-
-## Operational ownership
-
-Gate 7 requires named release/on-call owners and an agreed cutover window.
-
-The owner must know how to:
-
-- run migrations;
-- inspect readiness and logs;
-- restart each process independently;
-- restore PostgreSQL and object storage;
-- rotate/revoke provider credentials;
-- roll back application binaries while respecting schema compatibility;
-- execute the incident/rollback runbook.
-
-## Intended self-hosted staging deployment order
-
-1. provision or prepare the Linux staging host(s);
-2. configure firewall/private-network boundaries and TLS reverse proxy;
-3. provision PostgreSQL 18, Redis, Keycloak and S3-compatible object storage;
-4. verify PostgreSQL/object-storage backup jobs;
-5. pin application code to `288f4afba3b87dbc123eff6b198e1720075edc7d`;
-6. run `pnpm install --frozen-lockfile` and build the four application packages;
-7. configure real staging secrets/endpoints outside Git;
-8. run the certified migration command exactly once;
-9. start API and require `/v1/health/ready` before routing traffic;
-10. start notification gateway and require preflight/liveness success;
-11. start worker and require readiness startup success;
-12. start web with the final API HTTPS origin available at build time;
-13. run provider smoke tests, realtime checks, monitoring/alert checks and business smoke paths;
-14. rehearse backup/restore and application rollback;
-15. execute the manual Gate 7 workflow with the exact deployed runtime SHA and truthful attestations.
+1. Provision Linux capacity and private network boundaries.
+2. Provision PostgreSQL 18, private S3-compatible storage, Keycloak and any required supporting services.
+3. Configure backup/PITR/storage-versioning policy.
+4. Configure public TLS and trusted Nginx/LB forwarding.
+5. Configure real production secrets outside Git.
+6. Build/deploy **deployment bundle SHA `8750f94180b89cf58a1963f739c24aa0a56babbd`**.
+7. Run the certified one-shot migration job and require success.
+8. Start notification gateway, API and worker; require API readiness and `worker.ready`.
+9. Start web and public edge; verify HTTPS routes/SSE behavior.
+10. Run OIDC/provider/scanner/finance/monitoring smoke tests.
+11. Rehearse restore, migration and rollback/cutover using the target environment.
+12. Resolve every P0/P1 defect.
+13. Gather the 12 traceable evidence references.
+14. Run the manual final Gate 7 workflow against the real URLs and exact deployed bundle SHA.
 
 ## Current release decision
 
-**NO-GO for live production until external Gate 7 evidence is real and reviewed.**
+**NO-GO for live production until the final live Gate 7 workflow succeeds against a real environment.**
 
-The software candidate itself has completed automated production certification. Remaining blockers are deployment/environment evidence rather than missing core application architecture:
+This is not a statement that core product software is unfinished. The software/deployment artifact has substantial automated certification. What remains is evidence that the actual production environment, credentials/providers, monitoring/recovery processes and human ownership are real and working.
 
-1. actual self-hosted Linux capacity/sizing and TLS/network setup;
-2. real provider/OIDC/scanner/finance/settlement/observability credentials and endpoints;
-3. named operational owner and cutover window;
-4. live migration/monitoring/backup-restore/rollback/provider evidence;
-5. final manual Gate 7 workflow execution against the deployed certified SHA.
+## GO / NO-GO rule
 
-## Go / no-go rule
+**GO** only when:
 
-**GO** only when the manual final Gate 7 workflow passes on the exact certified runtime SHA intended for production and the release authority has reviewed the provider-specific and self-hosted operational evidence.
+- both software dependencies (full-stack + self-hosted deployment certification) pass;
+- structural preflight and P0/P1 check pass;
+- every required evidence reference is supplied and reviewed;
+- DNS/TLS/API/Web/OIDC live probes pass;
+- the deployed bundle SHA equals the certified bundle;
+- the production environment approval job is authorized.
 
-Any missing external credential, failed live readiness probe, unverified rollback, missing monitoring, open P0/P1 issue, absent operational owner, mismatched deployed SHA, unverified backup/restore, or insufficient host capacity means **NO-GO**.
+Any missing evidence category, mismatched bundle SHA, failed readiness/TLS/OIDC probe, open P0/P1, missing owner, unverified backup/rollback/provider path or failed environment approval means **NO-GO**.

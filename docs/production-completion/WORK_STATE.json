@@ -4,14 +4,14 @@
   "stage": "IMPLEMENTATION_STARTED",
   "planningBranch": "plan/egypt-platform-completion",
   "integrationBranch": "completion/egypt-full-platform",
-  "taskBranch": "task/e01-privileged-assurance",
-  "observedHeadBeforeCheckpoint": "a68e3bd835c628811368775889659b2d16fe46f4",
+  "taskBranch": "codex/egypt-platform-completion",
+  "observedHeadBeforeCheckpoint": "ccb780adfaf5ff9821d8306453b8bc11b0bdd2d4",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
   "activeTaskId": "E01.3",
-  "activeTaskStatus": "IMPLEMENTED",
-  "completedCheckpoint": "E01.1 direct-request lifecycle enforcement and E01.2 long-lived SSE/session/support revocation are exact-head certified; E01.3 privileged assurance, release identity and truthful quality commands are implemented and task-specific certification passed on the functional head, with final exact-head release verification pending after follow-up fixes",
-  "nextAction": "Run the complete exact-head certification matrix on the current user-authored E01.3 head. If all required checks pass, mark E01.3 TESTED/VERIFIED in the completion ledger and start E02.1/E02.2 from that certified head. Do not advance E02 while E01.3 exact-head evidence is incomplete.",
+  "activeTaskStatus": "IN_PROGRESS",
+  "completedCheckpoint": "Took over current E01 line; integrated deployment/provenance branch; fixed quality file-read race, privileged factor enrollment, dynamic schema certification and deployment workspace/config compatibility. Unit tests and type/lint checks passed; full changed-head checks pending.",
+  "nextAction": "Finish and certify E01 integration on this branch; run real local PostgreSQL/API and CI checks, then continue E02 and EOI-type/exact-apartment implementation.",
   "changedFiles": [
     "platform/apps/api/src/auth",
     "platform/apps/api/src/access",
@@ -29,11 +29,30 @@
     "docs/production-completion/CONTINUE.md"
   ],
   "commandsAndResults": [
-    {"action":"E01.1 lifecycle enforcement","result":"PR #86 implements and certifies central tenant/membership/project lifecycle checks for direct requests"},
-    {"action":"E01.2 long-lived authorization revalidation","result":"PR #87 certifies session/project/broker/support-scope revalidation during SSE and access_revoked termination"},
-    {"action":"E01.3 focused certification at b5327a716628c88d8ddcff30a6d5803222a61c8f","result":"E01 Privileged Assurance Certification PASS; Production Foundation PASS; Full Stack Acceptance PASS; Gate 4-5 PASS; Gate 6 Non-Functional PASS; several secondary release checks exposed follow-up issues"},
-    {"action":"E01.3 follow-up hardening","result":"subsequent commits repair allocation fixture timing, runtime/release checks, observability diagnostics, dependency/security issues and refresh the patched frozen lockfile"},
-    {"action":"final bot-authored head a68e3bd835c628811368775889659b2d16fe46f4","result":"pull-request workflow records were action_required with zero jobs, so they are not accepted as verification evidence"}
+    {
+      "action": "E01.1 lifecycle enforcement",
+      "result": "PR #86 implements and certifies central tenant/membership/project lifecycle checks for direct requests"
+    },
+    {
+      "action": "E01.2 long-lived authorization revalidation",
+      "result": "PR #87 certifies session/project/broker/support-scope revalidation during SSE and access_revoked termination"
+    },
+    {
+      "action": "E01.3 focused certification at b5327a716628c88d8ddcff30a6d5803222a61c8f",
+      "result": "E01 Privileged Assurance Certification PASS; Production Foundation PASS; Full Stack Acceptance PASS; Gate 4-5 PASS; Gate 6 Non-Functional PASS; several secondary release checks exposed follow-up issues"
+    },
+    {
+      "action": "E01.3 follow-up hardening",
+      "result": "subsequent commits repair allocation fixture timing, runtime/release checks, observability diagnostics, dependency/security issues and refresh the patched frozen lockfile"
+    },
+    {
+      "action": "final bot-authored head a68e3bd835c628811368775889659b2d16fe46f4",
+      "result": "pull-request workflow records were action_required with zero jobs, so they are not accepted as verification evidence"
+    },
+    {
+      "action": "local tests",
+      "result": "9 API assurance/enrollment tests and 3 runtime-contract tests passed; nine-package strict type/lint checks passed before the final session-activity typed-table correction"
+    }
   ],
   "evidencePaths": [
     "docs/production-completion/PLAN.md",
@@ -45,12 +64,9 @@
     ".github/workflows/e01-privileged-assurance-certification.yml"
   ],
   "remainingTests": [
-    "E01.3 exact-head E01 Privileged Assurance Certification",
-    "E01.3 exact-head Production Platform Foundation",
-    "E01.3 exact-head Full Stack Acceptance Certification",
-    "E01.3 exact-head Gate 6 Security Scan",
-    "E01.3 exact-head Gate 6 Non-Functional Certification",
-    "E01.3 exact-head Gate 7 Production Go-No-Go software-side path"
+    "Rebuild API/all packages after typed assurance mapping",
+    "Real full-stack role-elevation/revocation test",
+    "CodeQL and deployment certification on the integrated head"
   ],
   "externalBlockerIds": [
     "DEPLOYMENT_DEFERRED",
@@ -62,8 +78,13 @@
     "market": "Egypt: developers and brokerages",
     "eoiSelection": "apartment type",
     "allocationSelection": "exact eligible available apartment",
-    "uiLanguages": ["ar", "en"],
-    "initialVoiceLanguages": ["en"],
+    "uiLanguages": [
+      "ar",
+      "en"
+    ],
+    "initialVoiceLanguages": [
+      "en"
+    ],
     "demoHosting": "GitHub Pages, synthetic only",
     "laterProductionHosting": "existing self-hosted server, Docker, CLI/SSH",
     "railwayRequired": false
