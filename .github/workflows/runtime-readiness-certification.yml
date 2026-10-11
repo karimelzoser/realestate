@@ -16,6 +16,7 @@ on:
       - "platform/packages/database/scripts/migrate.mjs"
       - "platform/packages/database/package.json"
       - "platform/scripts/certify-runtime-readiness.sh"
+      - "platform/scripts/runtime-contract.mjs"
       - "platform/docs/runtime-readiness.md"
       - ".github/workflows/runtime-readiness-certification.yml"
   push:
@@ -36,6 +37,7 @@ on:
       - "platform/packages/database/scripts/migrate.mjs"
       - "platform/packages/database/package.json"
       - "platform/scripts/certify-runtime-readiness.sh"
+      - "platform/scripts/runtime-contract.mjs"
       - "platform/docs/runtime-readiness.md"
       - ".github/workflows/runtime-readiness-certification.yml"
 
@@ -138,7 +140,7 @@ jobs:
           COMMON_TOKEN=0123456789abcdef0123456789abcdef
           CONTACT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
           COMMON_OTEL=https://otel.preneura.invalid
-          EXPECTED_SCHEMA_VERSION=42
+          EXPECTED_SCHEMA_VERSION="$(node --input-type=module -e "import { readRuntimeContract } from './scripts/runtime-contract.mjs'; console.log(readRuntimeContract(process.cwd()).schemaVersion)")"
 
           NODE_ENV=production \
           PORT=4120 \
