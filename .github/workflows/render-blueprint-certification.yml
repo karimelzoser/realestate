@@ -31,17 +31,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Render CLI
-        run: |
-          set -Eeuo pipefail
-          curl -fsSL https://raw.githubusercontent.com/render-oss/cli/main/bin/install.sh | sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Install JSON Schema validator
+        run: python3 -m pip install --disable-pip-version-check check-jsonschema==0.31.3
 
-      - name: Validate Blueprint with Render CLI
-        run: |
-          set -Eeuo pipefail
-          render --version
-          render blueprints validate
+      - name: Validate Blueprint against Render schema
+        run: >-
+          check-jsonschema
+          --schemafile https://render.com/schema/render.yaml.json
+          render.yaml
 
       - name: Enforce PRENEURA deployment invariants
         run: |
