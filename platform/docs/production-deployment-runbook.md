@@ -28,12 +28,13 @@ A recommended self-hosted edge is Nginx or HAProxy terminating TLS and routing p
    ```
 
 3. Stop the rollout if the migration process fails.
-4. Restart or roll API instances.
-5. Admit API traffic only after `GET /v1/health/ready` returns HTTP 200.
-6. Restart notification-gateway instances. Their package `start` command runs the production configuration/database preflight before opening the HTTP listener.
-7. Restart worker instances. A worker exits non-zero before any processing loop when configuration or schema compatibility is invalid.
-8. Restart the web process and check `GET /api/health`.
-9. Verify provider endpoints, dashboards, realtime events, notification delivery and transaction flows before declaring the deployment complete.
+4. Verify the migration ledger latest version/filename matches `platform_runtime_contract`.
+5. Restart or roll API instances.
+6. Admit API traffic only after `GET /v1/health/ready` returns HTTP 200.
+7. Restart notification-gateway instances. Their package `start` command runs the production configuration/database preflight before opening the HTTP listener.
+8. Restart worker instances. A worker exits non-zero before any processing loop when configuration, schema compatibility, or migration provenance is invalid.
+9. Restart the web process and check `GET /api/health`.
+10. Verify provider endpoints, dashboards, realtime events, notification delivery and transaction flows before declaring the deployment complete.
 
 ## Health contracts
 
@@ -41,13 +42,13 @@ A recommended self-hosted edge is Nginx or HAProxy terminating TLS and routing p
 
 - `/v1/health` — process liveness only.
 - `/v1/health/live` — process liveness only.
-- `/v1/health/ready` — PostgreSQL connectivity + runtime/schema compatibility; use this as the reverse-proxy/orchestrator readiness check.
+- `/v1/health/ready` — PostgreSQL connectivity + runtime/schema compatibility + immutable migration provenance; use this as the reverse-proxy/orchestrator readiness check.
 
-A stale/incompatible schema returns 503 while liveness remains 200.
+A stale, incompatible, or untracked schema returns 503 while liveness remains 200.
 
 ### Worker
 
-The worker has no public HTTP listener. Startup is the readiness gate. It validates production configuration and the runtime/schema contract before starting outbox, notification, reminder, or commission loops. Use systemd, Docker restart policy, or your process supervisor to restart on non-zero exit.
+The worker has no public HTTP listener. Startup is the readiness gate. It validates production configuration and the same runtime/schema/migration-ledger contract before starting outbox, notification, reminder, or commission loops. Use systemd, Docker restart policy, or your process supervisor to restart on non-zero exit.
 
 ### Notification gateway
 
@@ -140,6 +141,8 @@ The runtime identifies itself with a schema compatibility version. The singleton
 - minimum compatible runtime version;
 - migration marker.
 
+The latest immutable `platform_schema_migrations` row must prove the same schema version and migration filename. A table-complete database without that release provenance is intentionally not ready.
+
 An additive migration may advance the database schema while leaving the previous runtime compatible. A breaking migration must use expand/contract deployment and must not raise the minimum runtime version until old processes are drained.
 
 Do not roll back database schemas. Repair an incorrect migration with a new forward migration. Application rollback is allowed only while the target runtime is still at or above the database's minimum compatible runtime version.
@@ -155,7 +158,7 @@ The production migration runner:
 - serializes concurrent release jobs;
 - is idempotent on rerun.
 
-For databases created before the migration ledger existed, `MIGRATION_ADOPT_EXISTING=true` is allowed only as a one-time baseline and only when the runtime contract proves the database is already at the exact current schema. Remove that flag immediately after adoption.
+For databases created before the migration ledger existed, `MIGRATION_ADOPT_EXISTING=true` is allowed only as a one-time baseline and only when the runtime contract proves the database is already at the exact current schema. Adoption must happen **before** expecting `/v1/health/ready` to return 200. Remove that flag immediately after adoption.
 
 ## Backup and recovery
 
@@ -177,11 +180,11 @@ Do not start new API/worker/gateway instances. Inspect the failed migration and 
 
 ### API readiness failure
 
-Keep the instance out of traffic. Use the bounded readiness code to distinguish PostgreSQL connectivity, missing/stale schema contract, old database, old runtime, or same-version marker mismatch.
+Keep the instance out of traffic. Use the bounded readiness code to distinguish PostgreSQL connectivity, missing/stale schema contract, old database, old runtime, same-version marker mismatch, or migration-ledger/provenance mismatch.
 
 ### Worker startup failure
 
-Do not bypass the readiness check. Correct configuration or schema compatibility, then restart. A worker that cannot prove readiness must not claim outbox/notification/financial operational work.
+Do not bypass the readiness check. Correct configuration, schema compatibility, or migration provenance, then restart. A worker that cannot prove readiness must not claim outbox/notification/financial operational work.
 
 ### Notification gateway startup failure
 
@@ -202,7 +205,7 @@ The runtime-readiness certification must prove the complete branch only after im
 
 - frozen dependency installation and production builds;
 - incomplete production configuration rejection;
-- current, stale, forward-compatible, and breaking-future schema states;
+- current, stale, untracked, forward-compatible, and breaking-future schema states;
 - API liveness/readiness behavior;
 - worker fail-closed startup;
 - notification-gateway fail-closed preflight;
@@ -210,4 +213,5 @@ The runtime-readiness certification must prove the complete branch only after im
 - fresh/idempotent migration execution;
 - historical checksum drift rejection;
 - concurrent migration serialization;
-- one-time legacy migration-ledger adoption.
+- one-time legacy migration-ledger adoption;
+- rejection of a fully shaped database that lacks immutable migration provenance.
