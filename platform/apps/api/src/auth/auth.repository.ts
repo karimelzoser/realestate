@@ -6,6 +6,7 @@ import type { SessionAssuranceEvidence } from './auth-assurance.js';
 
 export type AliasKind = 'PHONE' | 'NATIONAL_ID';
 export type DeliveryChannel = 'SMS' | 'WHATSAPP';
+export type ExternalIdentityLinkResult = 'LINKED' | 'ALREADY_LINKED' | 'CONFLICT';
 
 export interface NewChallenge {
   id: string;
@@ -50,6 +51,12 @@ export abstract class AuthRepository {
     displayName: string;
     verifiedEmail?: string | null;
   }): Promise<ExternalIdentityResult>;
+  abstract linkExternalIdentityToUser(input: {
+    userId: string;
+    provider: string;
+    providerSubject: string;
+    verifiedEmail?: string | null;
+  }): Promise<ExternalIdentityLinkResult>;
   abstract createChallenge(challenge: NewChallenge): Promise<void>;
   abstract markDeliveryAttempted(challengeId: string): Promise<void>;
   abstract consumeChallenge(challengeId: string, otpDigest: Uint8Array, now: Date): Promise<string | null>;
@@ -151,6 +158,59 @@ export class PostgresAuthRepository extends AuthRepository {
         .executeTakeFirstOrThrow();
 
       return { userId: winner.user_id, status: winner.status };
+    });
+  }
+
+  async linkExternalIdentityToUser(input: {
+    userId: string;
+    provider: string;
+    providerSubject: string;
+    verifiedEmail?: string | null;
+  }): Promise<ExternalIdentityLinkResult> {
+    return this.db.transaction().execute(async (trx) => {
+      const subjectOwner = await trx
+        .selectFrom('auth_external_identities')
+        .select('user_id')
+        .where('provider', '=', input.provider)
+        .where('provider_subject', '=', input.providerSubject)
+        .executeTakeFirst();
+      if (subjectOwner) {
+        return subjectOwner.user_id === input.userId ? 'ALREADY_LINKED' : 'CONFLICT';
+      }
+
+      const existingForUser = await trx
+        .selectFrom('auth_external_identities')
+        .select('provider_subject')
+        .where('provider', '=', input.provider)
+        .where('user_id', '=', input.userId)
+        .executeTakeFirst();
+      if (existingForUser) {
+        return existingForUser.provider_subject === input.providerSubject
+          ? 'ALREADY_LINKED'
+          : 'CONFLICT';
+      }
+
+      const inserted = await trx
+        .insertInto('auth_external_identities')
+        .values({
+          user_id: input.userId,
+          provider: input.provider,
+          provider_subject: input.providerSubject,
+          email_at_link_time: input.verifiedEmail ?? null,
+        })
+        .onConflict((oc) => oc.columns(['provider', 'provider_subject']).doNothing())
+        .returning('user_id')
+        .executeTakeFirst();
+
+      if (inserted) return 'LINKED';
+
+      const winner = await trx
+        .selectFrom('auth_external_identities')
+        .select('user_id')
+        .where('provider', '=', input.provider)
+        .where('provider_subject', '=', input.providerSubject)
+        .executeTakeFirst();
+      return winner?.user_id === input.userId ? 'ALREADY_LINKED' : 'CONFLICT';
     });
   }
 
