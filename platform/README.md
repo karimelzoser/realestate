@@ -50,9 +50,9 @@ GET /v1/health/live
 GET /v1/health/ready
 ```
 
-`/v1/health/live` proves only that the HTTP process is alive. `/v1/health/ready` verifies PostgreSQL connectivity plus the runtime/schema compatibility contract. Reverse proxies and process supervisors should only route production API traffic to instances whose readiness endpoint returns HTTP 200.
+`/v1/health/live` proves only that the HTTP process is alive. `/v1/health/ready` verifies PostgreSQL connectivity, runtime/schema compatibility, and that the runtime contract is backed by the immutable release-migration ledger. Reverse proxies and process supervisors should only route production API traffic to instances whose readiness endpoint returns HTTP 200.
 
-The worker validates production configuration and the same database/runtime contract before starting any job loop. It exits non-zero when configuration or schema compatibility is unsafe.
+The worker validates production configuration and the same database/runtime/migration-provenance contract before starting any job loop. It exits non-zero when configuration, schema compatibility, or migration provenance is unsafe.
 
 Detailed rolling-deployment, migration, backup and rollback rules are in:
 
@@ -236,8 +236,9 @@ The repository contains independent executable gates for:
 
 Runtime-readiness certification boots real emitted services against PostgreSQL states and verifies:
 
-- current schema readiness
+- current tracked schema readiness
 - stale schema rejection
+- fully shaped but untracked schema rejection
 - forward-compatible schema behavior
 - incompatible future schema rejection
 - production configuration fail-closed behavior
@@ -260,15 +261,16 @@ Use this order for every database-affecting release:
    ```
 
 4. stop immediately if migration fails;
-5. restart/roll API processes and route traffic only after `/v1/health/ready` returns `200`;
-6. restart notification gateway and require preflight success;
-7. restart workers and require startup readiness success;
-8. restart web processes and verify `/api/health`;
-9. run smoke checks for login, catalog, transaction, finance, notifications and provider callbacks.
+5. verify the latest immutable migration-ledger version/filename agrees with `platform_runtime_contract`;
+6. restart/roll API processes and route traffic only after `/v1/health/ready` returns `200`;
+7. restart notification gateway and require preflight success;
+8. restart workers and require startup readiness success;
+9. restart web processes and verify `/api/health`;
+10. run smoke checks for login, catalog, transaction, finance, notifications and provider callbacks.
 
 API, worker and gateway processes must never auto-migrate on startup.
 
-For a one-time transition of a database that predates the migration ledger, follow `docs/runtime-readiness.md`; never leave `MIGRATION_ADOPT_EXISTING=true` enabled after adoption.
+For a one-time transition of a database that predates the migration ledger, follow `docs/runtime-readiness.md`; never leave `MIGRATION_ADOPT_EXISTING=true` enabled after adoption. Readiness intentionally remains `503` until the legacy schema has been adopted into immutable migration history.
 
 ## Self-hosted production layout
 
