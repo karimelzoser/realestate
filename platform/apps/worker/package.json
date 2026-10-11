@@ -8,7 +8,6 @@
     "build": "pnpm run build:deps && tsc -p tsconfig.json",
     "build:deps": "pnpm --filter @preneura/database build && pnpm --filter @preneura/observability build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --test",
     "lint": "tsc --noEmit -p tsconfig.json",
     "start": "node --import @preneura/observability/register dist/main.js"
   },
