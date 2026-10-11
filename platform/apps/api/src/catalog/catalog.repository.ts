@@ -424,6 +424,56 @@ export class CatalogRepository {
     now: Date;
   }): Promise<InventoryLockResult | null> {
     return this.db.transaction().execute(async (trx) => {
+      if (input.buyerUserId) {
+        // Serialize all lock attempts for this buyer. Combined with the database
+        // unique partial index this makes multi-tab/double-click allocation deterministic.
+        await trx
+          .selectFrom('users')
+          .select('id')
+          .where('id', '=', input.buyerUserId)
+          .forUpdate()
+          .executeTakeFirstOrThrow();
+
+        await trx
+          .updateTable('inventory_locks')
+          .set({
+            status: 'EXPIRED',
+            released_at: input.now,
+            release_reason: 'TTL expired',
+            updated_at: input.now,
+          })
+          .where('tenant_id', '=', input.tenantId)
+          .where('project_id', '=', input.projectId)
+          .where('buyer_user_id', '=', input.buyerUserId)
+          .where('status', '=', 'ACTIVE')
+          .where('expires_at', '<=', input.now)
+          .execute();
+
+        const existing = await trx
+          .selectFrom('inventory_locks')
+          .select(['id', 'unit_type_id', 'expires_at'])
+          .where('tenant_id', '=', input.tenantId)
+          .where('project_id', '=', input.projectId)
+          .where('buyer_user_id', '=', input.buyerUserId)
+          .where('status', '=', 'ACTIVE')
+          .where('expires_at', '>', input.now)
+          .executeTakeFirst();
+
+        if (existing) {
+          const existingExpiresAt = existing.expires_at as Date;
+          return {
+            lockId: existing.id,
+            unitTypeId: existing.unit_type_id,
+            buyerUserId: input.buyerUserId,
+            expiresAt: existingExpiresAt.toISOString(),
+            remainingSeconds: Math.max(
+              0,
+              Math.ceil((existingExpiresAt.getTime() - input.now.getTime()) / 1000),
+            ),
+          };
+        }
+      }
+
       await trx
         .updateTable('inventory_locks')
         .set({
