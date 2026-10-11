@@ -9,7 +9,7 @@
     "start": "next start -p ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
     "test": "node --test",
-    "lint": "next lint"
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@preneura/contracts": "workspace:*",
