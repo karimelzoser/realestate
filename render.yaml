@@ -203,7 +203,7 @@ databases:
   - name: aipreneura-realestate-db
     region: frankfurt
     plan: basic-1gb
-    postgresMajorVersion: 18
+    postgresMajorVersion: "18"
     databaseName: preneura
     user: preneura
     diskSizeGB: 10
