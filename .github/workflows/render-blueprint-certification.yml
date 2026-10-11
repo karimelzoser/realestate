@@ -59,7 +59,7 @@ jobs:
               'preDeployCommand: pnpm --filter @preneura/database migrate',
               'autoDeployTrigger: checksPass',
               'pnpm install --frozen-lockfile',
-              'postgresMajorVersion: 18',
+              'postgresMajorVersion: "18"',
               'region: frankfurt',
           ]
           missing = [item for item in required if item not in text]
