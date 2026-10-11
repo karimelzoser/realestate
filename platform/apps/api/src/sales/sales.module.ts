@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AccessModule } from '../access/access.module.js';
 import { AuthModule } from '../auth/auth.module.js';
+import { AllocationOperationsController } from './allocation-operations.controller.js';
+import { AllocationOperationsRepository } from './allocation-operations.repository.js';
+import { AllocationOperationsService } from './allocation-operations.service.js';
 import { EoiListController } from './eoi-list.controller.js';
 import { EoiListRepository } from './eoi-list.repository.js';
 import { EoiListService } from './eoi-list.service.js';
@@ -31,6 +34,7 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
     EoiListController,
     EoiRefundController,
     QueueDispatchController,
+    AllocationOperationsController,
     TransactionListController,
     TransactionPriceController,
     TransactionTimelineController,
@@ -45,6 +49,8 @@ import { TransactionTimelineService } from './transaction-timeline.service.js';
     EoiRefundService,
     QueueDispatchRepository,
     QueueDispatchService,
+    AllocationOperationsRepository,
+    AllocationOperationsService,
     TransactionListRepository,
     TransactionListService,
     TransactionPriceRepository,
