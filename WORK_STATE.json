@@ -37,6 +37,7 @@
     "catalog_hierarchy_imports",
     "pricing_certification",
     "buyer_eoi_queue_transaction_core",
+    "exact_physical_apartment_allocation",
     "document_contract_trust",
     "immutable_finance_ledger",
     "broker_commissions",
@@ -48,13 +49,36 @@
     "runtime_readiness_and_schema_compatibility",
     "github_pages_synthetic_demo_regression"
   ],
-  "active_task": {
-    "id": "B1",
-    "title": "EOI unit type to exact physical apartment allocation",
-    "status": "IN_PROGRESS",
-    "reason": "Latest settled product rule requires type-level EOI and exact-apartment allocation; this must be corrected/certified before further workflow and deployment packaging work."
+  "completed_task_evidence": {
+    "B1": {
+      "title": "EOI unit type to exact physical apartment allocation",
+      "commit": "233b6f21c8f9acb95ec18d8e4df8d46f7de7e726",
+      "workflows": [
+        "Exact Apartment Allocation Certification",
+        "Production Platform Foundation",
+        "Validate PRENEURA"
+      ],
+      "evidence": [
+        "typed EOI snapshot and type immutability",
+        "exact building/floor/unit eligibility",
+        "single-winner physical-unit lock concurrency",
+        "anonymous lock rejection",
+        "cross-type rejection",
+        "expiry and release reacquisition",
+        "exact reservation snapshot",
+        "certified pricing snapshot preserved",
+        "allocator workspace and exact-unit UI",
+        "full Chromium regression"
+      ]
+    }
   },
-  "next_action": "Inspect current EOI, physical-unit, inventory-slot and lock schema/API paths; add EOI unit_type snapshot and exact-physical-unit allocation/locking with PostgreSQL concurrency certification and allocator UI.",
+  "active_task": {
+    "id": "B2",
+    "title": "English and Arabic production UI with RTL",
+    "status": "IN_PROGRESS",
+    "reason": "Exact apartment allocation is certified; bilingual production UI is the next P0 product-completeness dependency."
+  },
+  "next_action": "Implement a cookie-backed EN/AR locale foundation, root html lang/dir handling, shared dictionaries and locale-aware formatting; migrate login, workspace, allocation and transaction surfaces, then expand across remaining production routes with EN/AR browser certification.",
   "external_dependencies_not_blocking_software": [
     "production SSH/server details",
     "production DNS/domains",
@@ -67,5 +91,5 @@
     "live AI provider credentials if external"
   ],
   "software_ready_for_deployment": false,
-  "last_updated_utc": "2026-10-11T00:10:00Z"
+  "last_updated_utc": "2026-10-11T00:38:00Z"
 }
