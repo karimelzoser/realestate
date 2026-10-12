@@ -6,7 +6,7 @@
   "baselineProductionSha": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "planningHeadSha": "446cfe4803bedc9868ee28799ff4b376277c0d91",
   "demoMainSha": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "activeTaskId": "E16.3",
+  "activeTaskId": "E04.1",
   "taskDefaults": {
     "actorScope": "execution-agent using existing RBAC/domain boundaries",
     "requiredEvidence": [
@@ -136,7 +136,8 @@
             "Separate empty-DB offline admin bootstrap certification passed",
             "48 normal tests, nine-package types/lint and Next production build passed; new GitHub workflow prepared",
             "English/Arabic mobile owned-status/admin-review UI-only browser acceptance passed; actual IdP/DB authority certified separately."
-          ]
+          ],
+          "remainingHostedAcceptance": "Requested owner candidate prepared privately with temporary password/TOTP required, no email-verification claim or application admin grant; genuine human MFA and offline activation still pending."
         }
       ]
     },
@@ -183,13 +184,18 @@
           ],
           "deliverable": "Brand-consistent tokens/typography/components/state patterns without duplicate locale/permission logic",
           "acceptance": "Shared controls and role shells support RTL/keyboard/200% zoom/320–1440px; documented WCAG2.2 AA acceptance and visual screenshots; no inaccessible fancy-only states",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "actorScope": "Existing scoped roles and domain authority",
           "requiredEvidence": [
             "Focused schema/API/UI diff as applicable",
             "Positive/negative/replay/race/browser tests appropriate to the workflow",
             "Arabic/English acceptance and dated evidence",
             "Runbook and checkpoint update"
+          ],
+          "partialEvidence": [
+            "Explicit public project publication/privacy/lifecycle/schema51 read/guard foundation",
+            "Premium shared tokens/controls and bilingual discovery/search/detail/empty/error/retry",
+            "Local normal67 tests, real DB+HTTP certification, production browser9 cases and actual screenshot inspection"
           ]
         }
       ]
@@ -270,7 +276,12 @@
           "deliverable": "Published project/type/building/floor/physical-unit catalog with trusted assets",
           "acceptance": "Unpublished inventory remains private and exact selection never uses anonymous unmapped stock.",
           "existingImplementation": "Hierarchy, physical units/slots, assets, validated imports/rollback exist. Buyer public hierarchy and trusted physical-slot exact-selection API remain.",
-          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da",
+          "partialEvidence": [
+            "Explicit public project publication/privacy/lifecycle/schema51 read/guard foundation",
+            "Premium shared tokens/controls and bilingual discovery/search/detail/empty/error/retry",
+            "Local normal67 tests, real DB+HTTP certification, production browser9 cases and actual screenshot inspection"
+          ]
         },
         {
           "id": "E04.2",
@@ -309,7 +320,12 @@
           "deliverable": "Public project/type discovery, consent/account/linking, saved preferences/favorites/compare, illustrative EGP affordability and direct/broker/staff entry.",
           "acceptance": "Refresh/relogin preserves progress and attribution remains authorized.",
           "existingImplementation": "Secure login, staff invite and buyer profiles exist. Public registration, browse/preferences/favorites/compare and consent journey remain.",
-          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da",
+          "partialEvidence": [
+            "Explicit public project publication/privacy/lifecycle/schema51 read/guard foundation",
+            "Premium shared tokens/controls and bilingual discovery/search/detail/empty/error/retry",
+            "Local normal67 tests, real DB+HTTP certification, production browser9 cases and actual screenshot inspection"
+          ]
         },
         {
           "id": "E05.2",
@@ -837,13 +853,18 @@
           ],
           "deliverable": "Public/buyer/staff/broker/manager/admin shells and all loading/empty/error/conflict/offline/reconnect states",
           "acceptance": "All critical journeys accepted in Arabic/English/mobile/desktop with actual screenshots, keyboard/a11y checks and measured performance; no fake data fallback, hidden primary action or login-only polish",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "actorScope": "Existing scoped roles and domain authority",
           "requiredEvidence": [
             "Focused schema/API/UI diff as applicable",
             "Positive/negative/replay/race/browser tests appropriate to the workflow",
             "Arabic/English acceptance and dated evidence",
             "Runbook and checkpoint update"
+          ],
+          "partialEvidence": [
+            "Explicit public project publication/privacy/lifecycle/schema51 read/guard foundation",
+            "Premium shared tokens/controls and bilingual discovery/search/detail/empty/error/retry",
+            "Local normal67 tests, real DB+HTTP certification, production browser9 cases and actual screenshot inspection"
           ]
         }
       ]

@@ -5,29 +5,56 @@
   "planningBranch": "plan/egypt-platform-completion",
   "integrationBranch": "completion/egypt-full-platform",
   "taskBranch": "codex/egypt-platform-completion",
-  "observedHeadBeforeCheckpoint": "36941e74f1b0edba40a41947106720a459010b8e",
+  "observedHeadBeforeCheckpoint": "5f661351bfbd25b6eec851d195e7872d8e2870cc",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "activeTaskId": "E16.3",
+  "activeTaskId": "E04.1",
   "activeTaskStatus": "IN_PROGRESS",
-  "completedCheckpoint": "Public isolated VPS API/worker/web/edge live on source49de56f/schema49, all45 exact-source CI runs pass. Independent identity/S3/realAV/telemetry qualified; clean/EICAR/hash/auth recertification passed after correcting antivirus startup socket. All12 protected baselines unchanged. Fresh hosting reconciliation found no newer realestate completion head and separate platform-core remains untouched.",
-  "nextAction": "Resume E16.3/E01.5 genuine first-owner MFA and populated application onboarding, verify hosted SSO/cookies/SSE/signed-storage; while human/provider input pending proceed with E02.3 shared premium Arabic/English UI and M2 public buyer discovery. Follow full audit M1–M8 including grace/contracts/property/advisor/voice/ops/business gates; no fake public sessions/deliveries/visual pass.",
+  "completedCheckpoint": "Owner IdP candidate prepared privately; human MFA/admin grant still pending. First premium bilingual public-discovery foundation locally verified:67 normal tests,9 package strict checks, production API/web builds, real DB+HTTP publication/privacy/lifecycle/paging/audit/revocation checks and9 production browser cases with actual EN desktop/AR mobile screenshot review. VPS remains49de56f/schema49; new source not yet rolled out.",
+  "nextAction": "Certify the published exact source and discovery51/owner-preparation/execution plan; inspect exact-head CI, then build/rehearse51 and roll only own isolated API/worker/web after preserving all stable secrets and migration checksums. Verify hosted discovery and add manager publication UI/type/media catalog. If owner completes genuine MFA, inspect fresh exact issuer/subject/session and perform reviewed offline bootstrap, revoke pre-approval sessions and require sign-in again. Continue all M1–M8 gates.",
   "changedFiles": [
-    "docs/production-completion/PRODUCTION_GAP_AUDIT.md",
-    "docs/production-completion/evidence/product-gap-audit-20261012.json",
-    "docs/production-completion/PLAN.md",
-    "docs/production-completion/TASKS.json",
-    "docs/production-completion/TASKS.md",
-    "docs/production-completion/DECISIONS.md",
+    ".github/workflows/e04-public-discovery.yml",
     "docs/production-completion/BLOCKERS.md",
-    "docs/production-completion/CONTINUE.md",
-    "docs/production-completion/CHATGPT_MASTER_PROMPT.md",
-    "docs/production-completion/FEATURE_COMPLETION.md",
-    "docs/production-completion/WORK_STATE.json",
     "docs/production-completion/CURRENT_STATUS_AND_CONTINUATION.md",
+    "docs/production-completion/EXECUTION_PLAN.md",
+    "docs/production-completion/GOAL.json",
     "docs/production-completion/PROGRESS.md",
     "docs/production-completion/README.md",
-    "docs/production-completion/DEMO_PARITY_MATRIX.csv"
+    "docs/production-completion/TASKS.json",
+    "docs/production-completion/TASKS.md",
+    "docs/production-completion/WORK_STATE.json",
+    "docs/production-completion/evidence/public-discovery51-local.json",
+    "platform/apps/api/package.json",
+    "platform/apps/api/scripts/certify-public-discovery.mjs",
+    "platform/apps/api/src/app.module.ts",
+    "platform/apps/api/src/discovery/discovery.controller.ts",
+    "platform/apps/api/src/discovery/discovery.module.ts",
+    "platform/apps/api/src/discovery/discovery.repository.ts",
+    "platform/apps/api/test/discovery.test.ts",
+    "platform/apps/web/app/design-tokens.css",
+    "platform/apps/web/app/discover/[slug]/page.tsx",
+    "platform/apps/web/app/discover/[slug]/project-detail.tsx",
+    "platform/apps/web/app/discover/discover.module.css",
+    "platform/apps/web/app/discover/discovery-client.tsx",
+    "platform/apps/web/app/discover/page.tsx",
+    "platform/apps/web/app/layout.tsx",
+    "platform/apps/web/app/locale-provider.tsx",
+    "platform/apps/web/app/locale.css",
+    "platform/apps/web/app/page.tsx",
+    "platform/apps/web/app/ui/primitives.tsx",
+    "platform/apps/web/app/ui/ui.module.css",
+    "platform/apps/web/e2e/discovery.spec.mjs",
+    "platform/apps/web/lib/discovery-messages.ts",
+    "platform/deploy/.env.production.example",
+    "platform/deploy/vps/prepare-owner.mjs",
+    "platform/ops/selfhosted-gate7-staging.json",
+    "platform/packages/contracts/package.json",
+    "platform/packages/contracts/src/discovery.ts",
+    "platform/packages/contracts/src/index.ts",
+    "platform/packages/database/migrations/0050_public_project_discovery.sql",
+    "platform/packages/database/migrations/0051_project_publication_authority.sql",
+    "platform/packages/database/src/runtime-readiness.ts",
+    "platform/scripts/verify-quality-contract.mjs"
   ],
   "commandsAndResults": [
     {
@@ -85,6 +112,10 @@
     {
       "action": "Demo/plan/VPS product gap audit",
       "result": "HTTP demo/root+standalone+34 module assets200;52 literal route declarations plus aliases/dynamic paths; live business DB all0;19 epics/51 tasks after adding explicit premium UI/event/change/advisor/governance/business work. Browser initialization failed, so no fresh visual/authenticated browser pass is claimed."
+    },
+    {
+      "action": "Initial goal implementation and qualification",
+      "result": "Owner private candidate prepared without verified-email/admin claims; real publication50→authority51 local DB/HTTP checks, normal67/strict9/API+production web/browser9 pass; actual screenshots inspected. No discovery rollout or full platform GO yet."
     }
   ],
   "evidencePaths": [
@@ -98,7 +129,10 @@
     "docs/production-completion/evidence/hosting-source-reconciliation-20261012.json",
     "docs/production-completion/PRODUCTION_GAP_AUDIT.md",
     "docs/production-completion/evidence/product-gap-audit-20261012.json",
-    "docs/production-completion/DEMO_PARITY_MATRIX.csv"
+    "docs/production-completion/DEMO_PARITY_MATRIX.csv",
+    "docs/production-completion/EXECUTION_PLAN.md",
+    "docs/production-completion/GOAL.json",
+    "docs/production-completion/evidence/public-discovery51-local.json"
   ],
   "remainingTests": [
     "Human owner MFA and offline reviewed activation; public signed S3 and authenticated SSE/browser journeys",
@@ -110,7 +144,6 @@
     "DELIVERY_PROVIDER_CREDENTIALS_DEFERRED",
     "PAYMENT_SIGNATURE_VOICE_ACCEPTANCE_PENDING",
     "OFF_HOST_RECOVERY_AND_OPERATIONS_PENDING",
-    "BROWSER_AUTOMATION_UNAVAILABLE",
     "INDEPENDENT_ACCEPTANCE_PENDING"
   ],
   "deploymentAuthorized": true,
@@ -135,7 +168,10 @@
   "runtimeSchemaVersion": 49,
   "migrationMarker": "0049_reviewed_identity_enrollment.sql",
   "localWorkPreservation": "Unfinished pre-sync locale expansion preserved in named git stash; reuse selectively with canonical locale provider, never duplicate it.",
-  "pendingMigration": null,
+  "pendingMigration": [
+    "0050_public_project_discovery.sql",
+    "0051_project_publication_authority.sql"
+  ],
   "deploymentScope": "Authorized fully isolated VPS project realestate-os-testing; existing n8n/PRENEURA protected; Render deferred",
   "currentRuntimeSchemaVersion": 49,
   "hostingDecision": {
@@ -175,5 +211,19 @@
     "users": 0,
     "transactions": 0
   },
-  "planAuditParent": "24b33a8fe85326319d986941d7eda6298cea26cd"
+  "planAuditParent": "24b33a8fe85326319d986941d7eda6298cea26cd",
+  "currentGoal": "docs/production-completion/GOAL.json",
+  "executionPlan": "docs/production-completion/EXECUTION_PLAN.md",
+  "candidateRuntimeSchemaVersion": 51,
+  "ownerPreparation": {
+    "status": "PRIVATE_IDP_CANDIDATE_PREPARED",
+    "applicationAdminGranted": false,
+    "emailVerified": false,
+    "privateHandoffPath": "C:/Users/LEGION/Downloads/Realestate/.tooling/vps-access/owner-handoff/INITIAL_OWNER_ACCESS.txt",
+    "next": "Genuine human password replacement/TOTP/sign-in before reviewed offline activation; no credentials in repo."
+  },
+  "browserVerification": {
+    "directCua": "Unavailable request-header policy",
+    "projectTestRunner": "Production browser9 PASS and screenshot review; hosted authenticated all-role acceptance remains pending"
+  }
 }

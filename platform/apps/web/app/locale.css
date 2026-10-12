@@ -14,7 +14,7 @@
 }
 
 .locale-switcher__button {
-  min-height: 32px;
+  min-height: 44px;
   border: 0;
   border-radius: 999px;
   padding: 6px 10px;
@@ -51,7 +51,7 @@ html[dir='rtl'] body {
   }
 
   .locale-switcher__button {
-    min-height: 30px;
+    min-height: 44px;
     padding-inline: 8px;
   }
 }

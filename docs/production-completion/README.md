@@ -1,5 +1,7 @@
 # PRENEURA production completion handover
 
+An explicit completion goal is now active: [GOAL.json](GOAL.json). [EXECUTION_PLAN.md](EXECUTION_PLAN.md) defines functional and visual packages for all milestones. Initial discovery51/owner-preparation work is locally verified; read WORK_STATE for publication/CI/rollout state.
+
 Start with [the verified gap audit](PRODUCTION_GAP_AUDIT.md): demo/application/VPS feature matrix, M0–M8 roadmap, premium Arabic/English UX, business readiness and ten final gates. Then read WORK_STATE, TASKS, PLAN, DECISIONS, BLOCKERS, SERVICE_READINESS and CONTINUE.
 
 Resume codex/egypt-platform-completion, draft [PR90](https://github.com/karimelzoser/realestate/pull/90); preserve local/concurrent work. Public testing https://realestate-test.aipreneura.com:8443/login runs49de56f/schema49, with45 inspected CI runs passing for that source. Independent services are deployed; live business counts were0 tenants/projects/users/transactions. Full customer/provider/UX/operational acceptance is unfinished.

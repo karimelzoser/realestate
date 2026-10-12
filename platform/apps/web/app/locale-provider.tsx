@@ -49,11 +49,12 @@ export function LocaleProvider({ children }: Readonly<{ children: ReactNode }>) 
   const persistLocale = useCallback((nextLocale: AppLocale) => {
     setLocaleState(nextLocale);
     synchronizeDocument(nextLocale);
-    window.localStorage.setItem(LOCALE_STORAGE_KEY, nextLocale);
+    try { window.localStorage.setItem(LOCALE_STORAGE_KEY, nextLocale); } catch { /* Locale still works when storage is unavailable. */ }
   }, []);
 
   useEffect(() => {
-    const storedLocale = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+    let storedLocale: string | null = null;
+    try { storedLocale = window.localStorage.getItem(LOCALE_STORAGE_KEY); } catch { /* Use the in-memory/default locale. */ }
     const initialLocale = isAppLocale(storedLocale) ? storedLocale : DEFAULT_LOCALE;
     setLocaleState(initialLocale);
     synchronizeDocument(initialLocale);

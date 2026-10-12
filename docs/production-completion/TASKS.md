@@ -1,12 +1,12 @@
 # Production completion task ledger
 
-TASKS.json is the executable authority; WORK_STATE holds the current action. Read PRODUCTION_GAP_AUDIT.md for feature/UX/business evidence and M0–M8 milestones. Active task: E16.3, with E01.5 genuine human owner acceptance pending. Existing tests are not full live verification.
+TASKS.json is authoritative; WORK_STATE holds the next action. Active goal: GOAL.json. Detailed functional/visual packages: EXECUTION_PLAN.md. Current task E04.1; genuine owner E01.5 and isolated deployment E16.3 remain in progress.
 
 ## E00 — Repository authority and interruption-safe execution
 
 Epic status: INTEGRATED
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E00.1 | P0 | INTEGRATED | Reverify planning/candidate/demo heads and create canonical completion branch | Branch authority is reproducible from GitHub and no demo/runtime code is changed. |
 | E00.2 | P0 | INTEGRATED | Persist expanded task ledger and resumable checkpoint controls | A new session can resume the exact unfinished task without repeating settled decisions. |
@@ -15,7 +15,7 @@ Epic status: INTEGRATED
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E01.1 | P0 | TESTED | Centralize tenant/membership/project lifecycle enforcement for direct requests | Suspended/inactive tenant, membership or project cannot retain unauthorized direct API access; historical-read policy is explicit. |
 | E01.2 | P0 | TESTED | Revalidate SSE/session/support access on revocation, expiry and suspension | Open streams lose access promptly after role/session/support/tenant lifecycle changes. |
@@ -27,17 +27,17 @@ Epic status: IN_PROGRESS
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E02.1 | P0 | IN_PROGRESS | Implement Arabic/English RTL/LTR accessible UI and Cairo/EGP formatting | Critical journeys are equivalent in Arabic/English with correct RTL, Africa/Cairo and EGP behavior. |
 | E02.2 | P0 | IN_PROGRESS | Implement Egypt phone/National-ID/passport normalization, consent and truthful verification | Phone ownership is not misrepresented as National-ID ownership; cross-tenant linking and recovery are scoped/audited. |
-| E02.3 | P0 | NOT_STARTED | Deliver premium Arabic/English design tokens and shared accessible components | Shared controls and role shells support RTL/keyboard/200% zoom/320–1440px; documented WCAG2.2 AA acceptance and visual screenshots; no inaccessible fancy-only states |
+| E02.3 | P0 | IN_PROGRESS | Deliver premium Arabic/English design tokens and shared accessible components | Shared controls and role shells support RTL/keyboard/200% zoom/320–1440px; documented WCAG2.2 AA acceptance and visual screenshots; no inaccessible fancy-only states |
 
 ## E03 — Developer/brokerage onboarding
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E03.1 | P1 | IN_PROGRESS | Complete developer/project branding, staff invitations and lifecycle onboarding | Tenant/project lifecycle is scoped, auditable and cannot grant cross-tenant access. |
 | E03.2 | P1 | IN_PROGRESS | Complete brokerage multi-developer agreements, user roles, attribution transfers and B2B administration | Same brokerage sees only approved projects; agents cannot self-escalate or steal attribution. |
@@ -47,7 +47,7 @@ Epic status: IN_PROGRESS
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E04.1 | P0 | IN_PROGRESS | Complete public catalog/assets and verified physical-unit to slot mapping | Unpublished inventory remains private and exact selection never uses anonymous unmapped stock. |
 | E04.2 | P0 | IN_PROGRESS | Complete exact-unit price adjustments, deterministic quote snapshots and safe imports | Counts/prices reconcile and imports cannot create duplicate/orphan scope or mutate executed history. |
@@ -56,7 +56,7 @@ Epic status: IN_PROGRESS
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E05.1 | P0 | IN_PROGRESS | Complete public browse/account/preferences and direct/broker/staff buyer entry | Refresh/relogin preserves progress and attribution remains authorized. |
 | E05.2 | P0 | IN_PROGRESS | Implement apartment-type EOI, payment/policy acceptance and eligibility checklist | EOI cannot lock exact inventory or invent eligibility and paid policy history is immutable. |
@@ -66,7 +66,7 @@ Epic status: IN_PROGRESS
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E06.1 | P0 | IN_PROGRESS | Implement allocation windows, invitation/check-in and stable shared queue ordering | Concurrent check-in/dispatch preserves stable priority and unauthorized priority changes fail. |
 | E06.2 | P0 | IN_PROGRESS | Implement allocator/online service slots, scoped allocation sessions and manager capacity views | No arbitrary buyer selection or blanket buyer locking capability. |
@@ -76,7 +76,7 @@ Epic status: IN_PROGRESS
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E07.1 | P0 | IN_PROGRESS | Implement Master Plan to exact apartment selection with session/type/quote guards | Buyer explicitly selects one eligible available apartment; no silent substitution. |
 | E07.2 | P0 | IN_PROGRESS | Implement idempotent atomic exact-unit locking and propagate identity through sale evidence | High concurrency yields one winner; retries are stable; cross-project/stale/ineligible requests fail. |
@@ -85,7 +85,7 @@ Epic status: IN_PROGRESS
 
 Epic status: NOT_STARTED
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E08.1 | P1 | NOT_STARTED | Persist short grace, extension/offline requests, decisions and operator inbox | Pending requests survive expiry as records without holding inventory indefinitely. |
 | E08.2 | P1 | NOT_STARTED | Certify expiry/approval/conversion races and same-unit atomic reacquire | Approval never steals another buyer's lock; one transition wins under races/restarts. |
@@ -95,7 +95,7 @@ Epic status: NOT_STARTED
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E09.1 | P0 | IN_PROGRESS | Bind EGP payment plan to frozen exact quote and complete approved provider/manual evidence ingress | Wrong signature/merchant/amount/project fails; browser success cannot manufacture payment. |
 | E09.2 | P0 | IN_PROGRESS | Complete partial/out-of-order/reversal/refund/cheque reconciliation, receipts and maker-checker operations | Replays never double-post and finance outputs reconcile exactly to ledger evidence. |
@@ -104,7 +104,7 @@ Epic status: IN_PROGRESS
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E10.1 | P0 | IN_PROGRESS | Complete document quarantine/scanning/private access and exact bilingual contract rendering | Exact apartment/price/plan/template data is pinned; scanner/renderer failures fail closed. |
 | E10.2 | P0 | IN_PROGRESS | Complete single-use signature challenges, company execution and immutable final evidence | Replay/reordering/revoked signer/mutated object fails; no fake biometric/legal proof. |
@@ -113,7 +113,7 @@ Epic status: IN_PROGRESS
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E11.1 | P1 | IN_PROGRESS | Complete exact property, finance schedule/receipts and contract/document buyer portal | Displayed money and evidence reconcile to one authoritative snapshot/ledger. |
 | E11.2 | P1 | NOT_STARTED | Implement published updates and buyer-scoped support cases with private attachments/SLA | No unrelated buyer/project data leaks and stale requests cannot overwrite another project view. |
@@ -123,7 +123,7 @@ Epic status: IN_PROGRESS
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E12.1 | P1 | IN_PROGRESS | Complete broker/developer control rooms, commissions, grace, collections and operational views | Sensitive economics stay independently redacted and role matrix holds across channels. |
 | E12.2 | P1 | IN_PROGRESS | Add server aggregates, cursor paging/filter/sort/export and high-volume/realtime certification | Counts are not derived from capped rows and older cases remain navigable without refetch storms. |
@@ -133,7 +133,7 @@ Epic status: IN_PROGRESS
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E13.1 | P1 | IN_PROGRESS | Complete verified-contact preferences and Arabic/English provider template/callback lifecycle | Wrong-signature callbacks fail and unverified contacts are never used. |
 | E13.2 | P1 | IN_PROGRESS | Handle uncertain external sends, reconciliation, retries/dead-letter and obsolete reminder cancellation | Accepted-but-response-lost does not cause uncontrolled duplicate external sends. |
@@ -142,7 +142,7 @@ Epic status: IN_PROGRESS
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E14.1 | P1 | NOT_STARTED | Port English ASR/TTS/chat navigation with opt-in, barge-in and text fallback | Audio is user-controlled, accessible fallback works, and primary buying actions remain visible. |
 | E14.2 | P1 | IN_PROGRESS | Enforce authorized exact candidates, hard eligibility/currency filters and allowlisted model actions | AI cannot alter price/eligibility/turn/locks/payments/grace/signatures and PII stays out of prompts. |
@@ -151,17 +151,17 @@ Epic status: IN_PROGRESS
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E15.1 | P1 | IN_PROGRESS | Reconcile demo parity matrix and one coherent Egyptian synthetic EGP dataset | Pages remains synthetic/shareable with no production secrets/PII/provider side effects. |
 | E15.2 | P1 | NOT_STARTED | Complete Arabic/English desktop/mobile full production browser journeys and Pages route/deep-link tests | Fixtures seed data only; tested commands perform the real business transitions. |
-| E15.3 | P0 | NOT_STARTED | Deliver complete premium role-specific visual and interaction acceptance | All critical journeys accepted in Arabic/English/mobile/desktop with actual screenshots, keyboard/a11y checks and measured performance; no fake data fallback, hidden primary action or login-only polish |
+| E15.3 | P0 | IN_PROGRESS | Deliver complete premium role-specific visual and interaction acceptance | All critical journeys accepted in Arabic/English/mobile/desktop with actual screenshots, keyboard/a11y checks and measured performance; no fake data fallback, hidden primary action or login-only polish |
 
 ## E16 — Containers, operations and deployment package
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E16.1 | P0 | IN_PROGRESS | Build non-root images/Compose/migration service plus proxy/TLS/SSE/config/deploy scripts | Documented exact-source isolated package and fresh disposable production-config environment boot; malformed config fails closed; protected n8n/existing PRENEURA remain unchanged. |
 | E16.2 | P0 | IN_PROGRESS | Deliver backup/restore/rollback, observability/alerts and artifact/offline installation certification | Coordinated restore verifies DB/identity/object/config evidence and actionable alert paths. |
@@ -171,7 +171,7 @@ Epic status: IN_PROGRESS
 
 Epic status: IN_PROGRESS
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E17.1 | P0 | IN_PROGRESS | Run exact-candidate security, authorization, concurrency/load/soak/provider-negative certification | Known security/load/realtime/job/provider failure cases pass on one exact candidate. |
 | E17.2 | P0 | IN_PROGRESS | Run restore/rollback/migration rehearsal and freeze exact artifacts/evidence | One exact artifact set is reproducible and all remaining live/deployment dependencies are explicitly registered. |
@@ -180,7 +180,7 @@ Epic status: IN_PROGRESS
 
 Epic status: NOT_STARTED
 
-| Task | Priority | Status | Deliverable | Acceptance |
+| Task | Priority | Status | Work | Acceptance |
 |---|---|---|---|---|
 | E18.1 | P1 | NOT_STARTED | Prepare developer/two-brokerage pilot onboarding, training and operating responsibilities | A bounded Egyptian project pilot has documented scope and named responsibilities; real data/money starts only after its applicable release gates, without claiming the full platform done |
 | E18.2 | P1 | NOT_STARTED | Complete tenant entitlements, usage and approved B2B invoicing/service policy | Access and usage follow approved tenant entitlements; no unapproved charges, unsupported legal claims or invented contractual/financial acceptance |

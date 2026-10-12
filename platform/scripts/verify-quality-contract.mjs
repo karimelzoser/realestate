@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 const root = process.cwd();
 const mandatoryTests = [
+  { path: 'apps/api/test/discovery.test.ts', minimumDeclaredTests: 4 },
   { path: 'deploy/vps/scanner.test.mjs', minimumDeclaredTests: 6 },
   { path: 'apps/api/test/storage-integrity.test.ts', minimumDeclaredTests: 4 },
   { path: 'apps/api/test/auth-provider-availability.test.ts', minimumDeclaredTests: 4 },

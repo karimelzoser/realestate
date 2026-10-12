@@ -8,6 +8,7 @@
       "types": "./src/index.ts",
       "default": "./dist/index.js"
     },
+    "./discovery": { "types": "./src/discovery.ts", "default": "./dist/discovery.js" },
     "./auth": { "types": "./src/auth.ts", "default": "./dist/auth.js" },
     "./access": { "types": "./src/access.ts", "default": "./dist/access.js" },
     "./accounts": { "types": "./src/accounts.ts", "default": "./dist/accounts.js" },

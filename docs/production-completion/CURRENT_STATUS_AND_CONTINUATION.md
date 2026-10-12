@@ -1,5 +1,9 @@
 # PRENEURA — verified status and public-production completion brief
 
+## Active completion goal and current candidate
+
+The user explicitly requested the full plan, goal, implementation and functional/visual testing through completion. GOAL.json is active and EXECUTION_PLAN.md defines the delivery packages. Owner candidate is prepared privately with required password/TOTP but no administrator grant/verified-email assertion. Candidate discovery51 adds explicit public publication/privacy/authority and premium bilingual UI.67 normal tests,9 package strict checks, real DB/HTTP and9 production-browser cases pass locally; actual English desktop/Arabic mobile screenshots inspected. VPS source/schema remain49de56f/49 until exact-source CI/rollout. Continue E04.1 and genuine owner/hosted acceptance without dropping the full plan.
+
 ## Current authority — 12 October 2026
 
 The active target is only the isolated realestate-os-testing project under /opt/realestate-os-testing. Existing n8n and PRENEURA containers, databases, identity realms, networks and ports80/443 are protected. All12 protected container IDs/start times/restart counts were rechecked and remain unchanged. Render is deferred.

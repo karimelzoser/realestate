@@ -1,5 +1,2 @@
-import { redirect } from 'next/navigation';
-
-export default function HomePage(): never {
-  redirect('/workspace');
-}
+import DiscoveryClient from './discover/discovery-client';
+export default function HomePage() {return <DiscoveryClient/>;}

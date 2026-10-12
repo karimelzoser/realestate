@@ -1,4 +1,5 @@
 export * from './auth.js';
+export * from './discovery.js';
 export * from './access.js';
 export * from './accounts.js';
 export * from './identity.js';

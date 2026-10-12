@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { LocaleProvider } from './locale-provider';
 import PublicTestNotice from './public-test-notice';
 import './globals.css';
+import './design-tokens.css';
 import './locale.css';
 
 export const metadata: Metadata = {

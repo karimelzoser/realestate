@@ -18,9 +18,9 @@ Prepare actual payment/manual maker-checker, populated bilingual rendering/signi
 
 TLS renewal, off-host encrypted coordinated restore, persistent monitoring/delivered alerts, load/soak, compatible rollback and operational ownership remain unfinished. Same-host files or green health endpoints do not establish recovery or availability. Preserve protected project baselines.
 
-## BROWSER_AUTOMATION_UNAVAILABLE
+## DIRECT_BROWSER_AUTOMATION_UNAVAILABLE — project test runner now verified
 
-CUA initialization/Chrome retry failed loading request-header policy. HTTP/demo-asset/source checks passed, but no fresh visual/click-through/authenticated browser pass exists. Re-run genuine Arabic/English/mobile/keyboard/all-role review when available; never fabricate screenshots or auth/session proof.
+CUA remains unavailable, but the existing project Playwright runner now completed9 production-build browser cases, with actual screenshot inspection for the new discovery slice. Its fixture transport is labeled; hosted authenticated/all-role/provider visual acceptance remains pending. Do not claim this slice proves the entire platform or genuine MFA.
 
 ## INDEPENDENT_ACCEPTANCE_PENDING
 

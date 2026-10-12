@@ -1,0 +1,13 @@
+:root {
+  --pn-ink: #172b3a;
+  --pn-muted: #526676;
+  --pn-navy: #122b3c;
+  --pn-accent: #096858;
+  --pn-accent-soft: #e4f4ef;
+  --pn-surface: #ffffff;
+  --pn-canvas: #f5f6f2;
+  --pn-line: #dce4df;
+  --pn-radius: 18px;
+  --pn-space: 8px;
+  --pn-shadow: 0 16px 42px rgba(18, 43, 60, .06);
+}
