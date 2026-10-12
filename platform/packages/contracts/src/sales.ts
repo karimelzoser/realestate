@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { decimalMoneySchema } from './catalog.js';
+import type { PhysicalApartmentSnapshot } from './allocation.js';
 
 export const buyerSourceSchema = z.enum(['DIRECT', 'BROKER', 'INTERNAL']);
 export type BuyerSource = z.infer<typeof buyerSourceSchema>;
@@ -257,6 +258,8 @@ export interface ReservationResult {
   reservationId: string;
   transactionId: string;
   unitTypeId: string;
+  physicalUnitId: string;
+  apartment: PhysicalApartmentSnapshot;
   quotedTotal: string | null;
   currency: string;
   reservedAt: string;
@@ -276,6 +279,8 @@ export interface TransactionListItemSnapshot {
   unitTypeId: string;
   unitTypeCode: string;
   unitTypeName: string;
+  physicalUnitId: string | null;
+  apartment: PhysicalApartmentSnapshot | null;
   status: 'IN_PROGRESS' | 'READY_FOR_COMPLETION' | 'COMPLETED' | 'CANCELLED';
   quotedTotal: string | null;
   currency: string;

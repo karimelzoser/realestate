@@ -3,6 +3,7 @@ import type { TransactionPriceSnapshot } from '@preneura/contracts/pricing-quote
 import { sql, type Kysely } from 'kysely';
 import type { Database } from '@preneura/database';
 import { DATABASE } from '../database/database.module.js';
+import type { PhysicalApartmentSnapshot } from '@preneura/contracts/allocation';
 
 @Injectable()
 export class TransactionPriceRepository {
@@ -19,6 +20,8 @@ export class TransactionPriceRepository {
       unit_type_id: string;
       unit_type_code: string;
       unit_type_name: string;
+      physical_unit_id: string | null;
+      apartment_snapshot: PhysicalApartmentSnapshot | null;
       pricing_version_id: string;
       pricing_version_number: number;
       pricing_version_label: string;
@@ -33,6 +36,8 @@ export class TransactionPriceRepository {
         r.unit_type_id,
         ut.code AS unit_type_code,
         ut.name AS unit_type_name,
+        r.physical_unit_id,
+        r.apartment_snapshot,
         r.pricing_version_id,
         pv.version_number AS pricing_version_number,
         pv.label AS pricing_version_label,
@@ -90,6 +95,8 @@ export class TransactionPriceRepository {
       unitTypeId: row.unit_type_id,
       unitTypeCode: row.unit_type_code,
       unitTypeName: row.unit_type_name,
+      physicalUnitId: row.physical_unit_id,
+      apartment: row.apartment_snapshot,
       pricingVersionId: row.pricing_version_id,
       pricingVersionNumber: Number(row.pricing_version_number),
       pricingVersionLabel: row.pricing_version_label,

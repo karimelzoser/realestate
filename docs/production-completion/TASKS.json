@@ -192,6 +192,18 @@
           "acceptance": "Same brokerage sees only approved projects; agents cannot self-escalate or steal attribution.",
           "existingImplementation": "Schema45 cross-developer brokerage organizations, agreements/project access, attribution transfer API and SQL certification exist. Complete B2B UI/enrollment/role UAT remains.",
           "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
+        },
+        {
+          "id": "E03.3",
+          "title": "Prevent legacy profile upsert from bypassing approved attribution transfer",
+          "priority": "P0",
+          "status": "NOT_STARTED",
+          "dependencies": [
+            "E03.2"
+          ],
+          "deliverable": "Immutable existing attribution on generic profile create/upsert plus database controlled-transfer authority and deal snapshot evidence",
+          "acceptance": "Buyer/direct or another broker cannot reset/steal an existing attribution; only authorized approved transfer changes it, with stale/concurrent and historical commission tests.",
+          "existingImplementation": "Schema45 history is append-only and transfer API is controlled, but SalesRepository.createBuyerProfile conflict upsert still rewrites source/company/agent; no buyer-profile attribution update guard was found in45."
         }
       ]
     },
@@ -335,12 +347,19 @@
           "status": "IN_PROGRESS",
           "deliverable": "Authorized exact physical-unit selection and quote confirmation",
           "acceptance": "Buyer explicitly selects one eligible available apartment; no silent substitution.",
-          "existingImplementation": "Physical hierarchy stored internally. Production UI locks unit type; exact eligible apartment selection is missing.",
+          "existingImplementation": "Schema47 local exact apartment quote/hold/reservation path, immutable identity, original quote retention, scoped paging and bilingual allocator UI implemented. Real PostgreSQL race/expiry/replay/eligibility/contract hash certification and actual English/Arabic browser reservation pass.",
           "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da",
           "dependencyEvidence": [
             "Schema46 chosen apartment-type EOI local/CI certification",
             "Existing schema18 physical unit-to-slot hierarchy and schema21 certified pricing",
             "Existing schema40 called buyer/allocator session ownership plus schema41 durable expiry"
+          ],
+          "remainingAcceptance": "Exact published-head CI; master-plan visual interaction and online buyer allocation/capacity dependencies; hosted UAT and full finance/receipt/commission visual identity coverage.",
+          "evidencePaths": [
+            "platform/apps/api/scripts/certify-exact-allocation.mjs",
+            "platform/apps/web/e2e/exact-allocation.spec.mjs",
+            ".github/workflows/e07-exact-allocation-certification.yml",
+            "docs/production-completion/evidence/e07-exact-allocation-local.json"
           ]
         },
         {
@@ -353,8 +372,15 @@
           "status": "IN_PROGRESS",
           "deliverable": "Exact-unit lock/reservation/transaction/contract/property identity path",
           "acceptance": "High concurrency yields one winner; retries are stable; cross-project/stale/ineligible requests fail.",
-          "existingImplementation": "Atomic type/slot locks, expiry and quote/reservation exist. Explicit exact apartment identity/idempotency and propagation must be implemented.",
-          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
+          "existingImplementation": "Schema47 local exact apartment quote/hold/reservation path, immutable identity, original quote retention, scoped paging and bilingual allocator UI implemented. Real PostgreSQL race/expiry/replay/eligibility/contract hash certification and actual English/Arabic browser reservation pass.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da",
+          "remainingAcceptance": "Exact published-head CI; master-plan visual interaction and online buyer allocation/capacity dependencies; hosted UAT and full finance/receipt/commission visual identity coverage.",
+          "evidencePaths": [
+            "platform/apps/api/scripts/certify-exact-allocation.mjs",
+            "platform/apps/web/e2e/exact-allocation.spec.mjs",
+            ".github/workflows/e07-exact-allocation-certification.yml",
+            "docs/production-completion/evidence/e07-exact-allocation-local.json"
+          ]
         }
       ]
     },
@@ -747,7 +773,7 @@
     "reason": "Software and deployment package must be complete before separate user authorization",
     "deploymentAuthorized": false
   },
-  "currentCandidateSha": "a3583bd802d515f9acb6298ebf1414e488a3105a",
+  "currentCandidateSha": "bd5ca4f1eeda2ef566f56f7d869fbc16a45ceb30",
   "activeBranch": "codex/egypt-platform-completion",
   "activePr": 90,
   "currentRuntimeSchemaVersion": 46

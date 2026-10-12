@@ -8,6 +8,7 @@ import type {
 import type { Database } from '@preneura/database';
 import { sql, type Kysely } from 'kysely';
 import { DATABASE } from '../database/database.module.js';
+import type { PhysicalApartmentSnapshot } from '@preneura/contracts/allocation';
 
 interface BasePropertyRow {
   transaction_id: string;
@@ -18,6 +19,8 @@ interface BasePropertyRow {
   unit_type_id: string;
   unit_type_code: string;
   unit_type_name: string;
+  physical_unit_id: string | null;
+  apartment_snapshot: PhysicalApartmentSnapshot | null;
   quoted_total: string | number | null;
   currency: string;
   completion_percent: string | number;
@@ -69,6 +72,8 @@ export class PropertyRepository {
         ut.id AS unit_type_id,
         ut.code AS unit_type_code,
         ut.name AS unit_type_name,
+        r.physical_unit_id,
+        r.apartment_snapshot,
         r.quoted_total,
         r.currency,
         COALESCE(
@@ -104,6 +109,8 @@ export class PropertyRepository {
       unitTypeId: row.unit_type_id,
       unitTypeCode: row.unit_type_code,
       unitTypeName: row.unit_type_name,
+      physicalUnitId: row.physical_unit_id,
+      apartment: row.apartment_snapshot,
       quotedTotal: row.quoted_total === null ? null : String(row.quoted_total),
       currency: row.currency,
       completionPercent: String(row.completion_percent),

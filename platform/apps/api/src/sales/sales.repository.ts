@@ -12,6 +12,7 @@ import type {
   TransactionProgressSnapshot,
 } from '@preneura/contracts/sales';
 import { DATABASE } from '../database/database.module.js';
+import type { PhysicalApartmentSnapshot } from '@preneura/contracts/allocation';
 
 export interface BuyerProfileRecord {
   id: string;
@@ -473,6 +474,19 @@ export class SalesRepository {
         .executeTakeFirst();
       if (!buyer) throw new NotFoundException('Buyer profile not found.');
 
+      const existing = await trx.selectFrom('reservations as r').innerJoin('transactions as t','t.reservation_id','r.id')
+        .select(['r.id','t.id as transaction_id','r.unit_type_id','r.physical_unit_id','r.apartment_snapshot','r.quoted_total','r.currency','r.reserved_at'])
+        .where('r.inventory_lock_id','=',input.lockId).where('r.tenant_id','=',input.tenantId)
+        .where('r.project_id','=',input.projectId).where('r.buyer_profile_id','=',buyer.id)
+        .where('r.queue_entry_id','=',input.queueEntryId).where('r.reserved_by','=',input.actorUserId)
+        .where('r.status','in',['ACTIVE','COMPLETED']).executeTakeFirst();
+      if (existing?.physical_unit_id && existing.apartment_snapshot) {
+        return { reservationId:existing.id,transactionId:existing.transaction_id,unitTypeId:existing.unit_type_id,
+          physicalUnitId:existing.physical_unit_id,apartment:existing.apartment_snapshot as unknown as PhysicalApartmentSnapshot,
+          quotedTotal:existing.quoted_total===null ? null : String(existing.quoted_total),currency:existing.currency,
+          reservedAt:(existing.reserved_at as Date).toISOString() };
+      }
+
       const queue = await trx
         .selectFrom('queue_entries')
         .select(['id', 'buyer_profile_id', 'eoi_id', 'status'])
@@ -487,7 +501,7 @@ export class SalesRepository {
 
       const eoi = await trx
         .selectFrom('buyer_eois')
-        .select(['id', 'status'])
+        .select(['id', 'status', 'selected_unit_type_id'])
         .where('id', '=', queue.eoi_id)
         .where('tenant_id', '=', input.tenantId)
         .where('project_id', '=', input.projectId)
@@ -504,6 +518,8 @@ export class SalesRepository {
           'id',
           'unit_type_id',
           'inventory_slot_id',
+          'physical_unit_id',
+          'allocation_quote_id',
           'buyer_user_id',
           'status',
           'expires_at',
@@ -519,44 +535,17 @@ export class SalesRepository {
       if (lock.buyer_user_id && lock.buyer_user_id !== buyer.user_id) {
         throw new ConflictException('The inventory lock belongs to a different buyer.');
       }
+      if (!lock.physical_unit_id || !lock.allocation_quote_id || eoi.selected_unit_type_id !== lock.unit_type_id) {
+        throw new ConflictException('Reservation requires the exact apartment quote selected for this EOI type.');
+      }
 
-      const price = await sql<{
-        pricingVersionId: string;
-        quotedTotal: string;
-        currency: string;
-      }>`
-        SELECT
-          pv.id AS "pricingVersionId",
-          round(sum(
-            CASE r.component
-              WHEN 'INDOOR' THEN ut.indoor_area_sqm * r.rate_per_sqm
-              WHEN 'ROOF' THEN ut.roof_area_sqm * r.rate_per_sqm
-              WHEN 'GARDEN' THEN ut.garden_area_sqm * r.rate_per_sqm
-            END
-          ), 2)::text AS "quotedTotal",
-          p.currency AS "currency"
-        FROM pricing_versions pv
-        JOIN pricing_rates r
-          ON r.pricing_version_id = pv.id
-         AND r.tenant_id = pv.tenant_id
-         AND r.project_id = pv.project_id
-        JOIN catalog_unit_types ut
-          ON ut.id = r.unit_type_id
-         AND ut.tenant_id = pv.tenant_id
-         AND ut.project_id = pv.project_id
-        JOIN projects p ON p.id = pv.project_id AND p.tenant_id = pv.tenant_id
-        WHERE pv.tenant_id = ${input.tenantId}
-          AND pv.project_id = ${input.projectId}
-          AND pv.status IN ('PUBLISHED','SCHEDULED')
-          AND pv.published_at IS NOT NULL
-          AND pv.effective_at <= ${input.now}
-          AND r.unit_type_id = ${lock.unit_type_id}
-        GROUP BY pv.id, pv.effective_at, pv.version_number, p.currency
-        ORDER BY pv.effective_at DESC, pv.version_number DESC
-        LIMIT 1
-      `.execute(trx);
-      const quote = price.rows[0];
-      if (!quote) throw new ConflictException('No effective published pricing exists for this unit type.');
+      const quote = await trx.selectFrom('allocation_quotes')
+        .select(['id','pricing_version_id as pricingVersionId','quoted_total as quotedTotal','currency','apartment_snapshot'])
+        .where('id','=',lock.allocation_quote_id).where('tenant_id','=',input.tenantId).where('project_id','=',input.projectId)
+        .where('queue_entry_id','=',queue.id).where('buyer_user_id','=',buyer.user_id)
+        .where('allocator_user_id','=',input.actorUserId).where('physical_unit_id','=',lock.physical_unit_id)
+        .forShare().executeTakeFirst();
+      if (!quote) throw new ConflictException('Owned exact apartment quote not found for this reservation.');
 
       await trx
         .updateTable('inventory_locks')
@@ -582,6 +571,9 @@ export class SalesRepository {
           inventory_lock_id: lock.id,
           inventory_slot_id: lock.inventory_slot_id,
           unit_type_id: lock.unit_type_id,
+          physical_unit_id: lock.physical_unit_id,
+          allocation_quote_id: quote.id,
+          apartment_snapshot: quote.apartment_snapshot,
           pricing_version_id: quote.pricingVersionId,
           quoted_total: quote.quotedTotal,
           currency: quote.currency,
@@ -651,6 +643,8 @@ export class SalesRepository {
           event_type: 'reservation.created',
           metadata: {
             reservationId: reservation.id,
+            physicalUnitId: lock.physical_unit_id,
+            quoteId: quote.id,
             unitTypeId: lock.unit_type_id,
             quotedTotal: quote.quotedTotal,
             currency: quote.currency,
@@ -667,7 +661,7 @@ export class SalesRepository {
             aggregate_type: 'RESERVATION',
             aggregate_id: reservation.id,
             event_type: 'reservation.created',
-            payload: { buyerProfileId: buyer.id, transactionId: transaction.id },
+            payload: { buyerProfileId: buyer.id, transactionId: transaction.id, physicalUnitId: lock.physical_unit_id, quoteId: quote.id },
             published_at: null,
             attempts: 0,
           },
@@ -677,7 +671,7 @@ export class SalesRepository {
             aggregate_type: 'TRANSACTION',
             aggregate_id: transaction.id,
             event_type: 'transaction.opened',
-            payload: { buyerProfileId: buyer.id, reservationId: reservation.id },
+            payload: { buyerProfileId: buyer.id, reservationId: reservation.id, physicalUnitId: lock.physical_unit_id, quoteId: quote.id },
             published_at: null,
             attempts: 0,
           },
@@ -687,6 +681,8 @@ export class SalesRepository {
       return {
         reservationId: reservation.id,
         transactionId: transaction.id,
+        physicalUnitId: lock.physical_unit_id,
+        apartment: quote.apartment_snapshot as unknown as PhysicalApartmentSnapshot,
         unitTypeId: lock.unit_type_id,
         quotedTotal: quote.quotedTotal,
         currency: quote.currency,

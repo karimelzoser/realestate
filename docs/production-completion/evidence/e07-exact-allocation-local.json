@@ -1,0 +1,36 @@
+{
+  "scope": "Local disposable verification; not live production approval",
+  "runtimeSchemaVersion": 47,
+  "baselinePublishedHead": "bd5ca4f1eeda2ef566f56f7d869fbc16a45ceb30",
+  "database": "PostgreSQL18.6 loopback, synthetic only",
+  "migrations": {
+    "fromZero": 47,
+    "upgradeFrom": 46,
+    "legacyReservationsPreserved": 2,
+    "legacyPhysicalIdentityInferred": false
+  },
+  "checks": {
+    "normalTests": 34,
+    "packagesStrictTypesAndLint": 9,
+    "domainRegressionSuites": 7,
+    "exactApartmentRace": "one winner, requested physical unit only",
+    "idempotency": "same lock/reservation, converted and expired terminal retries preserved",
+    "eligibility": "original EOI type; explicit allocator; buyer membership and role revalidated",
+    "pricing": "stale unheld quote rejected; accepted price preserved after published version superseded",
+    "executionEvidence": "new immutable schema2 manifest binds apartment into SHA256",
+    "browser": "English1440 desktop, Arabic390 RTL, quote acknowledgment, hold, refresh and actual reservation retain U2 and EGP201000.00; no horizontal overflow or page errors"
+  },
+  "pending": [
+    "Exact published-head GitHub CI",
+    "Hosted HTTPS cookie/OIDC/SSE tests",
+    "Full public product and provider acceptance"
+  ],
+  "render": {
+    "pluginInstalled": true,
+    "mcpExposed": false,
+    "cliAuthenticated": false,
+    "publicTestingAuthorized": true,
+    "paidPurchaseAuthorized": false,
+    "selfHostedDeferred": true
+  }
+}

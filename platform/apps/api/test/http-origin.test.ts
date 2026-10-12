@@ -13,6 +13,7 @@ test('unsafe cookie requests require an exact trusted origin or trusted referer'
     assert.equal(trustedMutationOrigin('POST', { cookie, origin }, env), false, origin);
   }
   assert.equal(trustedMutationOrigin('POST', { cookie }, env), false);
+  assert.equal(trustedMutationOrigin('POST', { cookie: 'preneura_session = value' }, env), false);
   assert.equal(trustedMutationOrigin('POST', { cookie, origin: ['https://app.preneura.test', 'https://evil.test'] }, env), false);
 });
 

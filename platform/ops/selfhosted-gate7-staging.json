@@ -7,8 +7,8 @@
     "applicationRuntimeSource": "PR #81 emitted full-stack acceptance",
     "deploymentBundleSha": "8750f94180b89cf58a1963f739c24aa0a56babbd",
     "deploymentBundleSource": "PR #82 self-hosted deployment bundle",
-    "runtimeSchemaVersion": 46,
-    "migrationMarker": "0046_eoi_apartment_type_choice.sql",
+    "runtimeSchemaVersion": 47,
+    "migrationMarker": "0047_exact_apartment_allocation.sql",
     "status": "DEVELOPMENT"
   },
   "deployment": {

@@ -120,7 +120,7 @@ export class ExportService {
           FROM buyer_profiles bp JOIN users u ON u.id=bp.user_id LEFT JOIN broker_companies bc ON bc.id=bp.broker_company_id LEFT JOIN users agent ON agent.id=bp.broker_agent_user_id
           WHERE bp.tenant_id=${input.tenantId}::uuid ${buyerScope} ORDER BY bp.created_at DESC`.execute(this.db)).rows;
       case 'eois':
-        return (await sql<ExportRow>`SELECT e.id AS eoi_id,u.display_name AS buyer_name,e.amount,e.currency,e.status,p.name AS refund_policy,e.paid_at,e.applied_at,e.refund_requested_at,e.refunded_at,e.created_at
+        return (await sql<ExportRow>`SELECT e.id AS eoi_id,u.display_name AS buyer_name,e.selected_unit_type_id,e.selected_unit_type_snapshot->>'name' AS selected_apartment_type,e.amount,e.currency,e.status,p.name AS refund_policy,e.paid_at,e.applied_at,e.refund_requested_at,e.refunded_at,e.created_at
           FROM buyer_eois e JOIN buyer_profiles bp ON bp.id=e.buyer_profile_id JOIN users u ON u.id=bp.user_id JOIN eoi_refund_policies p ON p.id=e.refund_policy_id
           WHERE e.tenant_id=${input.tenantId}::uuid AND e.project_id=${input.projectId}::uuid ${buyerScope} ORDER BY e.created_at DESC`.execute(this.db)).rows;
       case 'queue':
@@ -136,7 +136,7 @@ export class ExportService {
           FROM pricing_versions pv JOIN pricing_rates pr ON pr.pricing_version_id=pv.id JOIN catalog_unit_types ut ON ut.id=pr.unit_type_id
           WHERE pv.tenant_id=${input.tenantId}::uuid AND pv.project_id=${input.projectId}::uuid AND pv.status IN ('PUBLISHED','SCHEDULED') ORDER BY pv.version_number DESC,ut.sort_order,pr.component`.execute(this.db)).rows;
       case 'transactions':
-        return (await sql<ExportRow>`SELECT t.id AS transaction_id,u.display_name AS buyer_name,t.status,ut.code AS unit_type_code,ut.name AS unit_type,r.quoted_total,r.currency,t.opened_at,t.completed_at,t.cancelled_at
+        return (await sql<ExportRow>`SELECT t.id AS transaction_id,u.display_name AS buyer_name,t.status,ut.code AS unit_type_code,ut.name AS unit_type,r.physical_unit_id,r.apartment_snapshot->>'apartmentReference' AS apartment_reference,r.apartment_snapshot->>'buildingName' AS building,r.apartment_snapshot->>'floorName' AS floor,r.quoted_total,r.currency,t.opened_at,t.completed_at,t.cancelled_at
           FROM transactions t JOIN buyer_profiles bp ON bp.id=t.buyer_profile_id JOIN users u ON u.id=bp.user_id JOIN reservations r ON r.id=t.reservation_id JOIN catalog_unit_types ut ON ut.id=r.unit_type_id
           WHERE t.tenant_id=${input.tenantId}::uuid AND t.project_id=${input.projectId}::uuid ${buyerScope} ORDER BY t.opened_at DESC`.execute(this.db)).rows;
       case 'payments':

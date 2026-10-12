@@ -115,3 +115,9 @@ Git CLI credential cache expired during CI fix publication. Used the connected G
 ## Sales certification alignment
 
 Schema46/Origin candidate a3583bd passed34 of35 CI runs; the remaining Sales certificate still called createEoi with the old missing-type/policy shape. Updated the synthetic Sales fixture and real service certificate to choose an explicit type and accepted policy, with chosen-type summary assertions. Local Sales onboarding/encrypted contact/role finance-separation certificate now passes. Staff can record an unpaid prospect EOI while enrollment remains pending; this neither activates account access nor holds inventory. Exact allocation will enforce the paid EOI and eligible active buyer/session boundary.
+
+## Exact apartment allocation and Render testing continuation
+
+Schema47 draft adds immutable apartment quotes, scoped building/floor/apartment paging, requested-slot locks and replay keys, exact reservation identity, original accepted price retention, eligibility revalidation at conversion, property/transaction/export identity and hash-bound executed-contract manifest v2. Real PostgreSQL18 certification passes requested-apartment races, no substitution, changed-price rejection, terminal retries, expiry rejection, revoked buyer and immutable evidence. All34 normal tests and9 package strict type/lint checks pass. English desktop/Arabic390px RTL browser test passes selection, accepted quote, hold, refresh and actual reservation with unchanged physical identity and price. New GitHub workflow captures browser screenshots. Live provider/production UAT remains open.
+
+Latest user authorizes GitHub + Render public testing and preparation of both. Render plugin is installed/enabled but no MCP tools are available in this session; no CLI/key is present. Account reconnection/reload pending. No resources purchased or self-hosted server accessed.

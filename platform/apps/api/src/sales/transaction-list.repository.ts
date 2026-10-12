@@ -3,6 +3,7 @@ import { sql, type Kysely } from 'kysely';
 import type { Database } from '@preneura/database';
 import type { TransactionListItemSnapshot } from '@preneura/contracts/sales';
 import { DATABASE } from '../database/database.module.js';
+import type { PhysicalApartmentSnapshot } from '@preneura/contracts/allocation';
 
 @Injectable()
 export class TransactionListRepository {
@@ -67,6 +68,8 @@ export class TransactionListRepository {
         'b.broker_agent_user_id',
         'broker_agent.display_name as broker_agent_display_name',
         'r.unit_type_id',
+        'r.physical_unit_id',
+        'r.apartment_snapshot',
         'r.quoted_total',
         'r.currency',
         'u.code as unit_type_code',
@@ -111,6 +114,8 @@ export class TransactionListRepository {
       unitTypeId: row.unit_type_id,
       unitTypeCode: row.unit_type_code,
       unitTypeName: row.unit_type_name,
+      physicalUnitId: row.physical_unit_id,
+      apartment: row.apartment_snapshot as unknown as PhysicalApartmentSnapshot | null,
       status: row.status,
       quotedTotal: row.quoted_total === null ? null : String(row.quoted_total),
       currency: row.currency,

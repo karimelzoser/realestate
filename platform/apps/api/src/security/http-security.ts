@@ -49,7 +49,7 @@ export function trustedMutationOrigin(
   if (['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) return true;
   const allowed = new Set((env.WEB_ORIGIN ?? 'http://localhost:3000').split(',').map((value) => value.trim()));
   const cookieName = env.SESSION_COOKIE_NAME ?? 'preneura_session';
-  const hasSessionCookie = headers.cookie?.split(';').some((part) => part.trim().startsWith(`${cookieName}=`)) ?? false;
+  const hasSessionCookie = headers.cookie?.split(';').some((part) => part.split('=',1)[0]?.trim() === cookieName) ?? false;
   if (headers.origin !== undefined) {
     if (typeof headers.origin !== 'string') return false;
     try {

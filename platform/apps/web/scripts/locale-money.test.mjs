@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { formatDecimalCurrency, normalizeLocalizedDigits } from '../lib/locale.ts';
 import { eoiMessages } from '../lib/eoi-messages.ts';
+import { allocationMessages } from '../lib/allocation-messages.ts';
 
 test('large immutable monetary strings retain cents beyond floating-point precision', () => {
   assert.match(formatDecimalCurrency('9007199254740991.12', 'EGP', 'en'), /9,007,199,254,740,991\.12/);
@@ -24,5 +25,9 @@ test('every EOI policy and selection message has Arabic and English copy', () =>
   for (const key of Object.keys(eoiMessages.en)) {
     assert.ok(eoiMessages.en[key].trim());
     assert.match(eoiMessages.ar[key], /[\u0600-\u06ff]/);
+  }
+  assert.deepEqual(Object.keys(allocationMessages.ar).sort(),Object.keys(allocationMessages.en).sort());
+  for(const key of Object.keys(allocationMessages.en)) {
+    assert.ok(allocationMessages.en[key].trim());assert.match(allocationMessages.ar[key],/[\u0600-\u06ff]/);
   }
 });

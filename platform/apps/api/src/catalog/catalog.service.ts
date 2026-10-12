@@ -168,11 +168,14 @@ export class CatalogService {
     data: CreateInventoryLockInput;
   }): Promise<InventoryLockResult> {
     await this.requireProject(input.data.tenantId, input.data.projectId);
-    await this.access.assert({
+    const decision = await this.access.assert({
       userId: input.actorUserId,
       permission: 'unit.lock',
       context: { tenantId: input.data.tenantId, projectId: input.data.projectId },
     });
+    if (input.data.buyerUserId || decision.role === 'ALLOCATOR') {
+      throw new BadRequestException('Buyer allocation requires the exact-apartment quote workflow.');
+    }
     await this.requireUnitTypes(input.data.tenantId, input.data.projectId, [input.data.unitTypeId]);
 
     const lock = await this.repository.createInventoryLock({

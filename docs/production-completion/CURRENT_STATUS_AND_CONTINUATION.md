@@ -1,18 +1,16 @@
 # PRENEURA — verified status and public-production completion brief
 
-Latest local implementation advances to **schema46** (0046_eoi_apartment_type_choice.sql): required apartment-type EOI, immutable type/policy acceptance, safe concurrent retries, scoped summaries and bilingual staff selection are locally certified. The cited schema45 CI snapshot remains the inspected prior exact head; schema46 exact-head CI is pending publication. Public buyer eligibility/payment and exact-unit allocation remain open.
+## Current checkpoint
 
-## Authority
+GitHub candidate branch `codex/egypt-platform-completion`, draft [PR #90](https://github.com/karimelzoser/realestate/pull/90), is at `bd5ca4f1eeda2ef566f56f7d869fbc16a45ceb30`, schema46. All34 inspected CI runs passed. Schema46 requires apartment-type EOI choice with immutable acceptance and protects cookie mutations with trusted Origin checks.
 
-Continue from `codex/egypt-platform-completion`, draft [PR #90](https://github.com/karimelzoser/realestate/pull/90), not `main`. Inspected application head: `e8f5216e0964be01b2f2aa754944df9423c390da`. Runtime schema **45**, marker `0045_brokerage_b2b_onboarding.sql`; Node 24, pnpm 12.9.1, PostgreSQL 18. Recheck remote HEAD before each continuation and preserve concurrent/uncommitted work.
-
-The inspected head has **32 distinct successful CI workflows** (33 successful runs including a duplicate push certification). This certifies the implemented candidate and reference topology; it does not certify every remaining product requirement or an actual public deployment. The final live Gate 7 job has not run. Release manifest remains `DEVELOPMENT`.
+The next local slice is unreleased schema47 exact apartment allocation: scoped hierarchy/paging, quotes, requested-apartment concurrency, replay-safe holds/reservations, original price retention, buyer eligibility revalidation, physical identity propagation and executed-contract hash binding. Local real PostgreSQL18 certification,34 normal tests, all9 package type/lint checks and English desktop/Arabic mobile browser selection/hold/refresh/reservation passed. GitHub exact-head CI for47 is pending publication. A DEVELOPMENT manifest and green CI do not certify final production or real provider operation.
 
 ## Product goal and accepted boundaries
 
 Deliver a public, integrated Egypt platform for developers, brokerages and buyers. EOI chooses **apartment type**; allocation chooses the **exact eligible available physical apartment**. Arabic/English UI and documents, English voice initially. A buyer must retain the same apartment identity through reservation, transaction, finance, contracts, commissions and My Property. PostgreSQL is the authority for business state, money and inventory. AI remains advisory. National ID is an identifier, never a password. Broker Agents never receive commission amounts/rates/bases.
 
-Source, tests, plan, checkpoints and deployment definitions stay in GitHub. GitHub Pages remains a synthetic demonstration. The existing self-hosted server is reserved for later; it is not accessed or configured during current implementation. Railway and Render are deployment options to assess, not evidence that this application is already live. No merge, infrastructure purchase or live cutover is implied by this brief.
+Source, tests, plan, checkpoints and deployment definitions stay in GitHub. GitHub Pages remains a synthetic demonstration. The existing self-hosted server is reserved for later; it is not accessed or configured during current implementation. The latest user explicitly authorizes GitHub + Render public testing now. Use isolated synthetic data and the latest certified candidate. No paid infrastructure purchase has been authorized; the self-hosted server remains deferred. Render deployment is not yet live or verified.
 
 ## What exists and should be reused
 
@@ -42,12 +40,12 @@ The Render workspace's live state is **unverified in this inspection**; no conne
 
 Before adopting the profile, regenerate it from the final candidate and certify actual runtime requirements: AAL2/identity/recovery secrets, source/build/schema identity, storage/scanner, messaging channels/templates, callback/cookie/CORS behavior, orderly explicit migration and worker rollout, observability and rollback. Do not assume generated encryption material has the required byte length/encoding. Do not assume a configured SMS OTP channel works when only WhatsApp credentials are supplied. Independent auto-deploys must not allow a worker/API schema mismatch.
 
-Render free Postgres expires after 30 days and background workers have no free compute plan. Free hosting is therefore unsuitable as a durable full-platform production promise. See [Render free limits](https://render.com/docs/free), [workers](https://render.com/docs/background-workers) and [Blueprint reference](https://render.com/docs/blueprint-spec). Preserve a portable Compose package while a single staging/production hosting path is selected later.
+Render free Postgres expires after 30 days and background workers have no free compute plan. Free hosting is therefore unsuitable as a durable full-platform production promise. See [Render free limits](https://render.com/docs/free), [workers](https://render.com/docs/background-workers) and [Blueprint reference](https://render.com/docs/blueprint-spec). Render is selected for public testing; preserve the portable package for final production. Installed/enabled Render plugin has no callable MCP tools in this session; no CLI/key is present. Account OAuth/reload is pending and independent GitHub/deployment preparation continues.
 
 ## Completion sequence
 
-1. **Current slice:** require and freeze apartment-type selection on every new EOI; expose chosen type, policy/payment status and eligibility. Existing EOIs with no selected type require explicit remediation; never guess a type or allocate them silently.
-2. Exact apartment allocation: project/master plan/building/floor/unit, original EOI type and session eligibility, exact quote/version, atomic requested-unit lock and idempotency. No type-only or anonymous substitute for the accepted journey. Propagate identity through all evidence/read models.
+1. Apartment-type EOI foundation is certified at schema46. Public buyer eligibility/payment remains open. Existing EOIs with no selected type require explicit remediation; never guess or allocate them silently.
+2. **Current slice:** finish and publish exact apartment allocation: project/master plan/building/floor/unit, original EOI type and session eligibility, exact quote/version, atomic requested-unit lock and idempotency. No type-only or anonymous substitute for the accepted journey. Propagate identity through all evidence/read models.
 3. Public acquisition/discovery: registration/consent/recovery, visuals/amenities, type browse, favorites/preferences/compare, broker/direct attribution and interrupted-journey recovery.
 4. Buyer shared queue/online handoff and allocator capacity, private live updates and truthful estimates.
 5. Grace/extension/offline exception: decisions/inbox/countdowns; expired locks release inventory; pending requests retain no hold; late approval cannot steal another buyer's unit. Certify races.

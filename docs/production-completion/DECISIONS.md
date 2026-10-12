@@ -13,8 +13,12 @@ Unselected provider names, credentials, domain/host configuration and finance/id
 
 ## Current-stage clarification
 
-The user requires implementation and disposable local/CI validation only. No server access, configuration, installation or deployment in this stage. Prepare a portable deployment package; actual hosting/deployment remains a separate later assignment.
+Superseded by the latest explicit user request: work with GitHub and Render and deploy a public testing platform now. Use an isolated synthetic test environment. Prepare and validate the latest candidate before deployment. No paid resource purchase has been authorized. The existing self-hosted server remains deferred.
 
 ## Latest reconciliation
 
 Public fully integrated production is the final goal. Latest user requests review of Railway and Render; both are assessed as possible hosting profiles. This does not choose a paid plan or authorize using the reserved self-hosted server now. Keep portable packaging, finish the software and record actual live evidence. Railway platform-core services are separate from realestate. Render PR91 must be adapted to the final realestate candidate before any deployment.
+
+## Render public testing authorization — latest steering
+
+The user explicitly requested GitHub + Render public testing and asked to reconnect and prepare both. Render plugin inventory reports installed/enabled, but this session exposes no Render MCP tools; the shell has neither Render CLI nor RENDER_API_KEY. Account reconnection/reload requires the user. Continue repository, Blueprint, test and documentation work independently. Never bypass production assurance by publishing NODE_ENV=test or synthetic session seeding. Public sandbox design must be explicit and isolated; final production still requires the full plan and live evidence.

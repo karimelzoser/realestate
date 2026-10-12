@@ -10,8 +10,8 @@
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
   "activeTaskId": "E07.1",
   "activeTaskStatus": "IN_PROGRESS",
-  "completedCheckpoint": "Schema46 EOI software and CI fixes published; explicit cookie mutation Origin/Referer protection now passes local normal/security/emitted full-stack tests. Hosted browser/provider acceptance remains.",
-  "nextAction": "Implement ADR-EXACT-ALLOCATION: immutable exact quote, requested-slot/idempotent lock, frozen reservation identity/price and scoped read models/UI; monitor schema46/Origin CI.",
+  "completedCheckpoint": "Schema46 published candidate passed all34 inspected CI runs. Schema47 local real DB certification including exact races, frozen price, conversion eligibility, expiry, terminal replay and executed-contract hash binding passes; English/Arabic mobile browser actual reservation passes.",
+  "nextAction": "Publish schema47 after final migration/upgrade/build/CI verification; adapt Render profile with same-origin routing and complete runtime requirements; close attribution bypass E03.3 while Render account reconnects.",
   "changedFiles": [
     "platform/apps/api/src/auth",
     "platform/apps/api/src/access",
@@ -76,17 +76,17 @@
     ".github/workflows/e01-privileged-assurance-certification.yml"
   ],
   "remainingTests": [
-    "Exact-head schema46 CI and browser selection/RTL acceptance",
-    "Exact-unit EOI/type/session/quote/expiry/concurrency and propagation",
-    "All remaining public-product/provider/UAT/live release acceptance"
+    "Schema47 upgrade rehearsal and exact-head GitHub CI",
+    "Production build after final UI changes",
+    "Hosted cookie/OIDC/SSE and public/provider/UAT/live release acceptance"
   ],
   "externalBlockerIds": [
     "PROVIDER_SETUP_PENDING",
-    "HOSTING_SELECTION_PENDING",
     "LIVE_DEPLOYMENT_PENDING",
-    "INDEPENDENT_REVIEW_PENDING"
+    "INDEPENDENT_REVIEW_PENDING",
+    "RENDER_CONNECTION_PENDING"
   ],
-  "deploymentAuthorized": false,
+  "deploymentAuthorized": true,
   "acceptedDecisions": {
     "market": "Egypt: developers and brokerages",
     "eoiSelection": "apartment type",
@@ -99,12 +99,15 @@
       "en"
     ],
     "demoHosting": "GitHub Pages, synthetic only",
-    "laterProductionHosting": "existing self-hosted server, Docker, CLI/SSH",
-    "railwayRequired": false
+    "laterProductionHosting": "Final hosting decision after production acceptance; existing self-hosted server reserved",
+    "railwayRequired": false,
+    "currentTestingHosting": "Render, GitHub-backed latest certified candidate"
   },
   "taskPr": 90,
-  "taskImplementationHead": "a3583bd802d515f9acb6298ebf1414e488a3105a",
+  "taskImplementationHead": "bd5ca4f1eeda2ef566f56f7d869fbc16a45ceb30",
   "runtimeSchemaVersion": 46,
   "migrationMarker": "0046_eoi_apartment_type_choice.sql",
-  "localWorkPreservation": "Unfinished pre-sync locale expansion preserved in named git stash; reuse selectively with canonical locale provider, never duplicate it."
+  "localWorkPreservation": "Unfinished pre-sync locale expansion preserved in named git stash; reuse selectively with canonical locale provider, never duplicate it.",
+  "pendingMigration": "0047_exact_apartment_allocation.sql (unreleased draft; use fresh disposable DBs while editing)",
+  "deploymentScope": "Render public testing with isolated synthetic data; no paid purchase authorization; self-hosted server remains deferred"
 }
