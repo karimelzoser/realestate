@@ -1,45 +1,180 @@
 # Production completion progress
 
-## Checkpoint — E01 lifecycle security execution
+## Active full-production goal — first implementation increment
+
+Detailed EXECUTION_PLAN and GOAL persist the accepted full scope. Owner candidate prepared only in own IdP with private handoff, mandatory password/TOTP and no app admin/email-verification claims. Genuine human sign-in/activation pending. Discovery51 adds explicit bilingual publication, public privacy/lifecycle gates, cursor/search/detail and write-authority/audit protection. Premium tokens/controls and public discovery UI implemented;67 normal tests,9 strict package checks, API/production web builds, actual DB+HTTP certification and9 production-browser cases pass. Actual English desktop/Arabic mobile screenshots inspected and preserved outside transient output. New source is not yet rolled out; VPS remains49de56f/schema49. All full-product/provider/UAT/operations gates remain active.
+
+
+## Product gap audit —12 October2026
+
+Demo/plan/live services reviewed. Live business counts are0; foundation is deployed, complete customer journey remains open. Report maps all business/demo feature families, M0–M8, premium UX and ten release gates. All34 demo modules return200;52 static def routes plus dynamic aliases identified. Browser tool initialization failed: no fresh visual/click-through pass. Reconciled active E16.3 and obsolete Render/server-deferred instructions; ledger expanded to19 epics/51 tasks for explicit design/event/swap/advisor/governance/business acceptance. These planning updates do not mark their implementation done.
+
+
+## Current authority — 12 October 2026
+
+The active target is only the isolated realestate-os-testing project under /opt/realestate-os-testing. Existing n8n and PRENEURA containers, databases, identity realms, networks and ports80/443 are protected. All12 protected container IDs/start times/restart counts were rechecked and remain unchanged. Render is deferred.
+
+Public testing is live at https://realestate-test.aipreneura.com:8443/login. API, worker and frontend run exact source49de56fadf4caab1242fe0783285792ba58d5f0b; all45 inspected GitHub runs passed. Public /healthz reports ready, matching source and schema49/minimum49/marker0049_reviewed_identity_enrollment. Independent PostgreSQL18.6, Keycloak26.8.0, qualified SeaweedFS4.48, authenticated real ClamAV scanner and redacted telemetry are running. S3 uses separate HTTPS8444.63 local normal tests,9 package strict checks/builds, real-DB delivery-pause and English/Arabic mobile UI cases passed.
+
+Fresh GitHub/Railway/Render reconciliation confirms this is the latest realestate completion head. Railway realestate staging has0 services/0 deployments; its separate platform-core preview has newer failed frontend attempts and last successful source86facdb. Those distinct commerce/support/automation branches were not copied into realestate. Render Preneura returned no services and no PostgreSQL databases; no hosted Render application snapshot is available. PR91 is an older divergent deployment alternative, not the full Egypt candidate. See evidence/hosting-source-reconciliation-20261012.json.
+
+Current operational patch fixes the antivirus image startup requirement for a local socket, adds an explicit real PING health check, bounds signature-reload memory and completes the redacted OTLP logs pipeline. Genuine clean/EICAR/hash/auth certification passed after the isolated scanner rollout. Phone sign-in/external delivery remain visibly paused in public-test until the user supplies provider credentials. No synthetic successful delivery or fabricated AAL2 owner session is allowed.
+
+Human MFA/owner activation, authenticated public S3/SSE/browser journeys, TLS renewal automation, encrypted off-host restore, full product completion, load/soak and final liveGO remain outstanding. This is public testing, not approved full production. Read WORK_STATE/TASKS/VPS_DEPLOYMENT and retain the entire PLAN.
+
+
+
+## Checkpoint — E01.3 implemented, exact-head certification pending
 
 Date: 11 October 2026.
 
 ### Verified authority
 
-- Reviewed integrated production candidate remains PR #81 / `feature/production-full-stack-acceptance` at `c2746523eb434898cbb4c46cf5df452d122ba78f`.
-- Planning branch `plan/egypt-platform-completion` is at `446cfe4803bedc9868ee28799ff4b376277c0d91` and is a direct child of that candidate.
-- Published `main` / GitHub Pages demo remains `1a6e61c891e040221f09c773e6de589928a9a0b7`.
-- Canonical completion branch is `completion/egypt-full-platform`.
+- Canonical completion track remains `completion/egypt-full-platform` with focused stacked task branches.
+- Published `main` / GitHub Pages demo remains unchanged.
+- E01.1 is implemented and exact-head certified in PR #86 (`task/e01-tenant-lifecycle`).
+- E01.2 is implemented and exact-head certified in PR #87 (`task/e01-session-stream-revocation`).
+- E01.3 is implemented in PR #89 (`task/e01-privileged-assurance`) and remains draft until the complete exact-head release matrix passes.
 
-### Completed / tested task IDs
+### Completed / verified task IDs
 
-- **E00.1 — INTEGRATED:** reverified planning/candidate/demo heads and created the canonical completion integration branch.
-- **E00.2 — INTEGRATED:** expanded E00–E17 into stable dependency-aware implementation tasks and persisted the resume controls.
-- **E01.1 — TESTED:** centralized tenant/membership/broker-company/project lifecycle authorization on task branch `task/e01-tenant-lifecycle`, draft PR #86, exact tested head `4a9aa771d8759c261c6bc5d010ec3a91d8e95a25`.
+- **E00.1 — INTEGRATED:** repository authority reverified and canonical completion branch created.
+- **E00.2 — INTEGRATED:** interruption-safe task ledger and resume controls persisted.
+- **E01.1 — VERIFIED:** direct API authorization centrally enforces tenant, membership and project lifecycle state with explicit paused/historical-read policy.
+- **E01.2 — VERIFIED:** project, broker and user-notification SSE streams revalidate active session and scope during long-lived connections; revoked sessions, suspended memberships/broker access and expired support access terminate promptly with `access_revoked`.
+- **E01.3 — IMPLEMENTED:** privileged assurance/step-up, release/build identity pinning and truthful non-empty quality commands are implemented; exact-head cross-gate evidence is still pending.
 
-E01.1 evidence on the exact tested head:
-- Production Platform Foundation: strict TypeScript, production builds, migrations and domain constraints passed.
-- Full Stack Acceptance Certification: emitted API/gateway/worker/web passed the new same-session tenant suspension, membership suspension, paused-read/paused-write and archived-project lifecycle checks.
-- Gate 5 Broker Roles Certification passed.
-- Gate 5 Full Role Parity Certification passed.
-- Workspace context now suppresses assignments whose tenant/membership or broker company is no longer active.
+### E01.3 implementation
 
-E01.1 remains **TESTED**, not REVIEWED or INTEGRATED; PR #86 requires independent review before integration.
+The E01.3 branch now provides:
 
-### Current task
+- server-side session assurance levels (`AAL1` / `AAL2`);
+- OTP login fixed at AAL1, including a PostgreSQL guard against OTP-created AAL2 sessions;
+- OIDC AAL2 derived only from validated ID-token ACR/AMR evidence;
+- centralized privileged-role step-up enforcement for PRENEURA Super Admin, Operations Director, Manager, Allocator, Transaction Operator, Broker Manager and Broker Finance;
+- Buyer and Broker Agent remaining valid AAL1 roles;
+- step-up identity linking bound to the current recent PRENEURA session;
+- bidirectional uniqueness for provider subject / PRENEURA user identity ownership;
+- emitted build identity plus production expected-release SHA readiness enforcement;
+- root `pnpm test` and `pnpm lint` quality contracts that reject missing/empty mandatory suites and invalid placeholder test commands;
+- focused assurance tests and PostgreSQL E01 negative/positive certification.
 
-- **E01.2 — IN_PROGRESS:** revalidate long-lived SSE/session/support access after session revocation/expiry, role revocation, support-session expiry, tenant/membership suspension and project lifecycle changes.
+### Evidence already obtained
 
-Initial E01.2 audit found:
-- project and broker SSE authorize only at stream creation;
-- user-notification SSE authenticates only at stream creation;
-- heartbeats/live event delivery do not re-check session state;
-- support-session expiry or role/tenant lifecycle changes therefore do not currently terminate an already-open stream.
+Functional head `b5327a716628c88d8ddcff30a6d5803222a61c8f` passed:
+
+- E01 Privileged Assurance Certification
+- Production Platform Foundation
+- Full Stack Acceptance Certification
+- Gate 4-5 Product Parity Certification
+- Gate 6 Non-Functional Certification
+- Gate 4 Integrated Finance Certification
+- Gate 2 Pricing Certification
+- Gate 2 Inventory Lock Durability Certification
+- Gate 3 Document & Contract Trust Certification
+- Gate 3 Finance Ledger Certification
+- Gate 5 Buyer / Sales / Transaction Operator / Manager / Broker / Full Role Parity certifications
+- Release Dependency Reproducibility
+- HTTP Security Certification
+- Backup Restore Certification
+- Concurrency Certification
+
+That same head exposed secondary failures in Runtime Readiness, Observability, Gate 6 Security, Gate 5 Reception/Allocator and Gate 7. Follow-up commits repaired those areas and refreshed the patched dependency lockfile.
+
+The resulting bot-authored lockfile head `a68e3bd835c628811368775889659b2d16fe46f4` produced `action_required` pull-request workflow records with zero jobs. Those records are not accepted as verification evidence.
+
+### Current exact-head action
+
+A normal user-authored checkpoint commit now follows the bot lockfile commit specifically to retrigger the exact-head matrix. E01.3 must not be promoted to TESTED/VERIFIED and E02 must not start until the required workflows execute and pass on the same current head.
+
+Required completion evidence:
+
+- E01 Privileged Assurance Certification
+- Production Platform Foundation
+- Full Stack Acceptance Certification
+- Gate 6 Security Scan
+- Gate 6 Non-Functional Certification
+- Gate 7 Production Go-No-Go software-side path
+
+Additional inherited gates that trigger on the current head must remain green; failures are repaired rather than waived.
 
 ### Deployment boundary
 
-Server deployment remains intentionally deferred. No server, DNS, production secrets, provider credentials or production data were touched.
+Server deployment remains intentionally deferred. No server, DNS, production secrets, live provider credentials or production customer data are part of E01.3 certification.
 
 ### Exact next action
 
-Create stacked branch `task/e01-session-stream-revocation` from tested E01.1 head `4a9aa771`; add a reusable session-active check and periodic stream authorization revalidation, then add emitted SSE revocation tests covering session revoke plus project/support lifecycle loss before marking E01.2 TESTED.
+Monitor the user-authored E01.3 checkpoint head until its release workflows complete. If all required exact-head checks pass, update `TASKS.json`, `TASKS.md`, `WORK_STATE.json`, `PROGRESS.md` and `CONTINUE.md` to mark E01.3 tested/verified and begin E02.1/E02.2 from the certified E01.3 head. If any check fails, repair that failure on the same focused E01.3 branch and rerun; do not advance the dependency graph prematurely.
+
+## Codex takeover — 11 October 2026
+
+Working branch: codex/egypt-platform-completion, based on PR #89 with the existing PR #85 deployment/provenance line merged for integration. E01 source/runtime and packaging work are being validated together. Fixed first-factor linking for privileged step-up, file-read race, stale schema checks and deployment workspace/config omissions. Added five identity-enrollment and three runtime-contract regressions. Remote runtime/deployment and real DB checks remain pending; no production GO is claimed. Server access/deployment remains excluded.
+
+### E01 verified; E02 active
+
+Exact head 1e1b85f38684e7f107ede0d3db9cfeae73d86836 passed all 28 GitHub workflows, including CodeQL, E01, emitted full stack, container/provenance and Gate 7 software preflight. All 42 migrations applied to a fresh disposable PostgreSQL 18.6 database locally; FULL_STACK_ACCEPTANCE_OK including revocation/privileged-role change. Four runtime and ten API unit regressions passed. No live GO/provider/server claim. Active task now E02.1.
+
+## Schema45 candidate reconciliation and public-production continuation
+
+Reviewed PR90 e8f5216e0964be01b2f2aa754944df9423c390da: 32 distinct workflows success (33 runs). Reused identity43, developer44, brokerage45 and locale/auth foundations; did not duplicate them. Updated task/control/feature/service ledgers from actual code. Railway read-only inventory confirms realestate staging has two buckets and zero services/deployments; active app preview is platform-core on a separate PG16 topology. Render PR91 is an older-base deployment profile; fresh live inventory is unavailable and remains unverified. No provider/hosting changes, merge or live deployment performed.
+
+Next acceptance: E05.2 required immutable chosen apartment type on EOI, then exact physical allocation and evidence propagation. Original unfinished pre-sync localization expansion is preserved in a named git stash for selective reuse with the canonical locale provider.
+
+## Selected apartment-type EOI slice — schema46
+
+Added required type and explicit accepted refund policy to EOI API, immutable server-derived choice/terms/actor/time evidence, type/project/status/current-policy validation, concurrent retry returning one EOI/event, scoped list/buyer summaries and bilingual staff selection/policy review. EOI holds no inventory. Schema minimum46 requires coordinated migration/runtime rollout. Updated affected fixtures to choose their own type explicitly; accepted policy terms cannot be rewritten.
+
+Local verification: 26 normal tests, strict package checks and all apps/Next production build; zero-to46 and42-to46 migrations on disposable PostgreSQL18.6; real-repository positive/negative/concurrent certification; pricing/documents/finance/current-settlement/allocator/identity/onboarding/lock regression; dedicated contention/replay certification; emitted full-stack acceptance with EOI HTTP ownership/missing-type/scoped read checks. An obsolete direct-refund script expected a function removed by migration39; its compatibility entry point now runs canonical settlement certification. A brokerage test pinned schema45 instead of accepting later compatible schemas; corrected without bypassing the actual brokerage boundary tests.
+
+Exact-head CI and browser acceptance are pending at this checkpoint. Public EOI payment/identity-eligibility UX and exact-apartment allocation are still open; no full-product/live GO claim.
+
+Follow-up security acceptance E01.4 added from code inspection: SessionAuthGuard enforces authentication/assurance but has no explicit trusted-Origin/CSRF validation for unsafe bodyless routes. Signed cookies/CORS/SameSite alone require selected-topology browser verification. Close this before final hosted release; it does not invalidate the previously tested lifecycle/assurance boundaries.
+
+## Trusted origin mutation protection
+
+Global HTTP protection now rejects untrusted/malformed browser Origins on unsafe requests and requires a trusted Origin or Referer for session-cookie mutations, including bodyless routes. Provider/machine requests retain bearer/signature authorization. Four additional tests exercise real Fastify handlers and header edge cases; emitted full-stack checks show hostile/missing-Origin logout cannot revoke a valid session. Local strict type/lint/API build and30 normal tests pass. The selected hosted browser cookie/login/SSE topology still needs UAT; Lax host-only cookies are preserved.
+
+Git CLI credential cache expired during CI fix publication. Used the connected GitHub account with expected-head checks to publish df ae90e/36941e7 (canonical LF source tree equal to saved local9202e6f); preserved local commit on backup branch and aligned the clean candidate before restoring the named work stash. No force push or work loss.
+
+## Sales certification alignment
+
+Schema46/Origin candidate a3583bd passed34 of35 CI runs; the remaining Sales certificate still called createEoi with the old missing-type/policy shape. Updated the synthetic Sales fixture and real service certificate to choose an explicit type and accepted policy, with chosen-type summary assertions. Local Sales onboarding/encrypted contact/role finance-separation certificate now passes. Staff can record an unpaid prospect EOI while enrollment remains pending; this neither activates account access nor holds inventory. Exact allocation will enforce the paid EOI and eligible active buyer/session boundary.
+
+## Exact apartment allocation and Render testing continuation
+
+Schema47 draft adds immutable apartment quotes, scoped building/floor/apartment paging, requested-slot locks and replay keys, exact reservation identity, original accepted price retention, eligibility revalidation at conversion, property/transaction/export identity and hash-bound executed-contract manifest v2. Real PostgreSQL18 certification passes requested-apartment races, no substitution, changed-price rejection, terminal retries, expiry rejection, revoked buyer and immutable evidence. All34 normal tests and9 package strict type/lint checks pass. English desktop/Arabic390px RTL browser test passes selection, accepted quote, hold, refresh and actual reservation with unchanged physical identity and price. New GitHub workflow captures browser screenshots. Live provider/production UAT remains open.
+
+Latest user authorizes GitHub + Render public testing and preparation of both. Render plugin is installed/enabled but no MCP tools are available in this session; no CLI/key is present. Account reconnection/reload pending. No resources purchased or self-hosted server accessed.
+
+## Render public testing profile prepared
+
+Root free Blueprint targets PR90 branch, with controlled deploys, private PG18 and same-origin browser proxy. Co-located worker and local token-protected gateway terminate with API on child loss; fresh empty DB bootstrap is permitted but an existing schema mismatch requires offline migration. Real Windows process fault check passes; Linux CI must prove graceful drain.40 normal tests,9 package types/lint, official schema validation and production secret guards pass. English/Arabic390px browser checks pass quote/hold/refresh/reservation plus20-second SSE heartbeat through the proxy and visible public-test notice. Missing identity/recovery secrets now fail production startup and are wired into native/portable profiles. Provider/live readiness remains unverified; no Render resource created.
+
+## Render memory correction before publication
+
+Measured first four-process host at517947392bytes (~494MiB), leaving inadequate initial headroom on a512MiB free instance. Replaced it with one Node host importing the unchanged service modules/authorization boundaries and one telemetry runtime; measured197726208bytes (~189MiB) after readiness. Real abrupt host-loss and occupied-API-port startup failure tests pass with no remaining component; separate production service entry points remain available. Linux signal drain and actual Render load capacity still require their own evidence.
+
+## Project attribution and frozen deal authority — schema48 local acceptance
+
+Generic profile upsert could overwrite source/company/agent or reactivate a blocked profile. Attribution was tenant-wide, so one project transfer could affect another. Schema48 separates immutable shared buyer identity from project attribution and monotonic approved history. Only active scoped Managers/Operations Directors review transfers; creation/approval/rejection retries, lock ordering, source/revision and target lifecycle are certified. An approved status atomically creates history/projection/outbox. Reservation freezes broker ownership; commission/status/detail/finance/export/reminder consumers use that snapshot rather than current prospects. Agent economics remain redacted.
+
+44 normal tests and9-package strict types/lint/all builds pass. Real scoped two-project/concurrent/negative certification,47 upgrade preservation, full-stack HTTP/worker/auth/SSE and English/Arabic390 browser quote/hold/refresh/reservation pass. Upgrade recovers recorded approved project ownership, retains old commission ownership and history, and leaves unknown legacy sale attribution unrecorded. Source/current profile is not guessed into old financial evidence. Schema48 is not published yet; only disposable DBs were changed.
+
+
+## 12 October 2026 — reviewed MFA enrollment and isolated VPS preparation
+
+Local schema49 closes the first-time privileged enrollment dead end with verified issuer/nonce/fresh MFA evidence, time-limited requests, independent recent-AAL2 platform-admin approval, immutable bindings and terminal decisions, stable retries, and a reviewed offline initial-owner bootstrap. Ordinary phone OTP remains AAL1. Signed loopback IdP/real PostgreSQL certification and separate bootstrap certification pass; 48 normal tests, nine-package strict checks, frontend build and two bilingual mobile UI-only browser cases pass. New mandatory workflow includes both authority and UI certification.
+
+The user superseded Render with explicit VPS authorization, protecting both n8n and existing PRENEURA. Hostinger/SSH inventory verified the target. A dedicated key enables access; no supplied password is persisted. New /opt/realestate-os-testing, private PostgreSQL18.6 with independent owner/migrator/app/IdP roles and isolated network/volume are created and healthy. All12 protected container IDs/start times/restart counters are unchanged. The user selected full isolation; a new realestate-test.aipreneura.com A record and DNS01 Lets Encrypt certificate are prepared for HTTPS8443. No existing proxy/network is reused. Public application deployment, certificate renewal automation, genuine providers, full product journeys, restore/load and final liveGO remain unfinished.
+
+
+### Published schema49 CI follow-up
+
+Head ba0d2365917b4d4e2e96d343553aca960bb0d061 passed42 of44 inspected runs, including both reviewed identity/first-owner/production mobile browser certifications. Both failures are the E03 historical-upgrade fixture pinning schema48 after the runtime advances to49. Corrected that assertion to require schema/minimum-runtime/marker exactly match the latest applied append-only migration ledger (at least48); actual project ownership/frozen legacy sale/history checks are unchanged. Local47-to49 upgrade certification passes. Publish the focused fix and require exact-head green CI before deploying application services.
+
+
+## 12 October 2026 — qualified isolated storage/scanner/identity and delivery deferral
+
+User deferred delivery credentials while integration/preparation continues. New phone-capability UI and public-test-only pause reject phone login before lookup/challenge creation; external jobs stay pending with zero attempts while real in-app delivery continues. Actual disposable-DB pause and English/Arabic mobile UI cases passed. Storage now checks physical SHA256 in a bounded stream and signs create-only, content-type, checksum/metadata headers consistently.63 normal tests, nine-package strict checks and API/Next production builds pass locally.
+
+Own Keycloak26.8.0 imported/healthy with actual private configuration checks for password/OTP/LoA/PKCE/grants/client secret. Garage2.4.1 failed conditional overwrite qualification; only its newly created container was stopped, data volumes retained. Non-root SeaweedFS4.48 passed real SDK atomic8-way write, checksum/replay/header/anonymous/CORS cases. Real ClamAV1.5.4 and scanner passed clean/EICAR/hash/auth checks. Private redacted telemetry is running. Worker/gateway database roles deny auth/session/role and unrelated transaction access. Public API/worker/web/edge rollout and public browser/S3/SSE, owner human MFA, stable-secret/renewal/restore/load and full product acceptance remain. All existing projects remain protected.

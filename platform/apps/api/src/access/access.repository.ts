@@ -8,6 +8,7 @@ import type {
   WorkspaceProjectSnapshot,
 } from '@preneura/contracts/access';
 import { DATABASE } from '../database/database.module.js';
+import { AccessLifecycleService } from './access-lifecycle.service.js';
 
 export interface RoleAssignment {
   id: string;
@@ -31,6 +32,7 @@ type ProjectRow = {
 };
 
 export abstract class AccessRepository {
+  readonly lifecycle?: AccessLifecycleService;
   abstract listActiveAssignments(userId: string): Promise<RoleAssignment[]>;
   abstract workspaceContext(userId: string, at: Date): Promise<WorkspaceContextSnapshot | null>;
   abstract brokerCompanyCanAccessProject(input: {
@@ -49,8 +51,11 @@ export abstract class AccessRepository {
 
 @Injectable()
 export class PostgresAccessRepository extends AccessRepository {
+  override readonly lifecycle: AccessLifecycleService;
+
   constructor(@Inject(DATABASE) private readonly db: Kysely<Database>) {
     super();
+    this.lifecycle = new AccessLifecycleService(db);
   }
 
   async listActiveAssignments(userId: string): Promise<RoleAssignment[]> {
@@ -88,7 +93,45 @@ export class PostgresAccessRepository extends AccessRepository {
       .executeTakeFirst();
     if (!user) return null;
 
-    const assignments = await this.listActiveAssignments(userId);
+    const rawAssignments = await this.listActiveAssignments(userId);
+    const scopedTenantIds = unique(rawAssignments
+      .filter((assignment) => assignment.scopeType !== 'PLATFORM' && assignment.tenantId)
+      .map((assignment) => assignment.tenantId!));
+    const activeMembershipRows = scopedTenantIds.length === 0
+      ? []
+      : await this.db
+        .selectFrom('tenant_memberships as tm')
+        .innerJoin('tenants as t', 't.id', 'tm.tenant_id')
+        .select('tm.tenant_id')
+        .where('tm.user_id', '=', userId)
+        .where('tm.tenant_id', 'in', scopedTenantIds)
+        .where('tm.status', '=', 'ACTIVE')
+        .where('t.status', '=', 'ACTIVE')
+        .execute();
+    const activeMembershipTenantIds = new Set(activeMembershipRows.map((row) => row.tenant_id));
+
+    const assignedBrokerCompanyIds = unique(rawAssignments
+      .filter((assignment) => assignment.scopeType === 'BROKER_COMPANY' && assignment.brokerCompanyId)
+      .map((assignment) => assignment.brokerCompanyId!));
+    const activeBrokerRows = assignedBrokerCompanyIds.length === 0
+      ? []
+      : await this.db
+        .selectFrom('broker_companies')
+        .select('id')
+        .where('id', 'in', assignedBrokerCompanyIds)
+        .where('status', '=', 'ACTIVE')
+        .execute();
+    const activeBrokerCompanyIds = new Set(activeBrokerRows.map((row) => row.id));
+
+    const assignments = rawAssignments.filter((assignment) => {
+      if (assignment.scopeType === 'PLATFORM') return true;
+      if (!assignment.tenantId || !activeMembershipTenantIds.has(assignment.tenantId)) return false;
+      if (assignment.scopeType === 'BROKER_COMPANY') {
+        return Boolean(assignment.brokerCompanyId && activeBrokerCompanyIds.has(assignment.brokerCompanyId));
+      }
+      return true;
+    });
+
     const projectRows = new Map<string, ProjectRow>();
     const hasPlatformScope = assignments.some((assignment) => assignment.scopeType === 'PLATFORM');
     const tenantIds = unique(assignments

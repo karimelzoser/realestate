@@ -1,0 +1,259 @@
+{
+  "head": "f85f36fdc8cc5ffa2ef926b813eac44991469914",
+  "successfulRuns": 41,
+  "runs": [
+    {
+      "name": "Gate 5 Full Role Parity Certification",
+      "id": 38197211163,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "E05 Apartment Type EOI Certification",
+      "id": 38197211066,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 5 Broker Roles Certification",
+      "id": 38197211024,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 2 Pricing Certification",
+      "id": 38197211096,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 3 Finance Ledger Certification",
+      "id": 38197211102,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 5 Buyer Property Certification",
+      "id": 38197210986,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 2 Inventory Lock Durability Certification",
+      "id": 38197211149,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 5 Receptionist Allocator Certification",
+      "id": 38197211022,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "E03 Brokerage Onboarding Certification",
+      "id": 38197211070,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 3 Document & Contract Trust Certification",
+      "id": 38197210927,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 6 Security Scan",
+      "id": 38197210978,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "HTTP Security Certification",
+      "id": 38197210956,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "E02 Locale Foundation Certification",
+      "id": 38197210960,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Production Configuration Certification",
+      "id": 38197210929,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 7 Evidence Policy Contract",
+      "id": 38197211033,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Production Observability Certification",
+      "id": 38197210965,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "E07 Exact Apartment Allocation Certification",
+      "id": 38197210925,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 4 Integrated Finance Certification",
+      "id": 38197211062,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 5 Manager Director Certification",
+      "id": 38197211090,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Runtime Readiness Certification",
+      "id": 38197211039,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 6 Non-Functional Certification",
+      "id": 38197211019,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 5 Sales Buyer Certification",
+      "id": 38197210976,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "E03 Developer Onboarding Certification",
+      "id": 38197211049,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Concurrency Certification",
+      "id": 38197210937,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Full Stack Acceptance Certification",
+      "id": 38197211099,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Self-Hosted Deployment Certification",
+      "id": 38197210979,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Production Platform Foundation",
+      "id": 38197211078,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "E02 Egypt Identity Certification",
+      "id": 38197211011,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Backup Restore Certification",
+      "id": 38197211017,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 4-5 Product Parity Certification",
+      "id": 38197211094,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 5 Transaction Operator Certification",
+      "id": 38197211006,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Release Dependency Reproducibility",
+      "id": 38197211101,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "E01 Privileged Assurance Certification",
+      "id": 38197210993,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Render Public Test Profile Certification",
+      "id": 38197211034,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Gate 7 Production Go-No-Go",
+      "id": 38197211256,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "E02 Locale Foundation Certification",
+      "id": 38197207459,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "E03 Developer Onboarding Certification",
+      "id": 38197207369,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "E03 Brokerage Onboarding Certification",
+      "id": 38197207358,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "E05 Apartment Type EOI Certification",
+      "id": 38197207366,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "Render Public Test Profile Certification",
+      "id": 38197207402,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    },
+    {
+      "name": "E07 Exact Apartment Allocation Certification",
+      "id": 38197207396,
+      "conclusion": "success",
+      "head_sha": "f85f36fdc8cc5ffa2ef926b813eac44991469914"
+    }
+  ],
+  "linuxProcessEvidence": [
+    "2026-10-12T02:50:21.2322257Z {\"result\":\"RENDER_PUBLIC_TEST_BLUEPRINT_VALID\",\"schemaSha256\":\"8a3fb8da6b4f55fe686fbefa790e011d3dd7895f013f355953c572a21ab6494a\",\"services\":2,\"databases\":1,\"allPlansFree\":true,\"productionSecurity\":true,\"autoDeploy\":false}",
+    "2026-10-12T02:50:36.1168440Z {\"event\":\"render.preview.initial.memory\",\"residentMemoryBytes\":219570176,\"processes\":1,\"hostedLoadVerified\":false}",
+    "2026-10-12T02:51:07.7590361Z {\"event\":\"render.preview.initial.memory\",\"residentMemoryBytes\":222801920,\"processes\":1,\"hostedLoadVerified\":false}",
+    "2026-10-12T02:51:09.6117806Z {\"result\":\"RENDER_PREVIEW_PROCESS_CERTIFICATION_OK\",\"migrationVerification\":true,\"productionSecurity\":true,\"abruptHostLossStopsServices\":true,\"componentStartupFailureStopsHost\":true,\"gracefulSignalDrain\":true,\"initialResidentMemoryBytes\":222801920,\"providersVerified\":false,\"hostedLoadVerified\":false}"
+  ],
+  "actualRenderDeploymentVerified": false
+}

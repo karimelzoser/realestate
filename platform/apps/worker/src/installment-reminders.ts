@@ -43,8 +43,8 @@ export async function scheduleInstallmentReminders(
       transaction.tenant_id,
       transaction.project_id,
       buyer.user_id AS buyer_user_id,
-      buyer.broker_company_id,
-      buyer.broker_agent_user_id,
+      reservation.broker_company_id_snapshot AS broker_company_id,
+      reservation.broker_agent_user_id_snapshot AS broker_agent_user_id,
       policy.audience,
       policy.channel,
       policy.reminder_hours_before,
@@ -60,6 +60,7 @@ export async function scheduleInstallmentReminders(
     JOIN buyer_profiles buyer
       ON buyer.id = transaction.buyer_profile_id
       AND buyer.tenant_id = transaction.tenant_id
+    JOIN reservations reservation ON reservation.id=transaction.reservation_id AND reservation.tenant_id=transaction.tenant_id AND reservation.project_id=transaction.project_id
     JOIN project_installment_reminder_policies policy
       ON policy.tenant_id = transaction.tenant_id
       AND policy.project_id = transaction.project_id

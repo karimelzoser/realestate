@@ -6,12 +6,14 @@ import type {
 } from '@preneura/contracts/notifications';
 import { Observable } from 'rxjs';
 import { AccessService } from '../access/access.service.js';
+import { SessionActivityService } from '../auth/session-activity.service.js';
 import { RealtimeListenerService } from '../realtime/realtime-listener.service.js';
 import { NotificationRepository } from './notification.repository.js';
 
 const REPLAY_BATCH = 200;
 const MAX_REPLAY_EVENTS = 2_000;
 const HEARTBEAT_MS = 20_000;
+const DEFAULT_AUTH_REVALIDATE_MS = 5_000;
 
 @Injectable()
 export class NotificationService {
@@ -19,6 +21,7 @@ export class NotificationService {
     private readonly repository: NotificationRepository,
     private readonly access: AccessService,
     private readonly listener: RealtimeListenerService,
+    private readonly sessions: SessionActivityService,
   ) {}
 
   async upsertMilestoneSla(input: {
@@ -73,6 +76,7 @@ export class NotificationService {
   }
 
   streamUserNotifications(input: {
+    sessionId: string;
     userId: string;
     afterSequence: string;
   }): Observable<MessageEvent> {
@@ -82,7 +86,36 @@ export class NotificationService {
       let ready = false;
       let lastSequence = initialCursor;
       let liveChain = Promise.resolve();
+      let validationPromise: Promise<boolean> | null = null;
+      let lastValidatedAt = 0;
       const buffered = new Set<string>();
+      const revalidateMs = this.authRevalidateMs();
+
+      const ensureAuthorized = async (force = false): Promise<boolean> => {
+        if (closed) return false;
+        if (!force && Date.now() - lastValidatedAt < revalidateMs) return true;
+        if (!validationPromise) {
+          validationPromise = this.sessions.isActive({
+            sessionId: input.sessionId,
+            userId: input.userId,
+          }).then((allowed) => {
+            if (allowed) lastValidatedAt = Date.now();
+            return allowed;
+          }).finally(() => {
+            validationPromise = null;
+          });
+        }
+        return validationPromise;
+      };
+
+      const revoke = (): void => {
+        if (closed) return;
+        subscriber.next({
+          type: 'access_revoked',
+          data: { at: new Date().toISOString(), cursor: lastSequence },
+        });
+        subscriber.complete();
+      };
 
       const pushLive = (sequence: string): void => {
         if (closed || !this.cursorIsValid(sequence)) return;
@@ -92,6 +125,10 @@ export class NotificationService {
         }
         liveChain = liveChain.then(async () => {
           if (closed || !this.after(sequence, lastSequence)) return;
+          if (!await ensureAuthorized()) {
+            revoke();
+            return;
+          }
           const notification = await this.repository.getUserNotificationBySequence({
             userId: input.userId,
             sequence,
@@ -115,13 +152,30 @@ export class NotificationService {
           });
         }
       }, HEARTBEAT_MS);
+      const authorizationTimer = setInterval(() => {
+        void ensureAuthorized(true)
+          .then((allowed) => {
+            if (!allowed) revoke();
+          })
+          .catch((error) => {
+            if (!closed) subscriber.error(error);
+          });
+      }, revalidateMs);
 
       void (async () => {
         try {
+          if (!await ensureAuthorized(true)) {
+            revoke();
+            return;
+          }
           const watermark = await this.repository.latestUserSequence(input.userId);
           let replayed = 0;
           if (watermark && this.after(watermark, lastSequence)) {
             while (!closed && this.after(watermark, lastSequence)) {
+              if (!await ensureAuthorized(true)) {
+                revoke();
+                return;
+              }
               const remaining = MAX_REPLAY_EVENTS - replayed;
               if (remaining <= 0) {
                 subscriber.next({
@@ -163,6 +217,7 @@ export class NotificationService {
       return () => {
         closed = true;
         clearInterval(heartbeat);
+        clearInterval(authorizationTimer);
         liveSubscription.unsubscribe();
       };
     });
@@ -174,6 +229,12 @@ export class NotificationService {
       type: 'notification',
       data: notification,
     };
+  }
+
+  private authRevalidateMs(): number {
+    const parsed = Number(process.env.SSE_AUTH_REVALIDATE_MS ?? DEFAULT_AUTH_REVALIDATE_MS);
+    if (!Number.isFinite(parsed)) return DEFAULT_AUTH_REVALIDATE_MS;
+    return Math.min(Math.max(Math.trunc(parsed), 1_000), 60_000);
   }
 
   private cursor(value: string): string {

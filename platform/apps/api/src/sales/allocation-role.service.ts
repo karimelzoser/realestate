@@ -3,6 +3,11 @@ import type {
   AllocationSessionSnapshot,
   AssignedAllocationLockSnapshot,
   CreateAssignedAllocationLockInput,
+  CreateExactApartmentQuoteInput,
+  ExactApartmentQuoteSnapshot,
+  EligibleApartmentFilter,
+  EligibleApartmentPage,
+  EligibleApartmentStructure,
 } from '@preneura/contracts/allocation';
 import { AccessService } from '../access/access.service.js';
 import { AllocationRoleRepository } from './allocation-role.repository.js';
@@ -62,28 +67,56 @@ export class AllocationRoleService {
       projectId: input.data.projectId,
     });
 
-    if (!(await this.repository.unitTypeExists(input.data))) {
-      throw new NotFoundException('Active unit type not found.');
-    }
-
     try {
       const lock = await this.repository.createAssignedLock({
         tenantId: input.data.tenantId,
         projectId: input.data.projectId,
         allocatorUserId: input.actorUserId,
-        unitTypeId: input.data.unitTypeId,
+        quoteId: input.data.quoteId,
+        idempotencyKey: input.data.idempotencyKey,
         ttlSeconds: input.data.ttlSeconds,
-        now: new Date(),
       });
-      if (!lock) throw new ConflictException('No inventory is currently available for this unit type.');
+      if (!lock) throw new ConflictException('The requested apartment could not be held.');
       return lock;
     } catch (error) {
       if (error instanceof ConflictException || error instanceof NotFoundException) throw error;
-      const message = error instanceof Error ? error.message : String(error);
-      if (message.includes('no claimed called queue session')) {
-        throw new ForbiddenException('Claim a called buyer before locking inventory.');
-      }
+      this.rethrowAllocationConflict(error);
       throw error;
+    }
+  }
+
+  async apartments(input: { actorUserId: string; tenantId: string; projectId: string; filters: EligibleApartmentFilter }): Promise<EligibleApartmentPage> {
+    await this.requireAllocator(input);
+    return this.repository.eligibleApartments({ ...input, allocatorUserId: input.actorUserId });
+  }
+  async structure(input: { actorUserId:string; tenantId:string; projectId:string }): Promise<EligibleApartmentStructure> {
+    await this.requireAllocator(input);
+    return this.repository.structure({ ...input,allocatorUserId:input.actorUserId });
+  }
+
+  async createQuote(input: { actorUserId: string; data: CreateExactApartmentQuoteInput }): Promise<ExactApartmentQuoteSnapshot> {
+    await this.requireAllocator({ actorUserId: input.actorUserId, ...input.data });
+    try {
+      const quote=await this.repository.quoteApartment({ ...input.data, allocatorUserId: input.actorUserId });
+      if (!quote) throw new NotFoundException('Exact apartment quote not found.');
+      return quote;
+    } catch (error) {
+      this.rethrowAllocationConflict(error);
+      throw error;
+    }
+  }
+
+  async quote(input: { actorUserId: string; tenantId: string; projectId: string; quoteId: string }): Promise<ExactApartmentQuoteSnapshot> {
+    await this.requireAllocator(input);
+    const quote=await this.repository.quote({ ...input, allocatorUserId: input.actorUserId });
+    if (!quote) throw new NotFoundException('Owned exact apartment quote not found.');
+    return quote;
+  }
+
+  private rethrowAllocationConflict(error: unknown): void {
+    const code=error && typeof error==='object' && 'code' in error ? error.code : null;
+    if (['P0001','23505','55P03','40P01'].includes(String(code))) {
+      throw new ConflictException({ error: 'EXACT_SELECTION_CHANGED', message: 'Apartment availability, eligibility or quote changed. Refresh the selection.' });
     }
   }
 

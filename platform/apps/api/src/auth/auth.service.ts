@@ -1,8 +1,8 @@
 import {
-  BadRequestException,
   HttpException,
   HttpStatus,
   Injectable,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import {
@@ -12,7 +12,6 @@ import {
   randomInt,
   randomUUID,
 } from 'node:crypto';
-import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import {
   genericLoginMessage,
   startLoginSchema,
@@ -26,13 +25,19 @@ import {
   type AliasKind,
   type ResolvedSession,
 } from './auth.repository.js';
+import { otpAssurance, type SessionAssuranceEvidence } from './auth-assurance.js';
 import { OtpDeliveryPort } from './otp-delivery.js';
+import {
+  normalizeEgyptPhone,
+  normalizeIdentityDocument,
+} from '../identity/identity-normalization.js';
 
 export interface VerifiedLogin {
   userId: string;
   sessionId: string;
   sessionToken: string;
   expiresAt: Date;
+  assuranceLevel: 'AAL1' | 'AAL2';
 }
 
 @Injectable()
@@ -43,6 +48,9 @@ export class AuthService {
   ) {}
 
   async startLogin(rawInput: StartLoginInput): Promise<StartLoginResponse> {
+    if (process.env.AUTH_PHONE_LOGIN_ENABLED === 'false') {
+      throw new ServiceUnavailableException('Phone sign-in is awaiting delivery-provider configuration.');
+    }
     const input = startLoginSchema.parse(rawInput);
     const normalized = this.normalizeIdentifier(input.method, input.identifier);
     const kind: AliasKind = input.method === 'phone' ? 'PHONE' : 'NATIONAL_ID';
@@ -118,6 +126,15 @@ export class AuthService {
     };
   }
 
+  publicCapabilities(): { phoneSignInEnabled: boolean; oidcSignInEnabled: boolean; oidcProvider: 'GOOGLE' | 'ORGANIZATION'; defaultOtpChannel: 'sms' | 'whatsapp' } {
+    return {
+      phoneSignInEnabled: process.env.AUTH_PHONE_LOGIN_ENABLED !== 'false',
+      oidcSignInEnabled: Boolean(process.env.OIDC_ISSUER && process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET && process.env.OIDC_REDIRECT_URI),
+      oidcProvider: (process.env.OIDC_IDP_HINT ?? 'google') === 'google' ? 'GOOGLE' : 'ORGANIZATION',
+      defaultOtpChannel: process.env.OTP_CHANNEL === 'whatsapp' ? 'whatsapp' : 'sms',
+    };
+  }
+
   async verifyOtp(rawInput: VerifyOtpInput): Promise<VerifiedLogin> {
     const input = verifyOtpSchema.parse(rawInput);
     const now = new Date();
@@ -134,15 +151,20 @@ export class AuthService {
       throw new UnauthorizedException('The code is invalid or expired.');
     }
 
-    return this.issueSessionForUser(userId, {
-      eventType: 'LOGIN_OTP_VERIFIED',
-      challengeId: input.challengeId,
-    });
+    return this.issueSessionForUser(
+      userId,
+      {
+        eventType: 'LOGIN_OTP_VERIFIED',
+        challengeId: input.challengeId,
+      },
+      otpAssurance(),
+    );
   }
 
   async issueSessionForUser(
     userId: string,
     audit: { eventType: string; challengeId?: string | null },
+    assurance: SessionAssuranceEvidence = otpAssurance(),
   ): Promise<VerifiedLogin> {
     const sessionId = randomUUID();
     const sessionToken = randomBytes(32).toString('base64url');
@@ -153,6 +175,7 @@ export class AuthService {
       userId,
       tokenDigest: this.sessionDigest(sessionToken),
       expiresAt,
+      assurance,
     });
 
     await this.repository.recordEvent({
@@ -161,14 +184,29 @@ export class AuthService {
       result: 'SUCCESS',
       challengeId: audit.challengeId ?? null,
       sessionId,
+      metadata: {
+        authMethod: assurance.authMethod,
+        assuranceLevel: assurance.assuranceLevel,
+        ...(assurance.providerAcr ? { providerAcr: assurance.providerAcr } : {}),
+      },
     });
 
-    return { userId, sessionId, sessionToken, expiresAt };
+    return {
+      userId,
+      sessionId,
+      sessionToken,
+      expiresAt,
+      assuranceLevel: assurance.assuranceLevel,
+    };
   }
 
   async resolveSessionToken(sessionToken: string | undefined): Promise<ResolvedSession | null> {
     if (!sessionToken) return null;
     return this.repository.resolveSession(this.sessionDigest(sessionToken), new Date());
+  }
+
+  async requiresPrivilegedAssurance(userId: string): Promise<boolean> {
+    return this.repository.userRequiresPrivilegedAssurance(userId);
   }
 
   async revokeSessionToken(sessionToken: string | undefined): Promise<void> {
@@ -208,19 +246,8 @@ export class AuthService {
   }
 
   private normalizeIdentifier(method: StartLoginInput['method'], value: string): string {
-    if (method === 'phone') {
-      const phone = parsePhoneNumberFromString(value, 'EG');
-      if (!phone?.isValid()) {
-        throw new BadRequestException('Enter a valid phone number.');
-      }
-      return phone.number;
-    }
-
-    const nationalId = value.replace(/\D/g, '');
-    if (!/^\d{14}$/.test(nationalId)) {
-      throw new BadRequestException('Enter a valid 14-digit National ID.');
-    }
-    return nationalId;
+    if (method === 'phone') return normalizeEgyptPhone(value);
+    return normalizeIdentityDocument({ kind: 'NATIONAL_ID', identifier: value }).normalizedIdentifier;
   }
 
   private identifierHmac(normalizedIdentifier: string): Buffer {

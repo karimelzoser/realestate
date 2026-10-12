@@ -158,7 +158,8 @@ function PropertyCard({
             <span className={styles.progressBadge}>{Math.round(Number(property.completionPercent))}% complete</span>
           </div>
           <p className={styles.projectName}>{property.projectName}</p>
-          <h2>{property.unitTypeName}</h2>
+          <h2><bdi>{property.apartment?.apartmentReference ?? property.unitTypeName}</bdi></h2>
+          {property.apartment ? <p>{property.apartment.buildingName} · {property.apartment.floorName} · {property.apartment.unitTypeName}</p> : null}
           <p className={styles.unitCode}>{property.unitTypeCode}</p>
         </div>
         <div className={styles.priceBlock}>

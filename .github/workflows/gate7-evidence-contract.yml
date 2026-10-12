@@ -1,0 +1,45 @@
+name: Gate 7 Evidence Policy Contract
+
+on:
+  push:
+    branches:
+      - 'feature/production-gate7-*'
+      - 'release/**'
+    paths:
+      - 'platform/ops/selfhosted-gate7-staging.json'
+      - 'platform/scripts/certify-gate7-preflight.mjs'
+      - 'platform/scripts/certify-gate7-live.mjs'
+      - 'platform/docs/gate7-go-no-go.md'
+      - '.github/workflows/gate7-evidence-contract.yml'
+      - '.github/workflows/gate7-go-no-go.yml'
+  pull_request:
+    paths:
+      - 'platform/ops/selfhosted-gate7-staging.json'
+      - 'platform/scripts/certify-gate7-preflight.mjs'
+      - 'platform/scripts/certify-gate7-live.mjs'
+      - 'platform/docs/gate7-go-no-go.md'
+      - '.github/workflows/gate7-evidence-contract.yml'
+      - '.github/workflows/gate7-go-no-go.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-policy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate Gate 7 evaluator syntax
+        run: node --check scripts/certify-gate7-live.mjs
+      - name: Validate Gate 7 preflight syntax
+        run: node --check scripts/certify-gate7-preflight.mjs
+      - name: Certify release identity and topology policy
+        run: node scripts/certify-gate7-preflight.mjs

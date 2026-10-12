@@ -1,3 +1,4 @@
+import type { PhysicalApartmentSnapshot } from './allocation.js';
 export type BuyerPropertyState = 'PURCHASE_IN_PROGRESS' | 'PROPERTY_ACTIVE';
 export type BuyerInstallmentStatus =
   | 'UPCOMING'
@@ -54,6 +55,8 @@ export interface BuyerPropertySnapshot {
   unitTypeId: string;
   unitTypeCode: string;
   unitTypeName: string;
+  physicalUnitId: string | null;
+  apartment: PhysicalApartmentSnapshot | null;
   quotedTotal: string | null;
   currency: string;
   completionPercent: string;

@@ -1,0 +1,10 @@
+.page { max-width: 900px; margin: 4rem auto; padding: 1.5rem; color: #17263b; }
+.page h1 { font-size: clamp(1.7rem,4vw,2.5rem); }
+.page p { line-height: 1.7; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; margin-block: 1rem; }
+.page button { padding: .75rem 1rem; border: 1px solid #bacbd5; border-radius: .5rem; background: #edf5f6; cursor: pointer; font: inherit; }
+.page button:disabled { opacity: .6; cursor: wait; }
+.card { background: white; border: 1px solid #cbd7dd; border-radius: 1rem; padding: 1.25rem; margin-block: 1.25rem; }
+.card dl { display: grid; grid-template-columns: minmax(4rem,auto) minmax(0,1fr); gap: .65rem 1rem; }
+.card dd { margin: 0; overflow-wrap: anywhere; }
+.card textarea { display: block; box-sizing: border-box; width: 100%; min-height: 6rem; margin-block: .6rem; padding: .8rem; font: inherit; }

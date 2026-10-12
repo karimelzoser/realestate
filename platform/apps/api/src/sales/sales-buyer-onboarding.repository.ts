@@ -94,6 +94,9 @@ export class SalesBuyerOnboardingRepository {
           .returning('id')
           .executeTakeFirstOrThrow();
 
+        await trx.insertInto('buyer_project_attributions').values({tenant_id:input.tenantId,project_id:input.projectId,buyer_profile_id:buyer.id,
+          source:input.source,broker_company_id:null,broker_agent_user_id:null,created_by:input.actorUserId}).execute();
+
         await sql`
           INSERT INTO auth_contact_verification_challenges (
             id, user_id, contact_id, alias_id, channel, code_digest,

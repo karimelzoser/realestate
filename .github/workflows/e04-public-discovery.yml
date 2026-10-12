@@ -1,0 +1,57 @@
+name: E04 Public Project Discovery
+on:
+  workflow_dispatch:
+  push:
+    branches: ['main','codex/egypt-platform-completion','completion/**','feature/**','release/**']
+    paths: ['platform/**','.github/workflows/e04-public-discovery.yml']
+  pull_request:
+    branches: ['main','completion/**','feature/**','release/**']
+    paths: ['platform/**','.github/workflows/e04-public-discovery.yml']
+permissions:
+  contents: read
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env: {POSTGRES_DB: preneura_discovery_ci,POSTGRES_USER: postgres,POSTGRES_PASSWORD: postgres}
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres -d preneura_discovery_ci" --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_discovery_ci
+      MIGRATION_ACTOR: github-public-discovery-certification
+    defaults:
+      run: {working-directory: platform}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: {version: 12.9.1,run_install: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: 24,cache: pnpm,cache-dependency-path: platform/pnpm-lock.yaml}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @preneura/database migrate
+      - run: pnpm --filter @preneura/api build
+      - run: node apps/api/scripts/certify-public-discovery.mjs
+      - run: pnpm test && pnpm typecheck && pnpm lint
+      - name: Build production discovery UI with isolated browser-fixture transport
+        env: {NEXT_PUBLIC_API_URL: 'http://127.0.0.1:3042',NEXT_PUBLIC_APP_ENV: public-test}
+        run: pnpm --filter @preneura/web build
+      - run: pnpm --filter @preneura/web exec playwright install --with-deps chromium
+      - name: Functional and screenshot acceptance in English and Arabic
+        env: {E04_WEB_URL: 'http://127.0.0.1:3042',NEXT_PUBLIC_API_URL: 'http://127.0.0.1:3042'}
+        run: |
+          set -Eeuo pipefail
+          NODE_ENV=production pnpm --filter @preneura/web exec next start --hostname 127.0.0.1 --port 3042 > /tmp/e04-web.log 2>&1 &
+          web_pid=$!
+          trap 'kill "$web_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3042/discover >/dev/null; then break; fi
+            sleep 1
+          done
+          pnpm --filter @preneura/web exec playwright test e2e/discovery.spec.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: e04-discovery-browser,path: platform/apps/web/test-results,retention-days: 14}

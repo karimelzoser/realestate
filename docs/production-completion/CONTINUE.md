@@ -1,17 +1,10 @@
-# Resume with `continue`
+# Continue execution
 
-Canonical branch: `completion/egypt-full-platform`.
-
-1. Read this branch's `PLAN.md`, `DECISIONS.md`, `TASKS.json`, `PROGRESS.md`, `WORK_STATE.json`, `BLOCKERS.md` and `SERVICE_READINESS.md`. Use `CHATGPT_MASTER_PROMPT.md` as the execution contract.
-2. Inspect the canonical branch HEAD and the task branch recorded in `WORK_STATE.json`; reconcile GitHub commits/PRs/tests before changing state.
-3. Resume the recorded active task. Do not ask what to continue and do not repeat settled market, selling-model, language, voice or hosting questions.
-4. Current active task after the E00 checkpoint is **E01.1**: centralize tenant/membership/project lifecycle enforcement for direct API requests.
-5. Use a focused task branch against `completion/egypt-full-platform`. Preserve the GitHub Pages demo and do not merge unrelated historical PRs.
-6. Implement a meaningful increment, run task-specific positive/negative tests plus required existing gates, document evidence, then checkpoint the task and exact next action back to the canonical controls.
-7. Do not claim live-provider or production-server evidence from sandbox/mock/CI work. Deployment remains deferred until separately authorized.
-8. If interrupted, commit the smallest truthful recoverable checkpoint; never discard unverified user work or blindly rerun destructive/production operations.
-
-Verified baseline for this checkpoint:
-- candidate: `c2746523eb434898cbb4c46cf5df452d122ba78f` (PR #81)
-- planning head: `446cfe4803bedc9868ee28799ff4b376277c0d91`
-- published demo/main: `1a6e61c891e040221f09c773e6de589928a9a0b7`
+1. Read WORK_STATE, TASKS, CURRENT_STATUS_AND_CONTINUATION, PRODUCTION_GAP_AUDIT, PLAN, DECISIONS, BLOCKERS and SERVICE_READINESS. Active branch codex/egypt-platform-completion/PR90; main is the synthetic demo.
+2. Inspect local/concurrent work, remote head/CI and running VPS source. Runtime49de56f/schema49 has45 inspected successful CI runs; operational checkpoint24b33a8 follows it. Validate newer source separately and preserve all existing work.
+3. Resume E16.3/E01.5 hosted acceptance and M1 genuine populated workspace. Last live counts were0 tenants/projects/users/transactions. Prepare genuine first-owner MFA/offline review, then onboard developer/project/two brokerages using permitted application commands. Never seed a public privileged session.
+4. Stay inside /opt/realestate-os-testing and own network/volumes/database/identity/storage/HTTPS8443/S3HTTPS8444. Compare all12 protected baselines before/after changes. Never edit/restart/redeploy existing n8n/PRENEURA or reuse their resources/80/443.
+5. While a human/provider input is pending, continue dependency-ready UI/domain/adapter work through M2–M8. Preserve all visual/voice/grace/advisor/support/demo/business scope and immutable type/exact selection/money/evidence rules. Do not re-ask settled choices.
+6. Delivery credentials are deferred. Prepare integration and visibly pause phone/external delivery only in public-test. No fake success, synthetic production fallback or arbitrary MFA enrollment.
+7. Each reviewable increment includes appropriate role/negative/replay/race/browser/domain evidence, runbook/checkpoint and expected-head publication. Append migrations. Track implemented/tested/deployed/live-verified separately.
+8. Finish all public signed-file/SSE/cookie/CSRF/reconnect, TLS renewal, encrypted off-host restore, alerts/load/soak and full product/provider/UX/business gates before final production GO. A deployment or attractive login is not completion.

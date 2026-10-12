@@ -109,6 +109,9 @@ void main().catch(async (error) => {
   });
   await db.destroy().catch(() => undefined);
   process.exitCode = 1;
+  // In the co-located test host, a failed worker must terminate the entire host.
+  // Standalone production workers retain their ordinary event-loop shutdown.
+  if (process.env.PRENEURA_DEPLOYMENT_PROFILE === 'render-public-test') process.exit(1);
 });
 
 function sleep(ms: number): Promise<void> {

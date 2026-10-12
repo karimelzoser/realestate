@@ -1,0 +1,102 @@
+name: E03 Brokerage Onboarding Certification
+
+on:
+  pull_request:
+    paths:
+      - "platform/apps/api/src/brokerage-onboarding/**"
+      - "platform/apps/api/src/accounts/**"
+      - "platform/apps/api/src/app.module.ts"
+      - "platform/packages/contracts/src/brokerage-onboarding.ts"
+      - "platform/packages/contracts/package.json"
+      - "platform/packages/database/migrations/0045_brokerage_b2b_onboarding.sql"
+      - "platform/packages/database/tests/e03_brokerage_onboarding_certification.sql"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/e03-brokerage-onboarding-certification.yml"
+  push:
+    branches:
+      - "codex/egypt-platform-completion"
+    paths:
+      - "platform/apps/api/src/brokerage-onboarding/**"
+      - "platform/apps/api/src/accounts/**"
+      - "platform/apps/api/src/app.module.ts"
+      - "platform/packages/contracts/src/brokerage-onboarding.ts"
+      - "platform/packages/contracts/package.json"
+      - "platform/packages/database/migrations/0045_brokerage_b2b_onboarding.sql"
+      - "platform/packages/database/tests/e03_brokerage_onboarding_certification.sql"
+      - "platform/packages/database/src/runtime-readiness.ts"
+      - "platform/pnpm-lock.yaml"
+      - ".github/workflows/e03-brokerage-onboarding-certification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+
+      - name: Frozen install
+        working-directory: platform
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply all migrations from zero
+        working-directory: platform
+        run: |
+          set -euo pipefail
+          for migration in packages/database/migrations/*.sql; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+          done
+
+      - name: Certify brokerage B2B authority
+        working-directory: platform
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/database/tests/e03_brokerage_onboarding_certification.sql
+
+      - name: Run API tests
+        working-directory: platform
+        run: pnpm --filter @preneura/api test
+
+      - name: Strict platform typecheck
+        working-directory: platform
+        run: pnpm typecheck
+
+      - name: Build API
+        working-directory: platform
+        run: pnpm --filter @preneura/api build

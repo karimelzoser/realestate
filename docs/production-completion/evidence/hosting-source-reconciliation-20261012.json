@@ -1,0 +1,86 @@
+{
+  "observedAt": "2026-10-12T17:50:24.381Z",
+  "scope": "Read-only GitHub/Railway/Render source reconciliation; isolated realestate VPS only",
+  "github": {
+    "repository": "karimelzoser/realestate",
+    "branch": "codex/egypt-platform-completion",
+    "head": "49de56fadf4caab1242fe0783285792ba58d5f0b",
+    "pr": 90,
+    "ci": {
+      "inspected": 45,
+      "success": 45
+    },
+    "demoMain": "1a6e61c891e040221f09c773e6de589928a9a0b7"
+  },
+  "vps": {
+    "sourceHead": "49de56fadf4caab1242fe0783285792ba58d5f0b",
+    "apiWorkerWebImage": "realestate-os-testing-web:49de56fadf4caab1242fe0783285792ba58d5f0b",
+    "schema": 49,
+    "health": "ready",
+    "buildMatchesExpected": true,
+    "publicUrl": "https://realestate-test.aipreneura.com:8443/login",
+    "protectedContainersChecked": 12,
+    "protectedContainersUnchanged": true,
+    "operationalVerification": {
+      "antivirusHealth": "healthy",
+      "antivirusRestartsSinceCorrection": 0,
+      "scannerHealth": "healthy",
+      "genuineCleanEicarHashAuthentication": "PASS",
+      "otlp": {
+        "traces": 200,
+        "metrics": 200,
+        "logs": 200
+      },
+      "focusedRuntimeScannerTests": {
+        "passed": 10,
+        "failed": 0
+      },
+      "pythonSyntax": "PASS"
+    }
+  },
+  "railway": {
+    "realestateStaging": {
+      "project": "preneura-re-gate7-staging",
+      "services": 0,
+      "deployments": 0
+    },
+    "separatePreview": {
+      "project": "preneura-platform-preview",
+      "repository": "karimelzoser/platform-core",
+      "configuredBranch": "codex/frontend-review-mode-20261012",
+      "latestAttempt": {
+        "sha": "24bfff33d0a2a52b8cbd7d342473d1ffbc85fe9d",
+        "status": "FAILED",
+        "createdAt": "2026-10-12T02:17:24.062Z"
+      },
+      "precedingAttempt": {
+        "sha": "5435c4d9404d0791773020d2a587fd139bff32be",
+        "status": "FAILED"
+      },
+      "lastSuccessful": {
+        "sha": "86facdbfe89b69d6859cabed9c670f9471bdf62a",
+        "createdAt": "2026-10-11T02:46:36.802Z"
+      },
+      "currentGithubMain": "98b47258464bb856a589e35c822157bbb1a325aa",
+      "configuredBranchHead": "46cf3c0c8d967572e2db47d3ea564d9a5266f040",
+      "scope": "Separate multi-tenant commerce/support/sales/automation platform; not the realestate codebase; not copied, migrated or changed"
+    }
+  },
+  "render": {
+    "workspace": "Preneura",
+    "workspaceId": "tea-db5urg4s728c7394b2n0",
+    "servicesResponse": "null; no services returned",
+    "postgresResponse": "No Postgres instances found",
+    "deploymentSnapshotAvailable": false,
+    "olderBlueprintPr": {
+      "number": 91,
+      "head": "1bb7cf650baeed781f598e8c2a9d17e04299ceb9",
+      "base": "feature/production-runtime-readiness",
+      "comparisonToCurrent": "diverged",
+      "uniqueCommits": 39,
+      "currentOnlyCommits": 542
+    },
+    "decision": "Current completion branch already contains its own readiness/gateway/Render profile. Older alternate deployment branch is not proof of a live or integrated newer product; do not merge its outdated topology wholesale."
+  },
+  "result": "VPS is based on the latest certified realestate completion source, not a combined migration of all applications or hosting databases. No newer realestate completion head found; distinct platform-core work remains separate."
+}

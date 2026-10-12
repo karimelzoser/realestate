@@ -1,0 +1,32 @@
+import 'reflect-metadata';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import pg from 'pg';
+import { Kysely,PostgresDialect } from 'kysely';
+import { PostgresAuthRepository } from '../dist/auth/auth.repository.js';
+import { AuthService } from '../dist/auth/auth.service.js';
+const url=process.env.DATABASE_URL;
+if(process.env.NODE_ENV!=='test'||!url||!['localhost','127.0.0.1','[::1]'].includes(new URL(url).hostname))throw new Error('Bootstrap certification requires an empty disposable loopback test database.');
+const pool=new pg.Pool({connectionString:url}),db=new Kysely({dialect:new PostgresDialect({pool})});
+const query=(text,values=[])=>pool.query(text,values),user=randomUUID(),issuer='https://synthetic-owner.example.test/realm',subject='synthetic-owner-subject';
+const auth=new AuthService(new PostgresAuthRepository(db),{});
+const env={...process.env,BOOTSTRAP_USER_ID:user,BOOTSTRAP_IDENTITY_ISSUER:issuer,BOOTSTRAP_IDENTITY_SUBJECT:subject,BOOTSTRAP_REVIEW_NOTE:'Owner issuer and subject independently checked through a trusted corporate channel.'};
+const run=(overrides={},approved=true)=>spawnSync(process.execPath,['packages/database/scripts/bootstrap-platform-admin.mjs',...(approved?['--approve-initial-platform-admin']:[])],{env:{...env,...overrides},encoding:'utf8'});
+try {
+  assert.equal((await query(`SELECT count(*) FROM access_role_assignments WHERE role_code='PRENEURA_SUPER_ADMIN'`)).rows[0].count,'0');
+  await query(`INSERT INTO users(id,display_name,status) VALUES($1,'Synthetic initial owner','PENDING')`,[user]);
+  await query(`INSERT INTO auth_external_identities(user_id,provider,issuer,provider_subject) VALUES($1,'google',$2,$3)`,[user,issuer,subject]);
+  const aal1=await auth.issueSessionForUser(user,{eventType:'SYNTHETIC_BOOTSTRAP_AAL1'},{authMethod:'OTP',assuranceLevel:'AAL1'});
+  assert.notEqual(run().status,0);assert.notEqual(run({},false).status,0);
+  const aal2=await auth.issueSessionForUser(user,{eventType:'SYNTHETIC_BOOTSTRAP_AAL2'},{authMethod:'OIDC_GOOGLE',assuranceLevel:'AAL2',providerAmr:['mfa']});
+  assert.notEqual(run({BOOTSTRAP_IDENTITY_SUBJECT:'different-owner'}).status,0);
+  assert.notEqual(run({BOOTSTRAP_IDENTITY_ISSUER:issuer+'/different'}).status,0);
+  const result=run();assert.equal(result.status,0,result.stderr);
+  assert.equal((await query(`SELECT status FROM users WHERE id=$1`,[user])).rows[0].status,'ACTIVE');
+  assert.equal((await query(`SELECT count(*) FROM access_role_assignments WHERE user_id=$1 AND role_code='PRENEURA_SUPER_ADMIN'`,[user])).rows[0].count,'1');
+  assert.equal(await auth.resolveSessionToken(aal1.sessionToken),null);assert.equal(await auth.resolveSessionToken(aal2.sessionToken),null);
+  assert.equal((await query(`SELECT count(*) FROM auth_security_events WHERE user_id=$1 AND event_type='INITIAL_PLATFORM_ADMIN_OWNER_APPROVED'`,[user])).rows[0].count,'1');
+  assert.notEqual(run().status,0);assert.equal((await query(`SELECT count(*) FROM access_role_assignments WHERE role_code='PRENEURA_SUPER_ADMIN'`)).rows[0].count,'1');
+  console.log('ADMIN_BOOTSTRAP_CERTIFICATION_OK exact-owner-issuer/subject/fresh-MFA/offline-only/one-shot/revoked-preapproval-sessions');
+}finally{await db.destroy();}

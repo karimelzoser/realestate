@@ -139,6 +139,9 @@ try {
       tenantId: TENANT_ID,
       projectId: PROJECT_ID,
       buyerProfileId: invited.buyerProfileId,
+      unitTypeId: 'cccccccc-5151-4515-8515-cccccccccccc',
+      refundPolicyId: 'eeeeeeee-5151-4515-8515-eeeeeeeeeeee',
+      acceptedPolicy: true,
     },
   });
   assert.equal(eoi.amount, '25000.00');
@@ -152,6 +155,8 @@ try {
   assert.equal(afterEoi[0]?.latestEoi?.eoiId, eoi.eoiId);
   assert.equal(afterEoi[0]?.latestEoi?.status, 'PAYMENT_PENDING');
   assert.equal(afterEoi[0]?.latestEoi?.paidAt, null);
+  assert.equal(afterEoi[0]?.latestEoi?.selectedUnitTypeId, 'cccccccc-5151-4515-8515-cccccccccccc');
+  assert.equal(afterEoi[0]?.latestEoi?.selectedUnitTypeName, 'Sales apartment type');
 
   const storedEoi = await db
     .selectFrom('buyer_eois')

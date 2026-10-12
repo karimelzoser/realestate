@@ -1,0 +1,43 @@
+name: realestate-os-testing
+services:
+  identity:
+    image: quay.io/keycloak/keycloak:26.8.0
+    command: ['start','--import-realm']
+    restart: unless-stopped
+    init: true
+    mem_limit: 768m
+    cpus: '0.50'
+    pids_limit: 256
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/realestate_os_identity
+      KC_DB_USERNAME: realestate_os_idp
+      KC_DB_PASSWORD: ${PRENEURA_IDP_PASSWORD:?Separate identity database password required}
+      KC_DB_POOL_MIN_SIZE: '2'
+      KC_DB_POOL_MAX_SIZE: '8'
+      KC_HOSTNAME: https://realestate-test.aipreneura.com:8443/identity
+      KC_HTTP_ENABLED: 'true'
+      KC_HTTP_RELATIVE_PATH: /identity
+      KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: 'true'
+      KC_METRICS_ENABLED: 'true'
+      KC_BOOTSTRAP_ADMIN_USERNAME: realestate-deployment-admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_BOOTSTRAP_PASSWORD:?Independent identity administration password required}
+      REAL_ESTATE_OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?Independent OIDC client secret required}
+    volumes:
+      - ./realestate-realm.json:/opt/keycloak/data/import/realestate-realm.json:ro
+    expose: ['8080','9000']
+    healthcheck:
+      test: ['CMD','bash','-ec','exec 3<>/dev/tcp/127.0.0.1/9000; printf "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; read -r line <&3; [[ "$$line" == *" 200 "* ]]']
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+    networks: [backend]
+networks:
+  backend:
+    external: true
+    name: realestate-os-testing_backend

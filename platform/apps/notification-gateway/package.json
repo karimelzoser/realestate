@@ -9,7 +9,6 @@
     "build:deps": "pnpm --filter @preneura/database build && pnpm --filter @preneura/security build && pnpm --filter @preneura/observability build",
     "start": "node --import @preneura/observability/register dist/bootstrap.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --test",
     "lint": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

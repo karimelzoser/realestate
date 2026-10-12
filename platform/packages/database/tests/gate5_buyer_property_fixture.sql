@@ -68,9 +68,16 @@ SET status = 'PUBLISHED',
     updated_at = '2026-01-01T00:00:00+00'
 WHERE id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 
-INSERT INTO buyer_profiles (id, tenant_id, user_id, status, source, created_by) VALUES
-  ('10000000-0000-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','ACTIVE','DIRECT','11111111-1111-4111-8111-111111111111'),
-  ('20000000-0000-4000-8000-000000000002','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','22222222-2222-4222-8222-222222222222','ACTIVE','DIRECT','22222222-2222-4222-8222-222222222222');
+\if :{?FULL_STACK_BROKER_ATTRIBUTION}
+\ir full_stack_broker_setup.sql
+INSERT INTO buyer_profiles(id,tenant_id,user_id,status,source,broker_company_id,broker_agent_user_id,created_by) VALUES
+('10000000-0000-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','ACTIVE','BROKER','33000000-0000-4000-8000-000000000001','32000000-0000-4000-8000-000000000002','32000000-0000-4000-8000-000000000001');
+\else
+INSERT INTO buyer_profiles(id,tenant_id,user_id,status,source,created_by) VALUES
+('10000000-0000-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','ACTIVE','DIRECT','11111111-1111-4111-8111-111111111111');
+\endif
+INSERT INTO buyer_profiles(id,tenant_id,user_id,status,source,created_by) VALUES
+('20000000-0000-4000-8000-000000000002','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','22222222-2222-4222-8222-222222222222','ACTIVE','DIRECT','22222222-2222-4222-8222-222222222222');
 
 INSERT INTO eoi_refund_policies (
   id, tenant_id, project_id, version_number, name, status, eoi_amount, currency,
@@ -84,9 +91,9 @@ INSERT INTO eoi_refund_policies (
 
 INSERT INTO buyer_eois (
   id, tenant_id, project_id, buyer_profile_id, refund_policy_id, amount, currency, status, created_by
-) VALUES
-  ('10000000-0000-4000-8000-000000000011','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','10000000-0000-4000-8000-000000000001','eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',10,'EGP','PAYMENT_PENDING','11111111-1111-4111-8111-111111111111'),
-  ('20000000-0000-4000-8000-000000000012','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','20000000-0000-4000-8000-000000000002','eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',10,'EGP','PAYMENT_PENDING','22222222-2222-4222-8222-222222222222');
+, selected_unit_type_id, policy_accepted_by) VALUES
+  ('10000000-0000-4000-8000-000000000011','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','10000000-0000-4000-8000-000000000001','eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',10,'EGP','PAYMENT_PENDING','11111111-1111-4111-8111-111111111111', 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', '11111111-1111-4111-8111-111111111111'),
+  ('20000000-0000-4000-8000-000000000012','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','20000000-0000-4000-8000-000000000002','eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',10,'EGP','PAYMENT_PENDING','22222222-2222-4222-8222-222222222222', 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', '22222222-2222-4222-8222-222222222222');
 
 SELECT preneura_post_eoi_payment(
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',

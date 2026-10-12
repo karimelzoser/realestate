@@ -1,0 +1,59 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 96
+    spike_limit_mib: 24
+  transform/redact:
+    error_mode: propagate
+    trace_statements:
+      - context: span
+        statements:
+          - replace_pattern(attributes["url.full"], "\\?.*$", "") where attributes["url.full"] != nil
+          - replace_pattern(attributes["http.url"], "\\?.*$", "") where attributes["http.url"] != nil
+          - replace_pattern(attributes["http.target"], "\\?.*$", "") where attributes["http.target"] != nil
+          - delete_key(attributes, "url.query")
+          - delete_key(attributes, "http.request.header.authorization")
+          - delete_key(attributes, "http.request.header.cookie")
+          - delete_key(attributes, "http.response.header.set-cookie")
+    log_statements:
+      - context: log
+        statements:
+          - replace_pattern(attributes["url.full"], "\\?.*$", "") where attributes["url.full"] != nil
+          - replace_pattern(attributes["http.url"], "\\?.*$", "") where attributes["http.url"] != nil
+          - delete_key(attributes, "url.query")
+          - delete_key(attributes, "http.request.header.authorization")
+          - delete_key(attributes, "http.request.header.cookie")
+          - delete_key(attributes, "http.response.header.set-cookie")
+  batch:
+    timeout: 5s
+    send_batch_size: 128
+exporters:
+  debug:
+    verbosity: basic
+  prometheus:
+    endpoint: 0.0.0.0:9464
+    resource_to_telemetry_conversion:
+      enabled: false
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/redact, batch]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/redact, batch]
+      exporters: [debug]

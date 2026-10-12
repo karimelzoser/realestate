@@ -113,3 +113,11 @@ Before Gate 7 production approval, capture:
 - security-header sample from the deployed API;
 - request-ID correlation sample across API logs;
 - evidence that application services are not directly exposed around the trusted proxy path.
+
+## Cookie-authenticated mutation origins
+
+All unsafe API requests with a browser Origin must exactly match a WEB_ORIGIN allowlisted origin. Cookie-authenticated writes without Origin require an allowlisted Referer origin; absence or malformed/untrusted values returns403 before route execution, including bodyless logout/claim actions. Provider/machine requests without cookies or browser Origin retain their existing signature/bearer checks. CORS and SameSite are additional controls. Test clients performing session mutations must send the actual trusted web Origin.
+
+Keep hosted web/API under the accepted same-site or same-origin proxy topology and verify login/cookies/SSE in a real browser. The current Lax host-only session cookie must not be changed to insecure cross-site behavior to conceal a deployment mismatch. The older Render direct-domain Blueprint requires this topology correction and certification before use.
+
+Reference: [OWASP CSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).

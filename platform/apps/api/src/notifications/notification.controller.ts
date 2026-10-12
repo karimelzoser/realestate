@@ -105,6 +105,7 @@ export class UserNotificationController {
     @CurrentSession() session: ResolvedSession,
   ): Observable<MessageEvent> {
     return this.notifications.streamUserNotifications({
+      sessionId: session.sessionId,
       userId: session.userId,
       afterSequence: lastEventId ?? after ?? '0',
     });

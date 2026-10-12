@@ -1,0 +1,64 @@
+name: realestate-os-testing
+services:
+  antivirus:
+    image: clamav/clamav:1.5.4
+    restart: unless-stopped
+    init: true
+    mem_limit: 2048m
+    memswap_limit: 2048m
+    cpus: '0.35'
+    cpu_shares: 128
+    pids_limit: 128
+    security_opt: ['no-new-privileges:true']
+    environment: {TZ: UTC}
+    volumes:
+      - antivirus-definitions:/var/lib/clamav
+      - ./clamd.conf:/etc/clamav/clamd.conf:ro
+    tmpfs: ['/tmp:size=96m']
+    expose: ['3310']
+    healthcheck:
+      test: ['CMD','clamdscan','--ping=1']
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 120s
+    networks: [backend]
+  scanner:
+    image: ${PRENEURA_RUNTIME_IMAGE:?Certified application image is required}
+    entrypoint: ['node','/srv/preneura/document-scanner.mjs']
+    restart: unless-stopped
+    init: true
+    user: node
+    mem_limit: 192m
+    cpus: '0.25'
+    pids_limit: 64
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    environment:
+      NODE_ENV: production
+      TZ: UTC
+      PORT: '4400'
+      DOCUMENT_SCANNER_TOKEN: ${DOCUMENT_SCANNER_TOKEN:?Independent scanner token required}
+      SCANNER_ALLOWED_OBJECT_ORIGINS: http://object-storage:8333,https://realestate-test.aipreneura.com:8444
+      OBJECT_STORAGE_BUCKET: realestate-private-documents
+      CLAMD_HOST: antivirus
+      CLAMD_PORT: '3310'
+    volumes:
+      - ./document-scanner.mjs:/srv/preneura/document-scanner.mjs:ro
+    tmpfs: ['/tmp:size=16m']
+    expose: ['4400']
+    healthcheck:
+      test: ['CMD','node','-e',"fetch('http://127.0.0.1:4400/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 120s
+    networks: [backend]
+networks:
+  backend:
+    external: true
+    name: realestate-os-testing_backend
+volumes:
+  antivirus-definitions:
+    name: realestate-os-testing_antivirus-definitions

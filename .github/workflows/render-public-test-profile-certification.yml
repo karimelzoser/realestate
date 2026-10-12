@@ -1,0 +1,65 @@
+name: Render Public Test Profile Certification
+
+on:
+  pull_request:
+    paths:
+      - 'render.yaml'
+      - 'platform/**'
+      - '.github/workflows/render-public-test-profile-certification.yml'
+  push:
+    branches: ['codex/egypt-platform-completion', 'release/**']
+    paths:
+      - 'render.yaml'
+      - 'platform/**'
+      - '.github/workflows/render-public-test-profile-certification.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura_render_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura_render_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_render_test
+      MIGRATION_ACTOR: github-render-public-test-profile-certification
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Validate Blueprint against current official schema and no-purchase policy
+        run: node scripts/validate-render-preview.mjs
+      - name: Normal security and configuration tests
+        run: pnpm test
+      - name: Strict typecheck and policy lint
+        run: pnpm typecheck && pnpm lint
+      - name: Build production backend processes
+        run: pnpm --filter @preneura/api build && pnpm --filter @preneura/worker build && pnpm --filter @preneura/notification-gateway build
+      - name: Certify existing production configuration guards
+        run: pnpm --filter @preneura/api exec tsx ../../scripts/certify-production-config.mts
+      - name: Fresh database bootstrap, memory headroom, Linux drain and component startup failure
+        run: node scripts/certify-render-preview.mjs

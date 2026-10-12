@@ -1,5 +1,21 @@
 # PRENEURA — full production completion plan
 
+## Current authority — 12 October 2026
+
+The active target is only the isolated realestate-os-testing project under /opt/realestate-os-testing. Existing n8n and PRENEURA containers, databases, identity realms, networks and ports80/443 are protected. All12 protected container IDs/start times/restart counts were rechecked and remain unchanged. Render is deferred.
+
+Public testing is live at https://realestate-test.aipreneura.com:8443/login. API, worker and frontend run exact source49de56fadf4caab1242fe0783285792ba58d5f0b; all45 inspected GitHub runs passed. Public /healthz reports ready, matching source and schema49/minimum49/marker0049_reviewed_identity_enrollment. Independent PostgreSQL18.6, Keycloak26.8.0, qualified SeaweedFS4.48, authenticated real ClamAV scanner and redacted telemetry are running. S3 uses separate HTTPS8444.63 local normal tests,9 package strict checks/builds, real-DB delivery-pause and English/Arabic mobile UI cases passed.
+
+Fresh GitHub/Railway/Render reconciliation confirms this is the latest realestate completion head. Railway realestate staging has0 services/0 deployments; its separate platform-core preview has newer failed frontend attempts and last successful source86facdb. Those distinct commerce/support/automation branches were not copied into realestate. Render Preneura returned no services and no PostgreSQL databases; no hosted Render application snapshot is available. PR91 is an older divergent deployment alternative, not the full Egypt candidate. See evidence/hosting-source-reconciliation-20261012.json.
+
+Current operational patch fixes the antivirus image startup requirement for a local socket, adds an explicit real PING health check, bounds signature-reload memory and completes the redacted OTLP logs pipeline. Genuine clean/EICAR/hash/auth certification passed after the isolated scanner rollout. Phone sign-in/external delivery remain visibly paused in public-test until the user supplies provider credentials. No synthetic successful delivery or fabricated AAL2 owner session is allowed.
+
+Human MFA/owner activation, authenticated public S3/SSE/browser journeys, TLS renewal automation, encrypted off-host restore, full product completion, load/soak and final liveGO remain outstanding. This is public testing, not approved full production. Read WORK_STATE/TASKS/VPS_DEPLOYMENT and retain the entire PLAN.
+
+## Product gap audit and launch milestones
+
+Read [PRODUCTION_GAP_AUDIT.md](PRODUCTION_GAP_AUDIT.md) for the current demo/application/VPS feature matrix, M0–M8 delivery sequence, premium UI/UX specification and ten final release gates. Live business counts are zero; public services do not establish completed customer journeys. TASKS is expanded with explicit design/event/advisor/change/governance/business acceptance. Old baseline statistics below remain historical reference only.
+
 Prepared 11 October 2026 for https://github.com/karimelzoser/realestate.
 
 ## 1. Accepted product and delivery decisions
@@ -12,18 +28,18 @@ These decisions come from the user and supersede conflicting older repository de
 4. Arabic and English user interfaces are launch scope. English voice is launch scope; Arabic voice is later scope.
 5. All application/service source, migrations, infrastructure definitions, plans and operational scripts belong in GitHub.
 6. Keep a working, synthetic demonstration on GitHub Pages with a shareable link. GitHub Pages is not the live commercial platform or backend runtime.
-7. No Railway dependency or Railway MCP deployment workflow. The user has a self-hosted server, but server deployment happens **after** software and deployment preparation are complete.
-8. Prepare Docker-based self-hosted deployment and standard CLI/SSH/GitHub Actions tooling. Do not touch the server, alter DNS, deploy services, run production migrations or install credentials during the software-completion stage.
+7. No Railway dependency. The user now explicitly authorizes public testing on a separate part of the supplied VPS; Render is deferred. Existing n8n and PRENEURA are protected.
+8. Use isolated Docker/SSH/GitHub tooling under /opt/realestate-os-testing, separate volumes/network/DB/identity and HTTPS8443/S3HTTPS8444. Never edit/restart/migrate protected projects or reuse their resources. No paid purchase is authorized; final production still requires full acceptance.
 9. Progress must survive interruptions. Once this plan/prompt is ingested into the repository, the user must be able to say **continue** to resume the unfinished task without repeating settled decisions.
 
 There are two separate completion outcomes:
 
 - **SOFTWARE_READY_FOR_DEPLOYMENT:** implemented scope, tested integrations/contracts, reviewed migrations, built artifacts and complete operational/deployment package.
-- **LIVE_PRODUCTION_GO:** subsequently deployed exact artifacts on the user's server, verified live providers, capacity/recovery/security/operations evidence, and an approved release decision.
+- **LIVE_PRODUCTION_GO:** deployed exact artifacts on the accepted durable production target, verified live providers, capacity/recovery/security/operations evidence, and an approved release decision.
 
 Do not confuse either with a green static demo or structural CI check. A prompt cannot prevent network outages or remove required credentials; it can preserve work and avoid unnecessary clarification.
 
-## 2. Current implementation baseline
+## 2. Historical initial implementation baseline
 
 Re-inspect current GitHub state before editing; these are reference facts, not assumptions that branches never move:
 
@@ -94,9 +110,9 @@ GitHub Pages serves static files. GitHub also restricts use for commercial SaaS/
 
 Required GitHub Pages outcome: the existing link remains usable; publish a modern demo preview at a separate path if necessary, and replace the root only after parity/visual/regression acceptance. Test repository base paths, deep links, refresh, assets and mobile layouts. Build a static demo bundle that reuses production UI/contracts through an explicitly injected demo data adapter. Fixtures may use IndexedDB/browser state, but may not pretend to prove cross-device server locking. Keep simulation and real API clients separate at build/configuration level.
 
-Production web and backend run later on the existing self-hosted server, behind a real HTTPS domain. Prefer web/API paths on one origin, or same-site subdomains with tested cookie/CORS behavior. Do not make the commercial app depend on cross-site cookies from `github.io`; do not move sessions into browser localStorage as a shortcut.
+Public testing web and backend now run on the isolated authorized VPS. Render is deferred. Final production follows full acceptance and ownership/capacity/recovery decisions. Prefer web/API paths on one origin, or same-site subdomains with tested cookie/CORS behavior. Do not make the commercial app depend on cross-site cookies from `github.io`; do not move sessions into browser localStorage as a shortcut.
 
-Prepare GitHub Actions builds and GHCR/versioned archives. Prepare `deploy.sh`, `preflight.sh`, `migrate.sh`, `smoke.sh`, `rollback.sh`, `backup.sh`, `restore-rehearsal.sh` and a validated Compose deployment bundle. Remote deployment uses ordinary SSH/CLI, not a hosting MCP. No server connection is needed during this stage. Workflows must not automatically deploy production merely because a feature branch was pushed.
+Prepare GitHub Actions builds and GHCR/versioned archives. Prepare `deploy.sh`, `preflight.sh`, `migrate.sh`, `smoke.sh`, `rollback.sh`, `backup.sh`, `restore-rehearsal.sh` and a validated Compose deployment bundle. Remote deployment uses pinned SSH/CLI into the isolated project; the current public-testing services are already deployed. Workflows must not automatically deploy production merely because a feature branch was pushed.
 
 The later deployment workflow must use immutable image digests, protected environments, a pinned SSH host key, a restricted deploy account and serialized releases. Do not run arbitrary pull-request code on the production server or expose Docker control to untrusted CI jobs. Provide a manual CLI path if CI/registry quota is exhausted. MCP limits, CI quotas and server capacity are separate concerns; no claim of unlimited hosting is made.
 
@@ -165,7 +181,7 @@ Acceptance: one developer/project plus two brokerages works, and the same broker
 
 ### E04 — Catalog, physical inventory, assets, imports and pricing
 
-Complete published public project/residential/commercial/unit-type views, areas/specifications, photos, amenities, favourites and preferences. Staff-only unpublished inventory stays private. Add exact-apartment public/display references and verified physical-unit → slot mapping. Exact selection requires that mapping; do not publish anonymous unmapped inventory for the new exact-selection journey.
+Complete published public project/residential/commercial/unit-type views, areas/specifications, photos, amenities, favourites, comparison, preferences and an explicitly illustrative EGP affordability/payment-plan calculator. Staff-only unpublished inventory stays private. Add exact-apartment public/display references and verified physical-unit → slot mapping. Exact selection requires that mapping; do not publish anonymous unmapped inventory for the new exact-selection journey.
 
 Complete physical attributes and versioned per-unit price adjustments where floor/view/area/premium values differ from a type price. Implement deterministic quote APIs with exact identity and component breakdown, validity and published policy version. Imports must create/validate mappings and give preview/errors/rollback; never overwrite an executed transaction's history.
 
@@ -185,7 +201,7 @@ Acceptance: direct, broker and staff buyers complete the same backend path. Refr
 
 Implement allocation event windows, invitation/check-in/token, wait/turn visibility and receptionist flow. Model compatible online/human capacity and durable allocation sessions. Stable shared ordering remains consistent under concurrent check-in/dispatch and channel changes. Human allocators claim the next eligible called buyer; no arbitrary buyer picking. Online buyers receive a scoped active turn/session rather than a blanket unit-lock capability.
 
-Define no-show, cancellation, abandonment, rejoin, service timeout and operator override policies with explicit permission/reason. Manager sees queue/seat capacity/waits and actual events across both channels. Do not use browser timers as authority.
+Publish an approved versioned event readiness/preflight/freeze package and preserve policy history. Define no-show, cancellation, abandonment, rejoin, service timeout and operator override policies with explicit permission/reason. Manager sees queue/seat capacity/waits and actual events across both channels. Do not use browser timers as authority.
 
 Acceptance: concurrency tests preserve ordering, one active session per service slot/allocator, no unauthorized turn/priority changes and safe reconnect/worker restart behavior.
 
@@ -202,6 +218,8 @@ Acceptance: hundreds of simultaneous attempts for one selected apartment produce
 Persist short handoff state, countdown authority, extension requests/reasons, decisions, offline paperwork exceptions, actor/timestamps and transition history. Default short grace is 15 minutes unless project policy changes it for new locks. Online extensions require a buyer request and Transaction Operator approval. Offline 24-hour exceptions require the operator's authorized reason. Approved extended grace begins at approval time; it does not start automatically.
 
 Pending requests survive in the inbox after short expiry, but do not hold inventory indefinitely. If the lock expires, release safely. Approval after expiry must atomically reacquire the **same exact apartment only if still available**; otherwise return an explicit inventory-lost decision and offer an authorized new selection. Never take the apartment from another buyer. Race approval versus expiry versus conversion; one transition wins. Completed handoff closes grace; cancellation/release is audited and reconciles queue/session state.
+
+Complete controlled cancellation/change/swap with named authority, immutable replacement quote/contract amendment, safe inventory transition and refund/credit reconciliation.
 
 Acceptance: Buyer, Allocator, Operator and Manager show the same server state/countdown. Requests remain visible while other transactions are open. Multi-worker sweeps, restart, clock boundaries and concurrent decisions produce one inventory outcome and consistent events.
 
@@ -227,7 +245,7 @@ Acceptance: modified template/quote/object requires a new document/challenge; re
 
 ### E11 — Full after-sale buyer portal
 
-Complete exact property details/galleries/specifications, purchase and handoff progress, paid/remaining/overdue/next-due summaries, full schedule, verified receipts, contract/document view/download, notices and project updates. Add support cases, comments, attachments, assignment/status, notification and ownership controls. Define support SLA and escalation; sensitive attachments use the same private scan/read boundary.
+Complete exact property details/galleries/specifications, purchase and handoff progress, paid/remaining/overdue/next-due summaries, full schedule, verified receipts, contract/document view/download, notices and project updates. Add support cases, comments, attachments, assignment/status, notification and ownership controls. Define support SLA and escalation; sensitive attachments use the same private scan/read boundary. Complete a consented human-advisor inbox/chat and co-browse property context with scoped retention/reconnect/unread state; no payment/signature or privileged session takeover.
 
 Acceptance: every displayed financial total reconciles to the same snapshot/ledger; no unrelated buyer/project documents or support cases leak; stale project requests cannot overwrite another selected project's display; updates are real published records rather than hardcoded announcements.
 
@@ -273,7 +291,7 @@ Deliver reverse proxy/TLS/SSE settings, DNS/port matrix, credential ownership, c
 
 Ship dashboards and actionable alert rules, not just metric names: availability/errors/latency, lock conflicts/expiry, queue waits/capacity, outbox/job lag, provider failure, financial reconciliation, storage/disk/backup age, scanner failures, authentication abuse and AI cost/latency. Record real named owners later.
 
-Acceptance now: fresh disposable environment runs the package with documented configuration and genuine services or clearly labeled provider sandbox substitutes; malformed config fails; no remote-server changes. Later deployment acceptance is a distinct gate.
+Acceptance now: the isolated authorized VPS and a fresh disposable environment run the documented exact-source package; malformed config fails; genuine private providers and public authenticated journeys are verified. Protected projects remain unchanged. Full production operational acceptance is a distinct gate.
 
 ### E17 — Performance, security, disaster recovery and release readiness
 
@@ -283,7 +301,11 @@ Use realistic API/queue/lock/SSE/upload/scanner/worker load, not only database b
 
 Preserve existing proposed service targets (99.9% availability, ordinary API p95 <=500 ms, lock p95 <=750 ms, outbox lag <=60 s) as planning targets, not proven achievements. Record test topology and actual numbers. Proposed revocation bound is <=15 seconds for open streams, subject to accepted policy; presigned file URLs need separately bounded expiry/proxy invalidation. Agree and measure RPO/RTO with the owner; no invented production SLA or recovery guarantee.
 
-Acceptance: all required software capabilities/tests/package evidence complete; no unresolved software P0/P1; external live dependencies separately enumerated. Publish SOFTWARE_READY_FOR_DEPLOYMENT only if that is true. Deploy later solely after explicit authorization and required server/provider configuration, then execute final LIVE_PRODUCTION_GO gate.
+Acceptance: all required software capabilities/tests/package evidence complete; no unresolved software P0/P1; external live dependencies separately enumerated. Publish SOFTWARE_READY_FOR_DEPLOYMENT only if that is true. Continue authorized isolated public testing, configure required real providers, and execute final LIVE_PRODUCTION_GO only when the entire accepted scope and live gates are satisfied.
+
+### E18 — Business launch and service readiness
+
+Complete the first Egyptian developer/project plus two-brokerage pilot playbook, operational role ownership, tenant pricing/entitlements/usage/manual B2B invoice responsibilities, onboarding/training/support/retention policies and authoritative conversion/queue/collections/provider metrics. Prepare concrete domain/security/finance/signature acceptance for independent review. Do not invent ROI, pricing commitments, legal validity, paid subscriptions or operational owners. See the gap audit for milestone and launch-gate evidence.
 
 ## 7. Data model and state-machine requirements
 
@@ -334,8 +356,8 @@ A task is done when reviewed code, schema/API/UI/events, appropriate positive/ne
 | Exact commercial and buyer core | E03–E08 | Type EOI → eligible shared queue → exact lock/grace/reservation works through APIs/UI |
 | Money, contract and after-sale completion | E09–E12 | Real evidence paths, exact contract/signing, broker/developer control rooms and buyer portal complete |
 | Communications, voice and demo parity | E13–E15 | Required provider adapters, English voice and Arabic/English product/demo parity accepted |
-| Deployment preparation and certification | E16–E17 | Reproducible package, operational tooling and same-artifact software evidence; no server deployment yet |
-| Later server deployment | Approved release tasks | Owner authorizes deployment, credentials configured, live tests/recovery/capacity prove LIVE_PRODUCTION_GO |
+| Public testing, operations and certification | E16–E17 | Isolated live package, operational tooling and same-artifact provider/UAT/recovery/capacity evidence |
+| Business launch and final release | E18 and release gates | Customer onboarding/entitlements/support/metrics plus completed product and live tests/recovery/capacity prove LIVE_PRODUCTION_GO |
 
 Some work overlaps, but dependencies are explicit: EOI/type/pricing precede queue/exact locking; exact identity/quote precede contract generation; ledger/provider evidence precedes trustworthy receipts/settlements; security and configuration precede public real-user access. Deployment preparation can progress alongside domain work.
 

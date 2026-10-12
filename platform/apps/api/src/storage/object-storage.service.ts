@@ -7,7 +7,7 @@ import {
   type HeadObjectOutput,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 export interface UploadIntent {
   objectKey: string;
@@ -27,6 +27,7 @@ export interface VerifiedObject {
 @Injectable()
 export class ObjectStorageService {
   private readonly client: S3Client;
+  private readonly signingClient: S3Client;
   private readonly bucket: string;
 
   constructor() {
@@ -43,6 +44,20 @@ export class ObjectStorageService {
         ? { credentials: { accessKeyId, secretAccessKey } }
         : {}),
     });
+    const publicEndpoint = process.env.OBJECT_STORAGE_PUBLIC_ENDPOINT;
+    if (publicEndpoint) {
+      const url = new URL(publicEndpoint);
+      const testLoopback = process.env.NODE_ENV === 'test' && ['localhost','127.0.0.1','[::1]'].includes(url.hostname);
+      if ((url.protocol !== 'https:' && !testLoopback) || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
+        throw new Error('OBJECT_STORAGE_PUBLIC_ENDPOINT must be an HTTPS origin without credentials or a path.');
+      }
+      this.signingClient = new S3Client({
+        region: process.env.OBJECT_STORAGE_REGION ?? 'us-east-1',
+        endpoint: url.origin,
+        forcePathStyle: process.env.OBJECT_STORAGE_FORCE_PATH_STYLE === 'true',
+        ...(accessKeyId && secretAccessKey ? { credentials: { accessKeyId, secretAccessKey } } : {}),
+      });
+    } else this.signingClient = this.client;
   }
 
   documentObjectKey(input: {
@@ -131,11 +146,18 @@ export class ObjectStorageService {
       ContentType: input.contentType,
       ContentLength: input.byteSize,
       ChecksumSHA256: input.sha256Base64,
+      // A still-valid upload URL cannot replace an object after it was scanned
+      // and attached to a document or contract. Providers must implement this.
+      IfNoneMatch: '*',
       Metadata: {
         'preneura-sha256': this.sha256Hex(input.sha256Base64),
       },
     });
-    const uploadUrl = await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+    const uploadUrl = await getSignedUrl(this.signingClient, command, {
+      expiresIn: expiresInSeconds,
+      signableHeaders: new Set(['if-none-match','content-type']),
+      unhoistableHeaders: new Set(['x-amz-checksum-sha256','x-amz-meta-preneura-sha256']),
+    });
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
 
     return {
@@ -144,6 +166,7 @@ export class ObjectStorageService {
       expiresAt,
       requiredHeaders: {
         'content-type': input.contentType,
+        'if-none-match': '*',
         'x-amz-checksum-sha256': input.sha256Base64,
         'x-amz-meta-preneura-sha256': this.sha256Hex(input.sha256Base64),
       },
@@ -156,7 +179,7 @@ export class ObjectStorageService {
   }): Promise<{ downloadUrl: string; expiresAt: string }> {
     const expiresInSeconds = Math.min(Math.max(input.expiresInSeconds ?? 300, 30), 600);
     const command = new GetObjectCommand({ Bucket: this.bucket, Key: input.objectKey });
-    const downloadUrl = await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+    const downloadUrl = await getSignedUrl(this.signingClient, command, { expiresIn: expiresInSeconds });
     return {
       downloadUrl,
       expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString(),
@@ -171,14 +194,19 @@ export class ObjectStorageService {
       new GetObjectCommand({ Bucket: this.bucket, Key: input.objectKey }),
     );
     if (response.ContentLength !== undefined && response.ContentLength > input.maxBytes) {
+      this.discardBody(response.Body);
       throw new Error('Stored object exceeds the permitted inspection size.');
     }
     if (!response.Body) throw new Error('Stored object has no readable body.');
-    const bytes = await response.Body.transformToByteArray();
-    if (bytes.byteLength > input.maxBytes) {
-      throw new Error('Stored object exceeds the permitted inspection size.');
+    const chunks: Buffer[] = [];
+    let total = 0;
+    for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
+      const bytes = Buffer.from(chunk);
+      total += bytes.byteLength;
+      if (total > input.maxBytes) throw new Error('Stored object exceeds the permitted inspection size.');
+      chunks.push(bytes);
     }
-    return bytes;
+    return Buffer.concat(chunks,total);
   }
 
   async verifyObject(input: {
@@ -214,6 +242,26 @@ export class ObjectStorageService {
       return null;
     }
 
+    // Metadata is a caller's declaration, not proof of stored bytes. Some S3
+    // compatible providers omit native checksum headers, so always verify the
+    // physical object digest in a bounded, constant-memory stream.
+    try {
+      const stored = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: input.objectKey }));
+      if (!stored.Body) return null;
+      if (stored.ContentLength !== undefined && stored.ContentLength !== input.expectedByteSize) {
+        this.discardBody(stored.Body);
+        return null;
+      }
+      const digest = createHash('sha256');
+      let total = 0;
+      for await (const chunk of stored.Body as AsyncIterable<Uint8Array>) {
+        total += chunk.byteLength;
+        if (total > input.expectedByteSize) return null;
+        digest.update(chunk);
+      }
+      if (total !== input.expectedByteSize || digest.digest('base64') !== input.expectedSha256Base64) return null;
+    } catch { return null; }
+
     return {
       objectKey: input.objectKey,
       byteSize: input.expectedByteSize,
@@ -225,6 +273,11 @@ export class ObjectStorageService {
 
   ensurePrefix(objectKey: string, requiredPrefix: string): boolean {
     return objectKey.startsWith(`${requiredPrefix}/`);
+  }
+
+  private discardBody(body: unknown): void {
+    const destroy = (body as { destroy?: () => void } | undefined)?.destroy;
+    if (typeof destroy === 'function') destroy.call(body);
   }
 
   private sha256Hex(base64Digest: string): string {

@@ -40,10 +40,10 @@ class HttpError extends Error {
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required');
 const db = createDatabase(connectionString);
-const port = positiveInteger(process.env.PORT ?? '4300', 'PORT');
+const port = positiveInteger(process.env.NOTIFICATION_GATEWAY_PORT ?? process.env.PORT ?? '4300', 'PORT');
 let stopping = false;
 
-const server = createServer((request, response) => {
+export const server = createServer((request, response) => {
   void handle(request, response).catch((error) => {
     const status = error instanceof HttpError ? error.status : 500;
     const message = error instanceof HttpError ? error.message : 'Notification gateway failed.';
@@ -57,7 +57,7 @@ const server = createServer((request, response) => {
   });
 });
 
-server.listen(port, '0.0.0.0', () => log('info', 'gateway.started', { port }));
+server.listen(port, process.env.NOTIFICATION_GATEWAY_BIND_HOST ?? '0.0.0.0', () => log('info', 'gateway.started', { port }));
 
 async function handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
   const path = request.url?.split('?')[0] ?? '';

@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
   createParamDecorator,
@@ -25,6 +26,19 @@ export class SessionAuthGuard implements CanActivate {
 
     if (!session || session.userStatus !== 'ACTIVE') {
       throw new UnauthorizedException('Authentication required.');
+    }
+
+    if (
+      session.assuranceLevel !== 'AAL2' &&
+      await this.authService.requiresPrivilegedAssurance(session.userId)
+    ) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'STEP_UP_REQUIRED',
+        message: 'A stronger authentication step is required for this privileged account.',
+        requiredAssurance: 'AAL2',
+        currentAssurance: session.assuranceLevel,
+      });
     }
 
     request.authSession = session;

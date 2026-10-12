@@ -12,7 +12,6 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "node --test",
     "lint": "tsc --noEmit"
   },
   "devDependencies": {

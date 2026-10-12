@@ -50,24 +50,26 @@ BEGIN
     '2026-01-01T00:00:00+00', '2026-01-01T00:00:00+00', v_user, v_user
   ) RETURNING id INTO v_policy;
 
-  INSERT INTO buyer_eois (
-    tenant_id, project_id, buyer_profile_id, refund_policy_id,
-    amount, currency, status, created_by
-  ) VALUES (
-    v_tenant, v_project, v_buyer, v_policy,
-    100, 'EGP', 'PAYMENT_PENDING', v_user
-  ) RETURNING id INTO v_eoi;
-
-  INSERT INTO broker_companies (tenant_id, code, name, status)
-  VALUES (v_tenant, 'G4-BROKER', 'Gate 4 Broker', 'ACTIVE')
-  RETURNING id INTO v_broker;
-
   INSERT INTO catalog_unit_types (
     tenant_id, project_id, code, name, indoor_area_sqm, roof_area_sqm,
     garden_area_sqm, status, sort_order
   ) VALUES (
     v_tenant, v_project, 'G4-A', 'Gate 4 Type A', 1, 0, 0, 'ACTIVE', 1
   ) RETURNING id INTO v_unit_type;
+
+  INSERT INTO buyer_eois (
+    tenant_id, project_id, buyer_profile_id, refund_policy_id,
+    amount, currency, status, created_by
+  , selected_unit_type_id, policy_accepted_by) VALUES (
+    v_tenant, v_project, v_buyer, v_policy,
+    100, 'EGP', 'PAYMENT_PENDING', v_user
+  , v_unit_type, v_user) RETURNING id INTO v_eoi;
+
+  INSERT INTO broker_companies (tenant_id, code, name, status)
+  VALUES (v_tenant, 'G4-BROKER', 'Gate 4 Broker', 'ACTIVE')
+  RETURNING id INTO v_broker;
+
+
 
   INSERT INTO pricing_versions (
     tenant_id, project_id, version_number, label, status, effective_at, created_by

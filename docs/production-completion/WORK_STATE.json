@@ -1,79 +1,237 @@
 {
   "schemaVersion": 2,
   "repository": "karimelzoser/realestate",
-  "stage": "IMPLEMENTATION_STARTED",
+  "stage": "PRODUCT_COMPLETION",
   "planningBranch": "plan/egypt-platform-completion",
   "integrationBranch": "completion/egypt-full-platform",
-  "taskBranch": "task/e01-session-stream-revocation",
-  "taskPr": 87,
-  "parentTaskBranch": "task/e01-tenant-lifecycle",
-  "parentTaskPr": 86,
-  "observedHeadBeforeCheckpoint": "4a9aa771d8759c261c6bc5d010ec3a91d8e95a25",
+  "taskBranch": "codex/egypt-platform-completion",
+  "observedHeadBeforeCheckpoint": "5f661351bfbd25b6eec851d195e7872d8e2870cc",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "testedTask": {
-    "taskId": "E01.1",
-    "head": "4a9aa771d8759c261c6bc5d010ec3a91d8e95a25",
-    "status": "TESTED",
-    "pr": 86,
-    "requiredChecks": [
-      "Production Platform Foundation: success",
-      "Full Stack Acceptance Certification: success",
-      "Gate 5 Full Role Parity Certification: success",
-      "Gate 5 Broker Roles Certification: success"
-    ]
-  },
-  "activeTaskId": "E01.2",
-  "activeTaskStatus": "IMPLEMENTED",
-  "taskImplementationHead": "7ad0b1bad661a9042977cae9d403584961fa2bb9",
-  "completedCheckpoint": "E01.1 TESTED and pending review; E01.2 session/access revalidation plus emitted live-stream revocation cases implemented on stacked PR #87; validation running",
-  "nextAction": "Inspect PR #87 exact-head workflows for 7ad0b1ba; require Production Platform Foundation and Full Stack Acceptance Certification to pass, then promote E01.2 to TESTED or fix only concrete failures",
+  "activeTaskId": "E04.1",
+  "activeTaskStatus": "IN_PROGRESS",
+  "completedCheckpoint": "Owner IdP candidate prepared privately; human MFA/admin grant still pending. First premium bilingual public-discovery foundation locally verified:67 normal tests,9 package strict checks, production API/web builds, real DB+HTTP publication/privacy/lifecycle/paging/audit/revocation checks and9 production browser cases with actual EN desktop/AR mobile screenshot review. VPS remains49de56f/schema49; new source not yet rolled out.",
+  "nextAction": "Certify corrected exact-source CI after additive compatibility assertion fix, then build/rehearse/roll own discovery51 image and migrations while preserving secrets/protected baselines. Follow EXECUTION_PLAN all milestones; genuine owner MFA is still pending. Continue publication/type/media UX and full product acceptance.",
   "changedFiles": [
-    "platform/apps/api/src/auth/session-activity.service.ts",
-    "platform/apps/api/src/auth/auth.module.ts",
-    "platform/apps/api/src/realtime/realtime.controller.ts",
-    "platform/apps/api/src/realtime/realtime.service.ts",
-    "platform/apps/api/src/realtime/realtime.module.ts",
-    "platform/apps/api/src/notifications/notification.controller.ts",
-    "platform/apps/api/src/notifications/notification.service.ts",
-    "platform/apps/api/src/notifications/notification.module.ts",
-    "platform/packages/database/tests/full_stack_acceptance.mjs",
-    ".github/workflows/full-stack-acceptance-certification.yml"
+    ".github/workflows/e04-public-discovery.yml",
+    "docs/production-completion/BLOCKERS.md",
+    "docs/production-completion/CURRENT_STATUS_AND_CONTINUATION.md",
+    "docs/production-completion/EXECUTION_PLAN.md",
+    "docs/production-completion/GOAL.json",
+    "docs/production-completion/PROGRESS.md",
+    "docs/production-completion/README.md",
+    "docs/production-completion/TASKS.json",
+    "docs/production-completion/TASKS.md",
+    "docs/production-completion/WORK_STATE.json",
+    "docs/production-completion/evidence/public-discovery51-local.json",
+    "platform/apps/api/package.json",
+    "platform/apps/api/scripts/certify-public-discovery.mjs",
+    "platform/apps/api/src/app.module.ts",
+    "platform/apps/api/src/discovery/discovery.controller.ts",
+    "platform/apps/api/src/discovery/discovery.module.ts",
+    "platform/apps/api/src/discovery/discovery.repository.ts",
+    "platform/apps/api/test/discovery.test.ts",
+    "platform/apps/web/app/design-tokens.css",
+    "platform/apps/web/app/discover/[slug]/page.tsx",
+    "platform/apps/web/app/discover/[slug]/project-detail.tsx",
+    "platform/apps/web/app/discover/discover.module.css",
+    "platform/apps/web/app/discover/discovery-client.tsx",
+    "platform/apps/web/app/discover/page.tsx",
+    "platform/apps/web/app/layout.tsx",
+    "platform/apps/web/app/locale-provider.tsx",
+    "platform/apps/web/app/locale.css",
+    "platform/apps/web/app/page.tsx",
+    "platform/apps/web/app/ui/primitives.tsx",
+    "platform/apps/web/app/ui/ui.module.css",
+    "platform/apps/web/e2e/discovery.spec.mjs",
+    "platform/apps/web/lib/discovery-messages.ts",
+    "platform/deploy/.env.production.example",
+    "platform/deploy/vps/prepare-owner.mjs",
+    "platform/ops/selfhosted-gate7-staging.json",
+    "platform/packages/contracts/package.json",
+    "platform/packages/contracts/src/discovery.ts",
+    "platform/packages/contracts/src/index.ts",
+    "platform/packages/database/migrations/0050_public_project_discovery.sql",
+    "platform/packages/database/migrations/0051_project_publication_authority.sql",
+    "platform/packages/database/src/runtime-readiness.ts",
+    "platform/scripts/verify-quality-contract.mjs"
   ],
   "commandsAndResults": [
-    {"action":"E01.1 exact-head validation","result":"foundation, emitted full stack lifecycle regression, broker role and full role parity passed on 4a9aa771"},
-    {"action":"E01.2 implementation","result":"project/broker/notification SSE now periodically revalidate server session and original access; replay/live paths fail closed and emit access_revoked before completion"},
-    {"action":"E01.2 emitted tests","result":"real SSE tests added for membership suspension, broker-project suspension, support expiry and logout; CI uses 1s revalidation interval"},
-    {"action":"E01.2 PR boundary","result":"draft PR #87 opened stacked on PR #86; exact implementation head 7ad0b1ba"},
-    {"action":"E01.2 foundation partial result","result":"PostgreSQL migrations, strict TypeScript and all production builds passed on 7ad0b1ba; emitted full-stack acceptance still running"}
+    {
+      "action": "E01.1 lifecycle enforcement",
+      "result": "PR #86 implements and certifies central tenant/membership/project lifecycle checks for direct requests"
+    },
+    {
+      "action": "E01.2 long-lived authorization revalidation",
+      "result": "PR #87 certifies session/project/broker/support-scope revalidation during SSE and access_revoked termination"
+    },
+    {
+      "action": "E01.3 focused certification at b5327a716628c88d8ddcff30a6d5803222a61c8f",
+      "result": "E01 Privileged Assurance Certification PASS; Production Foundation PASS; Full Stack Acceptance PASS; Gate 4-5 PASS; Gate 6 Non-Functional PASS; several secondary release checks exposed follow-up issues"
+    },
+    {
+      "action": "E01.3 follow-up hardening",
+      "result": "subsequent commits repair allocation fixture timing, runtime/release checks, observability diagnostics, dependency/security issues and refresh the patched frozen lockfile"
+    },
+    {
+      "action": "final bot-authored head a68e3bd835c628811368775889659b2d16fe46f4",
+      "result": "pull-request workflow records were action_required with zero jobs, so they are not accepted as verification evidence"
+    },
+    {
+      "action": "local tests",
+      "result": "9 API assurance/enrollment tests and 3 runtime-contract tests passed; nine-package strict type/lint checks passed before the final session-activity typed-table correction"
+    },
+    {
+      "action": "E01 final software verification",
+      "result": "28 exact-head workflows success, local real PostgreSQL 18.6 migrations and FULL_STACK_ACCEPTANCE_OK, 14 unit/runtime tests pass"
+    },
+    {
+      "action": "Schema46 EOI choice local verification",
+      "result": "26 normal tests; strict types/lint/all app builds; zero/upgrade migrations; actual repository and domain regression; dedicated concurrency; emitted FULL_STACK_ACCEPTANCE_OK"
+    },
+    {
+      "action": "Trusted-origin mutation security",
+      "result": "Fastify real-hook and header edge regressions; strict type/lint/API build; 30 normal tests and emitted full-stack acceptance including untrusted/missing-Origin logout rejection"
+    },
+    {
+      "action": "Schema49 local security and browser certification",
+      "result": "IDENTITY_ENROLLMENT_CERTIFICATION_OK including signed RS256 IdP, real DB races, raw-SQL reviewer guard, real callback/session preservation and /api cookies; ADMIN_BOOTSTRAP_CERTIFICATION_OK; 48 normal tests; nine-package types/lint; production web build; English/Arabic mobile enrollment UI-only transport passed."
+    },
+    {
+      "action": "Schema49 published-head upgrade follow-up",
+      "result": "Attribution authority and all domain regressions pass; the historical upgrade assertion incorrectly pinned48. It now requires runtime/schema/marker exactly match the latest append-only applied ledger and schema>=48. Local schema47 historical evidence upgraded to49 with E03_ATTRIBUTION_UPGRADE_CERTIFICATION_OK."
+    },
+    {
+      "action": "Actual isolated private-service qualification",
+      "result": "VPS_STORAGE_CERTIFICATION_OK including atomic8-way conditional create, checksum/replay/tamper/CORS/no anonymous reads; VPS_SCANNER_CERTIFICATION_OK genuine ClamAV1.5.4 clean/EICAR/wrong digest/auth; VPS_IDENTITY_CONFIGURATION_OK real realm/client/password+OTP/LoA/PKCE; restricted DB privileges verified."
+    },
+    {
+      "action": "2026-10-12 fresh hosting/source reconciliation",
+      "result": "GitHub completion49de56f equals VPS;45/45 CI success. Railway realestate0 services/deploys; distinct platform-core latest attempts failed. Render returned no services/databases.12 protected VPS containers unchanged."
+    },
+    {
+      "action": "Demo/plan/VPS product gap audit",
+      "result": "HTTP demo/root+standalone+34 module assets200;52 literal route declarations plus aliases/dynamic paths; live business DB all0;19 epics/51 tasks after adding explicit premium UI/event/change/advisor/governance/business work. Browser initialization failed, so no fresh visual/authenticated browser pass is claimed."
+    },
+    {
+      "action": "Initial goal implementation and qualification",
+      "result": "Owner private candidate prepared without verified-email/admin claims; real publication50→authority51 local DB/HTTP checks, normal67/strict9/API+production web/browser9 pass; actual screenshots inspected. No discovery rollout or full platform GO yet."
+    },
+    {
+      "action": "CI additive-upgrade follow-up",
+      "result": "Initial discovery7c9484 has two failed upgrade assertions requiring minimum=latest. Schema/marker remain exactly latest; minimum now validates the existing MFA49 safety floor and <=latest compatibility. Local historical47-seeded evidence upgraded through51 with E03_ATTRIBUTION_UPGRADE_CERTIFICATION_OK. No applied migration/history checks weakened."
+    },
+    {
+      "action": "CodeQL owner handoff follow-up",
+      "result": "Removed HTTP/environment-derived metadata writes; generated credentials only, admin-only IdP correlation and unchanged legacy subject. Actual isolated owner recheck passed with unchanged credentials/no app grant/email verification; corrected exact-head security verdict pending."
+    }
   ],
   "evidencePaths": [
-    "https://github.com/karimelzoser/realestate/pull/86",
-    "https://github.com/karimelzoser/realestate/pull/87",
-    "platform/apps/api/src/auth/session-activity.service.ts",
-    "platform/apps/api/src/realtime/realtime.service.ts",
-    "platform/apps/api/src/notifications/notification.service.ts",
-    "platform/packages/database/tests/full_stack_acceptance.mjs"
+    "docs/production-completion/PLAN.md",
+    "docs/production-completion/TASKS.json",
+    "docs/production-completion/PROGRESS.md",
+    "platform/apps/api/src/auth/auth-assurance.test.ts",
+    "platform/packages/database/tests/e01_privileged_assurance_certification.sql",
+    "platform/packages/database/tests/full_stack_acceptance.mjs",
+    ".github/workflows/e01-privileged-assurance-certification.yml",
+    "docs/production-completion/evidence/hosting-source-reconciliation-20261012.json",
+    "docs/production-completion/PRODUCTION_GAP_AUDIT.md",
+    "docs/production-completion/evidence/product-gap-audit-20261012.json",
+    "docs/production-completion/DEMO_PARITY_MATRIX.csv",
+    "docs/production-completion/EXECUTION_PLAN.md",
+    "docs/production-completion/GOAL.json",
+    "docs/production-completion/evidence/public-discovery51-local.json"
   ],
   "remainingTests": [
-    "Full Stack Acceptance Certification on 7ad0b1ba must prove all four live stream revocation cases",
-    "Confirm completed Production Platform Foundation run on 7ad0b1ba",
-    "Independent review remains required before E01.1/E01.2 integration"
+    "Human owner MFA and offline reviewed activation; public signed S3 and authenticated SSE/browser journeys",
+    "TLS renewal automation, redacted telemetry, backup/restore and bounded load/soak",
+    "Remaining full-product acceptance and live Gate7"
   ],
   "externalBlockerIds": [
-    "DEPLOYMENT_DEFERRED",
-    "PROVIDER_SETUP_PENDING",
-    "INDEPENDENT_REVIEW_PENDING"
+    "HUMAN_OWNER_MFA_PENDING",
+    "DELIVERY_PROVIDER_CREDENTIALS_DEFERRED",
+    "PAYMENT_SIGNATURE_VOICE_ACCEPTANCE_PENDING",
+    "OFF_HOST_RECOVERY_AND_OPERATIONS_PENDING",
+    "INDEPENDENT_ACCEPTANCE_PENDING"
   ],
-  "deploymentAuthorized": false,
+  "deploymentAuthorized": true,
   "acceptedDecisions": {
     "market": "Egypt: developers and brokerages",
     "eoiSelection": "apartment type",
     "allocationSelection": "exact eligible available apartment",
-    "uiLanguages": ["ar", "en"],
-    "initialVoiceLanguages": ["en"],
+    "uiLanguages": [
+      "ar",
+      "en"
+    ],
+    "initialVoiceLanguages": [
+      "en"
+    ],
     "demoHosting": "GitHub Pages, synthetic only",
-    "laterProductionHosting": "existing self-hosted server, Docker, CLI/SSH",
-    "railwayRequired": false
+    "laterProductionHosting": "Isolated VPS after full production acceptance; existing workloads protected",
+    "railwayRequired": false,
+    "currentTestingHosting": "Isolated VPS, HTTPS8443 at realestate-test.aipreneura.com"
+  },
+  "taskPr": 90,
+  "taskImplementationHead": "49de56fadf4caab1242fe0783285792ba58d5f0b",
+  "runtimeSchemaVersion": 49,
+  "migrationMarker": "0049_reviewed_identity_enrollment.sql",
+  "localWorkPreservation": "Unfinished pre-sync locale expansion preserved in named git stash; reuse selectively with canonical locale provider, never duplicate it.",
+  "pendingMigration": [
+    "0050_public_project_discovery.sql",
+    "0051_project_publication_authority.sql"
+  ],
+  "deploymentScope": "Authorized fully isolated VPS project realestate-os-testing; existing n8n/PRENEURA protected; Render deferred",
+  "currentRuntimeSchemaVersion": 49,
+  "hostingDecision": {
+    "active": "isolated VPS",
+    "render": "deferred at user instruction",
+    "server": "187.77.85.198",
+    "directory": "/opt/realestate-os-testing",
+    "composeProject": "realestate-os-testing",
+    "publicHost": "realestate-test.aipreneura.com",
+    "httpsPort": 8443,
+    "protected": [
+      "n8n",
+      "existing PRENEURA platform"
+    ],
+    "sshKeyPath": "C:/Users/LEGION/Downloads/Realestate/.tooling/vps-access/realestate-os-20261012",
+    "privateDatabase": "Healthy PostgreSQL18.6, all49 certified migrations; separate API/worker/gateway/migrator/identity roles",
+    "certificate": "Issued through DNS01; valid through 2027-01-10. Automatic renewal/targeted TXT cleanup pending.",
+    "publicApplication": "LIVE PUBLIC TESTING at https://realestate-test.aipreneura.com:8443/login, source49de56f/schema49; full production acceptance pending",
+    "builder": "Dedicated realestate-os-testing-builder, memory2GiB, CPU0.75; existing default builders/projects unchanged",
+    "services": "Own API/worker/web/HTTPSedge8443+S3edge8444, identity/qualified object store/real ClamAV scanner/private telemetry running"
+  },
+  "externalDependencies": [
+    "User supplies delivery-provider credentials later; prepare and visibly pause phone/external delivery in public-test only",
+    "Human first-owner MFA and independent activation review",
+    "Encrypted off-host backup destination and full production operations/UAT"
+  ],
+  "latestPlanAudit": "docs/production-completion/PRODUCTION_GAP_AUDIT.md",
+  "currentTaskLedger": {
+    "epics": 19,
+    "tasks": 51,
+    "activeTask": "E16.3"
+  },
+  "businessDataSnapshot": {
+    "observedAt": "2026-10-12T18:04:21.828Z",
+    "tenants": 0,
+    "projects": 0,
+    "users": 0,
+    "transactions": 0
+  },
+  "planAuditParent": "24b33a8fe85326319d986941d7eda6298cea26cd",
+  "currentGoal": "docs/production-completion/GOAL.json",
+  "executionPlan": "docs/production-completion/EXECUTION_PLAN.md",
+  "candidateRuntimeSchemaVersion": 51,
+  "ownerPreparation": {
+    "status": "PRIVATE_IDP_CANDIDATE_PREPARED",
+    "applicationAdminGranted": false,
+    "emailVerified": false,
+    "privateHandoffPath": "C:/Users/LEGION/Downloads/Realestate/.tooling/vps-access/owner-handoff/INITIAL_OWNER_ACCESS.txt",
+    "next": "Genuine human password replacement/TOTP/sign-in before reviewed offline activation; no credentials in repo."
+  },
+  "browserVerification": {
+    "directCua": "Unavailable request-header policy",
+    "projectTestRunner": "Production browser9 PASS and screenshot review; hosted authenticated all-role acceptance remains pending"
   }
 }

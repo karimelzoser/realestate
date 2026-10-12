@@ -148,10 +148,10 @@ BEGIN
   INSERT INTO buyer_eois (
     tenant_id, project_id, buyer_profile_id, refund_policy_id,
     amount, currency, status, payment_reference, paid_at, created_by
-  ) VALUES (
+  , selected_unit_type_id, policy_accepted_by) VALUES (
     v_tenant, v_project, v_buyer, v_policy,
     1000.00, 'EGP', 'PAID', 'GATE2-EOI', '2025-12-15T00:00:00+00', v_user
-  ) RETURNING id INTO v_eoi;
+  , v_unit_type, v_user) RETURNING id INTO v_eoi;
 
   INSERT INTO queue_entries (
     tenant_id, project_id, buyer_profile_id, eoi_id,

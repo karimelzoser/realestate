@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { decimalMoneySchema } from './catalog.js';
+import type { PhysicalApartmentSnapshot } from './allocation.js';
 
 export const buyerSourceSchema = z.enum(['DIRECT', 'BROKER', 'INTERNAL']);
 export type BuyerSource = z.infer<typeof buyerSourceSchema>;
@@ -32,6 +33,8 @@ export type InviteProjectBuyerInput = z.infer<typeof inviteProjectBuyerSchema>;
 
 export interface ProjectBuyerEoiSummary {
   eoiId: string;
+  selectedUnitTypeId: string | null;
+  selectedUnitTypeName: string | null;
   status: 'PAYMENT_PENDING' | 'PAID' | 'APPLIED' | 'REFUND_REQUESTED' | 'REFUNDED' | 'CANCELLED' | 'EXPIRED';
   amount: string;
   currency: string;
@@ -80,8 +83,23 @@ export const createBuyerEoiSchema = z.object({
   tenantId: z.uuid(),
   projectId: z.uuid(),
   buyerProfileId: z.uuid(),
+  unitTypeId: z.uuid(),
+  refundPolicyId: z.uuid(),
+  acceptedPolicy: z.literal(true),
 });
 export type CreateBuyerEoiInput = z.infer<typeof createBuyerEoiSchema>;
+
+export interface EoiPolicySnapshot {
+  refundPolicyId: string;
+  versionNumber: number;
+  name: string;
+  amount: string;
+  currency: string;
+  beforeReservationRefundPercent: string;
+  afterReservationBeforeContractRefundPercent: string;
+  afterContractRefundPercent: string;
+  processingFee: string;
+}
 
 export const markEoiPaidSchema = z.object({
   tenantId: z.uuid(),
@@ -179,6 +197,11 @@ export interface QueueEntrySnapshot {
 
 export interface EoiListItemSnapshot {
   eoiId: string;
+  selectedUnitTypeId: string | null;
+  selectedUnitTypeName: string | null;
+  refundPolicyId: string;
+  policyVersionNumber: number | null;
+  policyAcceptedAt: string | null;
   buyerProfileId: string;
   buyerUserId: string;
   buyerDisplayName: string;
@@ -235,6 +258,8 @@ export interface ReservationResult {
   reservationId: string;
   transactionId: string;
   unitTypeId: string;
+  physicalUnitId: string;
+  apartment: PhysicalApartmentSnapshot;
   quotedTotal: string | null;
   currency: string;
   reservedAt: string;
@@ -246,7 +271,7 @@ export interface TransactionListItemSnapshot {
   buyerProfileId: string;
   buyerUserId: string;
   buyerDisplayName: string;
-  buyerSource: BuyerSource;
+  buyerSource: BuyerSource | 'UNRECORDED';
   brokerCompanyId: string | null;
   brokerCompanyName: string | null;
   brokerAgentUserId: string | null;
@@ -254,6 +279,8 @@ export interface TransactionListItemSnapshot {
   unitTypeId: string;
   unitTypeCode: string;
   unitTypeName: string;
+  physicalUnitId: string | null;
+  apartment: PhysicalApartmentSnapshot | null;
   status: 'IN_PROGRESS' | 'READY_FOR_COMPLETION' | 'COMPLETED' | 'CANCELLED';
   quotedTotal: string | null;
   currency: string;

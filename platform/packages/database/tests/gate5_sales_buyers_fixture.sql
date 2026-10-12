@@ -52,3 +52,11 @@ INSERT INTO eoi_refund_policies (
   '51515151-5151-4515-8515-515151515151',
   '51515151-5151-4515-8515-515151515151'
 );
+
+INSERT INTO catalog_unit_types (
+  id, tenant_id, project_id, code, name, indoor_area_sqm, status
+) VALUES (
+  'cccccccc-5151-4515-8515-cccccccccccc',
+  'aaaaaaaa-5151-4515-8515-aaaaaaaaaaaa', 'bbbbbbbb-5151-4515-8515-bbbbbbbbbbbb',
+  'SALES-A', 'Sales apartment type', 100, 'ACTIVE'
+);

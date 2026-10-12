@@ -3,6 +3,12 @@ Thumbs.db
 *.log
 node_modules/
 dist/
+.next/
+.turbo/
+*.tsbuildinfo
+coverage/
+test-results/
+playwright-report/
 .env
 .env.*
 !.env.example

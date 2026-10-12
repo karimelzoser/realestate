@@ -17,10 +17,14 @@ export function validateApiRuntimeConfig(env: NodeJS.ProcessEnv = process.env): 
     MAX_API_BODY_LIMIT_BYTES,
     failures,
   );
+  requireHexSha(env, 'PRENEURA_EXPECTED_RELEASE_SHA', failures);
 
   requireSecret(env, 'AUTH_IDENTIFIER_HMAC_KEY', failures);
   requireSecret(env, 'AUTH_OTP_PEPPER', failures);
+  requireSecret(env, 'IDENTITY_DOCUMENT_HMAC_KEY', failures);
+  requireSecret(env, 'IDENTITY_RECOVERY_OTP_PEPPER', failures);
   requireSecret(env, 'COOKIE_SIGNING_SECRET', failures);
+  requireIntegerRange(env, 'AUTH_STEP_UP_BASE_MAX_AGE_SECONDS', 60, 1800, failures);
   requireSecret(env, 'CONTACT_HMAC_KEY', failures);
   requireSecret(env, 'CONTACT_VERIFICATION_PEPPER', failures);
   requireBase64Key(env, 'CONTACT_ENCRYPTION_KEY_BASE64', 32, failures);
@@ -31,11 +35,15 @@ export function validateApiRuntimeConfig(env: NodeJS.ProcessEnv = process.env): 
   requireAbsoluteUrl(env, 'AUTH_OTP_GATEWAY_URL', failures);
   requireAbsoluteUrl(env, 'CONTACT_VERIFICATION_GATEWAY_URL', failures);
   requireSecret(env, 'NOTIFICATION_GATEWAY_TOKEN', failures);
+  if (env.AUTH_PHONE_LOGIN_ENABLED !== undefined && !['true','false'].includes(env.AUTH_PHONE_LOGIN_ENABLED)) failures.push('AUTH_PHONE_LOGIN_ENABLED must be true or false.');
+  if (env.AUTH_PHONE_LOGIN_ENABLED === 'false' && env.APP_ENV !== 'public-test') failures.push('Phone sign-in can be paused only in the explicitly labeled public-test environment.');
+  if (env.OTP_CHANNEL !== undefined && !['sms','whatsapp'].includes(env.OTP_CHANNEL)) failures.push('OTP_CHANNEL must be sms or whatsapp.');
 
   requireHttpsUrl(env, 'OIDC_ISSUER', failures);
   requireNonPlaceholder(env, 'OIDC_CLIENT_ID', failures);
   requireSecret(env, 'OIDC_CLIENT_SECRET', failures, 16);
   requireHttpsUrl(env, 'OIDC_REDIRECT_URI', failures);
+  requireNonPlaceholder(env, 'OIDC_AAL2_ACR_VALUES', failures);
 
   requireNonPlaceholder(env, 'OBJECT_STORAGE_BUCKET', failures);
   if (env.OBJECT_STORAGE_ENDPOINT?.trim()) {
@@ -160,6 +168,14 @@ function requireHttpsOrigins(env: NodeJS.ProcessEnv, name: string, failures: str
     } catch {
       failures.push(`${name} contains an invalid origin.`);
     }
+  }
+}
+
+function requireHexSha(env: NodeJS.ProcessEnv, name: string, failures: string[]): void {
+  const value = requireNonPlaceholder(env, name, failures);
+  if (!value) return;
+  if (!/^[0-9a-f]{40,64}$/i.test(value)) {
+    failures.push(`${name} must be a 40-64 character hexadecimal commit identity.`);
   }
 }
 

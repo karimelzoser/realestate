@@ -6,6 +6,7 @@ type Env = NodeJS.ProcessEnv;
 
 const longSecret = 's'.repeat(48);
 const encryptionKey = Buffer.alloc(32, 7).toString('base64');
+const releaseSha = 'a'.repeat(40);
 
 const apiBase: Env = {
   NODE_ENV: 'production',
@@ -13,9 +14,13 @@ const apiBase: Env = {
   WEB_ORIGIN: 'https://app.preneura.example',
   TRUST_PROXY_HOPS: '1',
   API_BODY_LIMIT_BYTES: '8388608',
+  PRENEURA_EXPECTED_RELEASE_SHA: releaseSha,
   AUTH_IDENTIFIER_HMAC_KEY: longSecret,
   AUTH_OTP_PEPPER: longSecret,
+  IDENTITY_DOCUMENT_HMAC_KEY: longSecret,
+  IDENTITY_RECOVERY_OTP_PEPPER: longSecret,
   COOKIE_SIGNING_SECRET: longSecret,
+  AUTH_STEP_UP_BASE_MAX_AGE_SECONDS: '600',
   CONTACT_ENCRYPTION_KEY_BASE64: encryptionKey,
   CONTACT_HMAC_KEY: longSecret,
   CONTACT_VERIFICATION_PEPPER: longSecret,
@@ -23,6 +28,7 @@ const apiBase: Env = {
   OIDC_CLIENT_ID: 'preneura-web',
   OIDC_CLIENT_SECRET: longSecret,
   OIDC_REDIRECT_URI: 'https://api.preneura.example/v1/auth/google/callback',
+  OIDC_AAL2_ACR_VALUES: 'urn:preneura:aal2',
   OTP_PROVIDER: 'gateway',
   AUTH_OTP_GATEWAY_URL: 'http://notification-gateway.railway.internal/auth-otp',
   CONTACT_VERIFICATION_GATEWAY_URL: 'http://notification-gateway.railway.internal/contact-verification',
@@ -85,6 +91,24 @@ expectFail('api.localhost-origin', 'localhost', () =>
 expectFail('api.invalid-contact-key', '32 bytes', () =>
   assertApiRuntimeConfiguration({ ...apiBase, CONTACT_ENCRYPTION_KEY_BASE64: Buffer.alloc(16, 1).toString('base64') }),
 );
+expectFail('api.missing-aal2-policy', 'OIDC_AAL2_ACR_VALUES', () =>
+  assertApiRuntimeConfiguration({ ...apiBase, OIDC_AAL2_ACR_VALUES: '' }),
+);
+expectFail('api.invalid-step-up-window', 'AUTH_STEP_UP_BASE_MAX_AGE_SECONDS', () =>
+  assertApiRuntimeConfiguration({ ...apiBase, AUTH_STEP_UP_BASE_MAX_AGE_SECONDS: '30' }),
+);
+expectFail('api.missing-release-pin', 'PRENEURA_EXPECTED_RELEASE_SHA', () =>
+  assertApiRuntimeConfiguration({ ...apiBase, PRENEURA_EXPECTED_RELEASE_SHA: '' }),
+);
+expectFail('api.invalid-release-pin', 'commit identity', () =>
+  assertApiRuntimeConfiguration({ ...apiBase, PRENEURA_EXPECTED_RELEASE_SHA: 'not-a-sha' }),
+);
+expectFail('api.missing-identity-key', 'IDENTITY_DOCUMENT_HMAC_KEY', () =>
+  assertApiRuntimeConfiguration({ ...apiBase, IDENTITY_DOCUMENT_HMAC_KEY: undefined }),
+);
+expectFail('api.missing-recovery-pepper', 'IDENTITY_RECOVERY_OTP_PEPPER', () =>
+  assertApiRuntimeConfiguration({ ...apiBase, IDENTITY_RECOVERY_OTP_PEPPER: undefined }),
+);
 expectPass('api.development-skips-production-contract', () =>
   assertApiRuntimeConfiguration({ NODE_ENV: 'development' }),
 );
@@ -107,6 +131,9 @@ expectFail('worker.invalid-inventory-batch', 'INVENTORY_LOCK_EXPIRY_BATCH_SIZE',
 );
 
 expectPass('gateway.valid', () => assertNotificationGatewayRuntimeConfiguration({ ...gatewayBase }));
+expectFail('gateway.invalid-bind-host', 'NOTIFICATION_GATEWAY_BIND_HOST', () =>
+  assertNotificationGatewayRuntimeConfiguration({ ...gatewayBase, NOTIFICATION_GATEWAY_BIND_HOST: 'public.invalid' }),
+);
 expectFail('gateway.short-token', '32 characters', () =>
   assertNotificationGatewayRuntimeConfiguration({ ...gatewayBase, NOTIFICATION_GATEWAY_TOKEN: 'short' }),
 );

@@ -2,85 +2,9 @@
 
 -- Reuse the certified buyer/property commercial graph, then add only the
 -- identities and runtime probes required for full-stack acceptance.
+\set FULL_STACK_BROKER_ATTRIBUTION true
 \ir gate5_buyer_property_fixture.sql
-
--- Internal project manager plus broker users.
-INSERT INTO users (id, display_name, status) VALUES
-  ('31000000-0000-4000-8000-000000000001', 'Acceptance Manager', 'ACTIVE'),
-  ('32000000-0000-4000-8000-000000000001', 'Acceptance Broker Manager', 'ACTIVE'),
-  ('32000000-0000-4000-8000-000000000002', 'Acceptance Broker Agent', 'ACTIVE');
-
-INSERT INTO tenant_memberships (tenant_id, user_id, status) VALUES
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '31000000-0000-4000-8000-000000000001', 'ACTIVE'),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '32000000-0000-4000-8000-000000000001', 'ACTIVE'),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', '32000000-0000-4000-8000-000000000002', 'ACTIVE');
-
-INSERT INTO broker_companies (id, tenant_id, code, name, status)
-VALUES (
-  '33000000-0000-4000-8000-000000000001',
-  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  'ACCEPT-BROKER', 'Acceptance Brokerage', 'ACTIVE'
-);
-
-INSERT INTO broker_project_access (
-  broker_company_id, tenant_id, project_id, status, effective_from
-) VALUES (
-  '33000000-0000-4000-8000-000000000001',
-  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-  'ACTIVE', '2025-01-01T00:00:00+00'
-);
-
-INSERT INTO access_role_assignments (
-  id, user_id, role_code, scope_type, tenant_id, project_id, broker_company_id,
-  status, granted_by
-) VALUES
-  (
-    '31000000-1000-4000-8000-000000000001',
-    '31000000-0000-4000-8000-000000000001',
-    'MANAGER', 'PROJECT',
-    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', NULL,
-    'ACTIVE', '31000000-0000-4000-8000-000000000001'
-  ),
-  (
-    '32000000-1000-4000-8000-000000000001',
-    '32000000-0000-4000-8000-000000000001',
-    'BROKER_MANAGER', 'BROKER_COMPANY',
-    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', NULL,
-    '33000000-0000-4000-8000-000000000001',
-    'ACTIVE', '31000000-0000-4000-8000-000000000001'
-  ),
-  (
-    '32000000-1000-4000-8000-000000000002',
-    '32000000-0000-4000-8000-000000000002',
-    'BROKER_AGENT', 'BROKER_COMPANY',
-    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', NULL,
-    '33000000-0000-4000-8000-000000000001',
-    'ACTIVE', '32000000-0000-4000-8000-000000000001'
-  );
-
--- Attribute Buyer A to the broker agent for scoped broker tests.
-UPDATE buyer_profiles
-SET source = 'BROKER',
-    broker_company_id = '33000000-0000-4000-8000-000000000001',
-    broker_agent_user_id = '32000000-0000-4000-8000-000000000002',
-    updated_at = now()
-WHERE id = '10000000-0000-4000-8000-000000000001';
-
-INSERT INTO broker_commission_plans (
-  id, tenant_id, project_id, broker_company_id, version_number, status,
-  rate_percent, due_days_after_eligibility, effective_at, activated_at,
-  created_by, created_at, updated_at
-) VALUES (
-  '34000000-0000-4000-8000-000000000001',
-  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-  '33000000-0000-4000-8000-000000000001',
-  1, 'ACTIVE', 5, 30,
-  '2025-01-01T00:00:00+00', '2025-01-01T00:00:00+00',
-  '31000000-0000-4000-8000-000000000001', now(), now()
-);
+\unset FULL_STACK_BROKER_ATTRIBUTION
 
 -- A second tenant/project exists only to prove isolation.
 INSERT INTO tenants (id, code, name, status, default_currency, default_timezone)
@@ -122,6 +46,56 @@ INSERT INTO auth_sessions (id, user_id, token_digest, expires_at) VALUES
     digest('acceptance-broker-agent-token-0000001', 'sha256'),
     now() + interval '2 hours'
   );
+
+-- Acceptance uses explicit assurance evidence. Manager/finance-like roles are
+-- synthetic AAL2 OIDC sessions; ordinary buyer/broker-agent sessions remain AAL1.
+INSERT INTO auth_session_assurance (
+  session_id, auth_method, assurance_level, provider_acr, provider_amr
+) VALUES
+  (
+    '51000000-0000-4000-8000-000000000001',
+    'OTP', 'AAL1', NULL, '[]'::jsonb
+  ),
+  (
+    '51000000-0000-4000-8000-000000000002',
+    'OIDC_GOOGLE', 'AAL2', 'urn:preneura:aal2', '["mfa"]'::jsonb
+  ),
+  (
+    '51000000-0000-4000-8000-000000000003',
+    'OIDC_GOOGLE', 'AAL2', 'urn:preneura:aal2', '["mfa"]'::jsonb
+  ),
+  (
+    '51000000-0000-4000-8000-000000000004',
+    'OTP', 'AAL1', NULL, '[]'::jsonb
+  );
+
+-- Pre-seed the disposable support identity so its session can carry AAL2
+-- evidence before the runtime test renews its expiry/support grant.
+INSERT INTO users (id, display_name, status)
+VALUES ('36000000-0000-4000-8000-000000000001', 'Acceptance Support Admin', 'ACTIVE');
+
+INSERT INTO access_role_assignments (
+  id, user_id, role_code, scope_type, tenant_id, project_id, broker_company_id, status
+) VALUES (
+  '36000000-0000-4000-8000-000000000002',
+  '36000000-0000-4000-8000-000000000001',
+  'PRENEURA_SUPER_ADMIN', 'PLATFORM', NULL, NULL, NULL, 'ACTIVE'
+);
+
+INSERT INTO auth_sessions (id, user_id, token_digest, expires_at)
+VALUES (
+  '36000000-0000-4000-8000-000000000003',
+  '36000000-0000-4000-8000-000000000001',
+  digest('acceptance-super-admin-token-000000001', 'sha256'),
+  now() + interval '1 hour'
+);
+
+INSERT INTO auth_session_assurance (
+  session_id, auth_method, assurance_level, provider_acr, provider_amr
+) VALUES (
+  '36000000-0000-4000-8000-000000000003',
+  'OIDC_GOOGLE', 'AAL2', 'urn:preneura:aal2', '["mfa"]'::jsonb
+);
 
 -- Runtime worker probes: one outbox event, one in-app notification and one
 -- expired lock that must be reclaimed by the emitted production worker.

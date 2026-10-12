@@ -114,18 +114,19 @@ export class ExportService {
 
   private async rowsFor(input: { actorUserId: string; tenantId: string; projectId: string; dataset: ExportDataset }, scope: ExportScope): Promise<ExportRow[]> {
     const buyerScope = this.buyerScope(scope);
+    const dealScope = this.dealScope(scope);
     switch (input.dataset) {
       case 'buyers':
-        return (await sql<ExportRow>`SELECT bp.id AS buyer_id,u.display_name AS buyer_name,bp.source,bp.status,bc.name AS broker_company,agent.display_name AS broker_agent,bp.created_at
-          FROM buyer_profiles bp JOIN users u ON u.id=bp.user_id LEFT JOIN broker_companies bc ON bc.id=bp.broker_company_id LEFT JOIN users agent ON agent.id=bp.broker_agent_user_id
+        return (await sql<ExportRow>`SELECT bp.id AS buyer_id,u.display_name AS buyer_name,attribution.source,bp.status,bc.name AS broker_company,agent.display_name AS broker_agent,bp.created_at
+          FROM buyer_profiles bp JOIN buyer_project_attributions attribution ON attribution.buyer_profile_id=bp.id AND attribution.tenant_id=bp.tenant_id AND attribution.project_id=${input.projectId}::uuid JOIN users u ON u.id=bp.user_id LEFT JOIN broker_companies bc ON bc.id=attribution.broker_company_id LEFT JOIN users agent ON agent.id=attribution.broker_agent_user_id
           WHERE bp.tenant_id=${input.tenantId}::uuid ${buyerScope} ORDER BY bp.created_at DESC`.execute(this.db)).rows;
       case 'eois':
-        return (await sql<ExportRow>`SELECT e.id AS eoi_id,u.display_name AS buyer_name,e.amount,e.currency,e.status,p.name AS refund_policy,e.paid_at,e.applied_at,e.refund_requested_at,e.refunded_at,e.created_at
-          FROM buyer_eois e JOIN buyer_profiles bp ON bp.id=e.buyer_profile_id JOIN users u ON u.id=bp.user_id JOIN eoi_refund_policies p ON p.id=e.refund_policy_id
+        return (await sql<ExportRow>`SELECT e.id AS eoi_id,u.display_name AS buyer_name,e.selected_unit_type_id,e.selected_unit_type_snapshot->>'name' AS selected_apartment_type,e.amount,e.currency,e.status,p.name AS refund_policy,e.paid_at,e.applied_at,e.refund_requested_at,e.refunded_at,e.created_at
+          FROM buyer_eois e JOIN buyer_profiles bp ON bp.id=e.buyer_profile_id JOIN buyer_project_attributions attribution ON attribution.buyer_profile_id=bp.id AND attribution.tenant_id=e.tenant_id AND attribution.project_id=e.project_id JOIN users u ON u.id=bp.user_id JOIN eoi_refund_policies p ON p.id=e.refund_policy_id
           WHERE e.tenant_id=${input.tenantId}::uuid AND e.project_id=${input.projectId}::uuid ${buyerScope} ORDER BY e.created_at DESC`.execute(this.db)).rows;
       case 'queue':
         return (await sql<ExportRow>`SELECT q.id AS queue_id,u.display_name AS buyer_name,q.channel,q.priority_group,q.priority_score,q.status,q.checked_in_at,q.called_at,q.completed_at
-          FROM queue_entries q JOIN buyer_profiles bp ON bp.id=q.buyer_profile_id JOIN users u ON u.id=bp.user_id
+          FROM queue_entries q JOIN buyer_profiles bp ON bp.id=q.buyer_profile_id JOIN buyer_project_attributions attribution ON attribution.buyer_profile_id=bp.id AND attribution.tenant_id=q.tenant_id AND attribution.project_id=q.project_id JOIN users u ON u.id=bp.user_id
           WHERE q.tenant_id=${input.tenantId}::uuid AND q.project_id=${input.projectId}::uuid ${buyerScope} ORDER BY q.checked_in_at`.execute(this.db)).rows;
       case 'inventory':
         return (await sql<ExportRow>`SELECT ut.code AS unit_type_code,ut.name AS unit_type,ut.bedroom_count,ut.indoor_area_sqm,ut.roof_area_sqm,ut.garden_area_sqm,
@@ -136,24 +137,24 @@ export class ExportService {
           FROM pricing_versions pv JOIN pricing_rates pr ON pr.pricing_version_id=pv.id JOIN catalog_unit_types ut ON ut.id=pr.unit_type_id
           WHERE pv.tenant_id=${input.tenantId}::uuid AND pv.project_id=${input.projectId}::uuid AND pv.status IN ('PUBLISHED','SCHEDULED') ORDER BY pv.version_number DESC,ut.sort_order,pr.component`.execute(this.db)).rows;
       case 'transactions':
-        return (await sql<ExportRow>`SELECT t.id AS transaction_id,u.display_name AS buyer_name,t.status,ut.code AS unit_type_code,ut.name AS unit_type,r.quoted_total,r.currency,t.opened_at,t.completed_at,t.cancelled_at
+        return (await sql<ExportRow>`SELECT t.id AS transaction_id,u.display_name AS buyer_name,t.status,r.buyer_source_snapshot AS buyer_source,r.broker_company_id_snapshot AS broker_company_id,r.broker_agent_user_id_snapshot AS broker_agent_user_id,ut.code AS unit_type_code,ut.name AS unit_type,r.physical_unit_id,r.apartment_snapshot->>'apartmentReference' AS apartment_reference,r.apartment_snapshot->>'buildingName' AS building,r.apartment_snapshot->>'floorName' AS floor,r.quoted_total,r.currency,t.opened_at,t.completed_at,t.cancelled_at
           FROM transactions t JOIN buyer_profiles bp ON bp.id=t.buyer_profile_id JOIN users u ON u.id=bp.user_id JOIN reservations r ON r.id=t.reservation_id JOIN catalog_unit_types ut ON ut.id=r.unit_type_id
-          WHERE t.tenant_id=${input.tenantId}::uuid AND t.project_id=${input.projectId}::uuid ${buyerScope} ORDER BY t.opened_at DESC`.execute(this.db)).rows;
+          WHERE t.tenant_id=${input.tenantId}::uuid AND t.project_id=${input.projectId}::uuid ${dealScope} ORDER BY t.opened_at DESC`.execute(this.db)).rows;
       case 'payments':
         return (await sql<ExportRow>`SELECT t.id AS transaction_id,u.display_name AS buyer_name,psi.sequence_number,psi.item_type,psi.amount,psi.due_at,psi.status,COALESCE(sum(a.amount),0) AS net_allocated,(psi.amount-COALESCE(sum(a.amount),0)) AS remaining_amount
-          FROM payment_schedule_items psi JOIN payment_schedules ps ON ps.id=psi.payment_schedule_id JOIN transactions t ON t.id=ps.transaction_id JOIN buyer_profiles bp ON bp.id=t.buyer_profile_id JOIN users u ON u.id=bp.user_id LEFT JOIN finance_payment_allocations a ON a.payment_schedule_item_id=psi.id
-          WHERE ps.tenant_id=${input.tenantId}::uuid AND ps.project_id=${input.projectId}::uuid ${buyerScope} GROUP BY t.id,u.display_name,psi.id ORDER BY u.display_name,psi.sequence_number`.execute(this.db)).rows;
+          FROM payment_schedule_items psi JOIN payment_schedules ps ON ps.id=psi.payment_schedule_id JOIN transactions t ON t.id=ps.transaction_id JOIN reservations r ON r.id=t.reservation_id JOIN buyer_profiles bp ON bp.id=t.buyer_profile_id JOIN users u ON u.id=bp.user_id LEFT JOIN finance_payment_allocations a ON a.payment_schedule_item_id=psi.id
+          WHERE ps.tenant_id=${input.tenantId}::uuid AND ps.project_id=${input.projectId}::uuid ${dealScope} GROUP BY t.id,u.display_name,psi.id ORDER BY u.display_name,psi.sequence_number`.execute(this.db)).rows;
       case 'cheques':
         return (await sql<ExportRow>`SELECT t.id AS transaction_id,u.display_name AS buyer_name,c.sequence_number,c.generation,c.amount,c.due_at,c.cheque_number,c.bank_name,c.status,c.received_at
-          FROM transaction_cheques c JOIN transactions t ON t.id=c.transaction_id JOIN buyer_profiles bp ON bp.id=t.buyer_profile_id JOIN users u ON u.id=bp.user_id
-          WHERE c.tenant_id=${input.tenantId}::uuid AND c.project_id=${input.projectId}::uuid ${buyerScope} ORDER BY u.display_name,c.sequence_number,c.generation`.execute(this.db)).rows;
+          FROM transaction_cheques c JOIN transactions t ON t.id=c.transaction_id JOIN reservations r ON r.id=t.reservation_id JOIN buyer_profiles bp ON bp.id=t.buyer_profile_id JOIN users u ON u.id=bp.user_id
+          WHERE c.tenant_id=${input.tenantId}::uuid AND c.project_id=${input.projectId}::uuid ${dealScope} ORDER BY u.display_name,c.sequence_number,c.generation`.execute(this.db)).rows;
       case 'documents':
         return (await sql<ExportRow>`SELECT t.id AS transaction_id,u.display_name AS buyer_name,d.category,d.revision_number,d.status,d.original_filename,d.mime_type,d.byte_size,d.uploaded_at,d.verified_at
-          FROM transaction_documents d JOIN transactions t ON t.id=d.transaction_id JOIN buyer_profiles bp ON bp.id=t.buyer_profile_id JOIN users u ON u.id=bp.user_id
-          WHERE d.tenant_id=${input.tenantId}::uuid AND d.project_id=${input.projectId}::uuid ${buyerScope} ORDER BY d.created_at DESC`.execute(this.db)).rows;
+          FROM transaction_documents d JOIN transactions t ON t.id=d.transaction_id JOIN reservations r ON r.id=t.reservation_id JOIN buyer_profiles bp ON bp.id=t.buyer_profile_id JOIN users u ON u.id=bp.user_id
+          WHERE d.tenant_id=${input.tenantId}::uuid AND d.project_id=${input.projectId}::uuid ${dealScope} ORDER BY d.created_at DESC`.execute(this.db)).rows;
       case 'refunds':
         return (await sql<ExportRow>`SELECT r.id AS refund_request_id,u.display_name AS buyer_name,r.stage,r.original_eoi_amount,r.refund_percent,r.processing_fee,r.requested_amount,r.currency,r.status,r.requested_at,r.reviewed_at,r.paid_at,r.decision_note
-          FROM eoi_refund_requests r JOIN buyer_profiles bp ON bp.id=r.buyer_profile_id JOIN users u ON u.id=bp.user_id
+          FROM eoi_refund_requests r JOIN buyer_profiles bp ON bp.id=r.buyer_profile_id JOIN buyer_project_attributions attribution ON attribution.buyer_profile_id=bp.id AND attribution.tenant_id=r.tenant_id AND attribution.project_id=r.project_id JOIN users u ON u.id=bp.user_id
           WHERE r.tenant_id=${input.tenantId}::uuid AND r.project_id=${input.projectId}::uuid ${buyerScope} ORDER BY r.requested_at DESC`.execute(this.db)).rows;
       case 'commissions': {
         const canAmount = await this.hasPermission(input,'commission.amount.read');
@@ -188,13 +189,19 @@ export class ExportService {
   private buyerScope(scope: ExportScope): RawBuilder<unknown> {
     if (scope.kind === 'PROJECT') return sql``;
     if (scope.kind === 'SELF') return sql`AND bp.user_id=${scope.userId}::uuid`;
-    return sql`AND bp.broker_company_id = ANY(${scope.brokerCompanyIds}::uuid[]) ${scope.agentUserId ? sql`AND bp.broker_agent_user_id=${scope.agentUserId}::uuid` : sql``}`;
+    return sql`AND attribution.broker_company_id = ANY(${scope.brokerCompanyIds}::uuid[]) ${scope.agentUserId ? sql`AND attribution.broker_agent_user_id=${scope.agentUserId}::uuid` : sql``}`;
   }
 
   private commissionScope(scope: ExportScope): RawBuilder<unknown> {
     if (scope.kind === 'PROJECT') return sql``;
     if (scope.kind === 'BROKER') return sql`AND c.broker_company_id = ANY(${scope.brokerCompanyIds}::uuid[]) ${scope.agentUserId ? sql`AND c.broker_agent_user_id=${scope.agentUserId}::uuid` : sql``}`;
     return sql`AND FALSE`;
+  }
+
+  private dealScope(scope: ExportScope): RawBuilder<unknown> {
+    if(scope.kind==='PROJECT')return sql``;
+    if(scope.kind==='SELF')return sql`AND bp.user_id=${scope.userId}::uuid`;
+    return sql`AND r.broker_company_id_snapshot=ANY(${scope.brokerCompanyIds}::uuid[]) ${scope.agentUserId?sql`AND r.broker_agent_user_id_snapshot=${scope.agentUserId}::uuid`:sql``}`;
   }
 
   private async hasPermission(input: { actorUserId: string; tenantId: string; projectId: string }, permission: PermissionCode): Promise<boolean> {

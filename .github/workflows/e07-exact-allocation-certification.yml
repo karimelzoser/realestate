@@ -1,0 +1,103 @@
+name: E07 Exact Apartment Allocation Certification
+
+on:
+  pull_request:
+    paths:
+      - 'platform/**'
+      - '.github/workflows/e07-exact-allocation-certification.yml'
+  push:
+    branches: ['codex/egypt-platform-completion', 'release/**']
+    paths:
+      - 'platform/**'
+      - '.github/workflows/e07-exact-allocation-certification.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura_exact_certification
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura_exact_certification"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_exact_certification
+      MIGRATION_ACTOR: github-e07-exact-allocation-certification
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Migrate disposable database from zero
+        run: pnpm --filter @preneura/database migrate
+      - name: Normal authorization and contract tests
+        run: pnpm test
+      - name: Build emitted API
+        run: pnpm --filter @preneura/api build
+      - name: Real exact apartment race, frozen price, reservation and executed-contract certification
+        run: node apps/api/scripts/certify-exact-allocation.mjs
+      - name: Existing pricing, finance, document and allocator regression
+        run: |
+          set -Eeuo pipefail
+          for suite in gate2_pricing_certification gate3_document_contract_trust_certification gate3_finance_ledger_certification gate4_finance_integration_certification gate4_settlement_ledger_certification gate4_settlement_command_authority_certification gate5_reception_allocator_certification; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "packages/database/tests/${suite}.sql"
+          done
+      - name: Strict typecheck
+        run: pnpm typecheck
+      - name: Build production browser client
+        env:
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:3030
+          NEXT_PUBLIC_APP_ENV: public-test
+          PRENEURA_API_UPSTREAM: http://127.0.0.1:4120
+        run: pnpm --filter @preneura/web build
+      - name: Install certification browser
+        run: pnpm --filter @preneura/web exec playwright install --with-deps chromium
+      - name: English desktop and Arabic mobile exact allocation
+        env:
+          PORT: '4120'
+          WEB_ORIGIN: http://127.0.0.1:3030
+          OBJECT_STORAGE_BUCKET: acceptance-documents
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:3030
+          NEXT_PUBLIC_APP_ENV: public-test
+          PRENEURA_API_UPSTREAM: http://127.0.0.1:4120
+        run: |
+          set -Eeuo pipefail
+          node apps/api/scripts/seed-exact-allocation-browser.mjs
+          node apps/api/dist/main.js > /tmp/e07-api.log 2>&1 &
+          api_pid=$!
+          NODE_ENV=production pnpm --filter @preneura/web exec next start --hostname 127.0.0.1 --port 3030 > /tmp/e07-web.log 2>&1 &
+          web_pid=$!
+          trap 'kill "$api_pid" "$web_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4120/v1/health >/dev/null && curl -fsS http://127.0.0.1:3030/login >/dev/null; then break; fi
+            sleep 1
+          done
+          pnpm --filter @preneura/web exec playwright test e2e/exact-allocation.spec.mjs
+      - name: Preserve browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e07-exact-allocation-browser
+          path: platform/apps/web/test-results
+          retention-days: 14

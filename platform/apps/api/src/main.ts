@@ -10,9 +10,10 @@ import {
   registerHttpSecurity,
   resolveApiBodyLimit,
   resolveTrustProxy,
+  safeRequestLog,
 } from './security/http-security.js';
 
-async function bootstrap(): Promise<void> {
+async function bootstrap(): Promise<NestFastifyApplication> {
   validateApiRuntimeConfig();
 
   const adapter = new FastifyAdapter({
@@ -20,6 +21,7 @@ async function bootstrap(): Promise<void> {
       ? false
       : {
           level: process.env.LOG_LEVEL ?? 'info',
+          serializers: { req: safeRequestLog },
           redact: {
             paths: [
               'req.headers.authorization',
@@ -48,7 +50,7 @@ async function bootstrap(): Promise<void> {
     annotateActiveSpan({
       'preneura.request_id': request.id,
       'http.request.method': request.method,
-      'url.path': request.url,
+      'url.path': request.url.split('?')[0] ?? '/',
     });
   });
 
@@ -69,6 +71,7 @@ async function bootstrap(): Promise<void> {
     throw new Error('PORT must be a valid TCP port.');
   }
   await app.listen({ port, host: '0.0.0.0' });
+  return app;
 }
 
-void bootstrap();
+export const apiStartup = bootstrap();

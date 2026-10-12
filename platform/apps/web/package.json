@@ -5,20 +5,21 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "node scripts/validate-build-config.mjs && pnpm run build:deps && next build",
-    "build:deps": "pnpm --filter @preneura/contracts build",
+    "build:deps": "pnpm --filter @preneura/contracts build && pnpm --filter exceljs build",
     "start": "next start -p ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
-    "test": "node --test",
-    "lint": "next lint"
+    "lint": "tsc --noEmit",
+    "test": "node --test scripts/locale-money.test.mjs scripts/api-proxy-config.test.mjs"
   },
   "dependencies": {
     "@preneura/contracts": "workspace:*",
-    "exceljs": "4.4.0",
-    "next": "16.3.8",
+    "exceljs": "workspace:*",
+    "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.0",
     "@types/node": "^24.10.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",

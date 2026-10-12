@@ -1,10 +1,13 @@
 'use client';
 
 import { roleHasPermission, type WorkspaceContextSnapshot } from '@preneura/contracts/access';
-import type { InvitedProjectBuyerSnapshot, ProjectBuyerSnapshot } from '@preneura/contracts/sales';
+import type { EoiPolicySnapshot, InvitedProjectBuyerSnapshot, ProjectBuyerSnapshot } from '@preneura/contracts/sales';
+import type { UnitTypeCommercialSnapshot } from '@preneura/contracts/catalog';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError, apiFetch } from '../../lib/api';
 import styles from './sales.module.css';
+import { useLocale } from '../../locale-provider';
+import { eoiMessages } from '../../../lib/eoi-messages';
 
 const projectStorageKey = 'preneura:selected-project';
 
@@ -23,9 +26,14 @@ const emptyInvite: InviteForm = {
 };
 
 export default function SalesBuyersClient() {
+  const { locale, formatAmount } = useLocale();
+  const copy = eoiMessages[locale];
   const [workspace, setWorkspace] = useState<WorkspaceContextSnapshot | null>(null);
   const [projectId, setProjectId] = useState('');
   const [buyers, setBuyers] = useState<ProjectBuyerSnapshot[]>([]);
+  const [catalog, setCatalog] = useState<UnitTypeCommercialSnapshot[]>([]);
+  const [eoiPolicy, setEoiPolicy] = useState<EoiPolicySnapshot | null>(null);
+  const [eoiChoices, setEoiChoices] = useState<Record<string, { unitTypeId: string; accepted: boolean }>>({});
   const [invite, setInvite] = useState<InviteForm>(emptyInvite);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -88,7 +96,16 @@ export default function SalesBuyersClient() {
     window.localStorage.setItem(projectStorageKey, project.projectId);
     setLoading(true);
     setError('');
-    void loadBuyers(project.tenantId, project.projectId)
+    setEoiPolicy(null);
+    setCatalog([]);
+    setEoiChoices({});
+    void Promise.all([
+      loadBuyers(project.tenantId, project.projectId),
+      apiFetch<UnitTypeCommercialSnapshot[]>(`/v1/tenants/${project.tenantId}/projects/${project.projectId}/catalog`),
+      apiFetch<EoiPolicySnapshot | null>(`/v1/tenants/${project.tenantId}/projects/${project.projectId}/eoi-policy`),
+    ]).then(([, units, policy]) => {
+      if (!cancelled) { setCatalog(units); setEoiPolicy(policy); }
+    })
       .catch((reason: unknown) => {
         if (!cancelled) setError(reason instanceof Error ? reason.message : 'Unable to load project buyers.');
       })
@@ -128,19 +145,24 @@ export default function SalesBuyersClient() {
   }
 
   async function createEoi(buyer: ProjectBuyerSnapshot): Promise<void> {
-    if (!project || !canCreateEoi) return;
+    const choice = eoiChoices[buyer.buyerProfileId];
+    if (!project || !canCreateEoi || !eoiPolicy || !choice?.unitTypeId || !choice.accepted) return;
     setBusy(`eoi:${buyer.buyerProfileId}`);
     setError('');
     setMessage('');
     try {
       const result = await apiFetch<{ eoiId: string; amount: string; currency: string }>(
         `/v1/tenants/${project.tenantId}/projects/${project.projectId}/buyers/${buyer.buyerProfileId}/eois`,
-        { method: 'POST' },
+        { method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ unitTypeId: choice.unitTypeId, refundPolicyId: eoiPolicy.refundPolicyId, acceptedPolicy: true }) },
       );
-      setMessage(`EOI created for ${buyer.displayName}: ${money(result.amount, result.currency)}. Payment remains pending finance verification.`);
+      setMessage(`${buyer.displayName} · ${formatAmount(result.amount, result.currency)} · ${copy.pending}`);
       await loadBuyers(project.tenantId, project.projectId);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Unable to create EOI.');
+      setError(copy.failed);
+      setEoiChoices((current) => ({ ...current, [buyer.buyerProfileId]: { unitTypeId: choice.unitTypeId, accepted: false } }));
+      const freshPolicy = await apiFetch<EoiPolicySnapshot | null>(`/v1/tenants/${project.tenantId}/projects/${project.projectId}/eoi-policy`).catch(() => null);
+      setEoiPolicy(freshPolicy);
     } finally {
       setBusy(null);
     }
@@ -167,6 +189,18 @@ export default function SalesBuyersClient() {
 
       {message ? <div className={styles.success}>{message}</div> : null}
       {error ? <div className={styles.error}>{error}</div> : null}
+
+      {canCreateEoi ? <section className={styles.policyCard} aria-label={copy.title}>
+        <h2>{copy.title}</h2><p>{copy.distinction}</p>
+        {eoiPolicy ? <dl>
+          <div><dt>{copy.amount}</dt><dd>{formatAmount(eoiPolicy.amount, eoiPolicy.currency)}</dd></div>
+          <div><dt>{copy.policy}</dt><dd>{eoiPolicy.name} · {copy.version} {eoiPolicy.versionNumber}</dd></div>
+          <div><dt>{copy.before}</dt><dd>{eoiPolicy.beforeReservationRefundPercent}%</dd></div>
+          <div><dt>{copy.after}</dt><dd>{eoiPolicy.afterReservationBeforeContractRefundPercent}%</dd></div>
+          <div><dt>{copy.contract}</dt><dd>{eoiPolicy.afterContractRefundPercent}%</dd></div>
+          <div><dt>{copy.fee}</dt><dd>{formatAmount(eoiPolicy.processingFee, eoiPolicy.currency)}</dd></div>
+        </dl> : <p>{copy.unavailable}</p>}
+      </section> : null}
 
       {canInvite ? (
         <section className={styles.inviteCard}>
@@ -215,7 +249,9 @@ export default function SalesBuyersClient() {
         {!loading && buyers.length === 0 ? <div className={styles.empty}>No buyers are attached to this project yet.</div> : null}
         <div className={styles.buyers}>
           {buyers.map((buyer) => {
-            const canStartEoi = canCreateEoi && (!buyer.latestEoi || ['REFUNDED', 'CANCELLED', 'EXPIRED'].includes(buyer.latestEoi.status));
+            const canStartEoi = !loading && canCreateEoi && (!buyer.latestEoi || ['REFUNDED', 'CANCELLED', 'EXPIRED'].includes(buyer.latestEoi.status));
+            const choice = eoiChoices[buyer.buyerProfileId];
+            const selectedType = catalog.find((item) => item.unitTypeId === choice?.unitTypeId);
             return (
               <article className={styles.buyer} key={buyer.buyerProfileId}>
                 <div className={styles.identity}>
@@ -229,7 +265,8 @@ export default function SalesBuyersClient() {
                 <div className={styles.eoi}>
                   {buyer.latestEoi ? (
                     <>
-                      <strong>{money(buyer.latestEoi.amount, buyer.latestEoi.currency)}</strong>
+                      <strong>{formatAmount(buyer.latestEoi.amount, buyer.latestEoi.currency)}</strong>
+                      <span>{buyer.latestEoi.selectedUnitTypeName ?? copy.legacy}</span>
                       <span data-eoi={buyer.latestEoi.status}>{human(buyer.latestEoi.status)}</span>
                     </>
                   ) : (
@@ -238,9 +275,19 @@ export default function SalesBuyersClient() {
                 </div>
                 <div className={styles.actions}>
                   {canStartEoi ? (
-                    <button type="button" disabled={busy === `eoi:${buyer.buyerProfileId}`} onClick={() => void createEoi(buyer)}>
-                      {busy === `eoi:${buyer.buyerProfileId}` ? 'Creating…' : 'Initiate EOI'}
-                    </button>
+                    <form className={styles.eoiChoice} onSubmit={(event) => { event.preventDefault(); void createEoi(buyer); }}>
+                      <label><span>{copy.type}</span><select required value={choice?.unitTypeId ?? ''}
+                        onChange={(event) => setEoiChoices((current) => ({ ...current, [buyer.buyerProfileId]: { unitTypeId: event.target.value, accepted: false } }))}>
+                        <option value="">{copy.choose}</option>
+                        {catalog.map((item) => <option key={item.unitTypeId} value={item.unitTypeId}>{item.name} · {item.code}</option>)}
+                      </select></label>
+                      {selectedType ? <small>{copy.current}: {selectedType.currentTotalPrice ? formatAmount(selectedType.currentTotalPrice, selectedType.currency) : copy.noPrice}</small> : null}
+                      <label className={styles.acceptPolicy}><input type="checkbox" required checked={choice?.accepted ?? false}
+                        onChange={(event) => setEoiChoices((current) => ({ ...current, [buyer.buyerProfileId]: { unitTypeId: choice?.unitTypeId ?? '', accepted: event.target.checked } }))} />{copy.accept}</label>
+                      <button type="submit" disabled={!eoiPolicy || !choice?.accepted || !choice.unitTypeId || busy !== null}>
+                        {busy === `eoi:${buyer.buyerProfileId}` ? copy.creating : copy.create}
+                      </button>
+                    </form>
                   ) : (
                     <span>{buyer.latestEoi ? 'EOI active' : 'No EOI permission'}</span>
                   )}
@@ -252,13 +299,6 @@ export default function SalesBuyersClient() {
       </section>
     </main>
   );
-}
-
-function money(value: string, currency: string): string {
-  const parsed = Number(value);
-  return Number.isFinite(parsed)
-    ? new Intl.NumberFormat('en-EG', { style: 'currency', currency, maximumFractionDigits: 2 }).format(parsed)
-    : `${value} ${currency}`;
 }
 
 function human(value: string): string {

@@ -5,18 +5,20 @@ import type {
   CheckInQueueInput,
   CreateBuyerProfileInput,
   CreateEoiRefundPolicyInput,
+  EoiPolicySnapshot,
   QueueEntrySnapshot,
   ReservationResult,
   TransactionMilestoneCode,
   TransactionProgressSnapshot,
 } from '@preneura/contracts/sales';
 import { DATABASE } from '../database/database.module.js';
+import type { PhysicalApartmentSnapshot } from '@preneura/contracts/allocation';
 
 export interface BuyerProfileRecord {
   id: string;
   tenantId: string;
   userId: string;
-  source: 'DIRECT' | 'BROKER' | 'INTERNAL';
+  source: 'DIRECT' | 'BROKER' | 'INTERNAL' | 'UNRECORDED';
   brokerCompanyId: string | null;
   brokerAgentUserId: string | null;
 }
@@ -52,20 +54,22 @@ export class SalesRepository {
   async getBuyerProfile(input: {
     tenantId: string;
     buyerProfileId: string;
+    projectId: string;
   }): Promise<BuyerProfileRecord | null> {
     const row = await this.db
-      .selectFrom('buyer_profiles')
+      .selectFrom('buyer_profiles as b')
+      .innerJoin('buyer_project_attributions as attribution',join=>join.onRef('attribution.buyer_profile_id','=','b.id').onRef('attribution.tenant_id','=','b.tenant_id').on('attribution.project_id','=',input.projectId))
       .select([
-        'id',
-        'tenant_id',
-        'user_id',
-        'source',
-        'broker_company_id',
-        'broker_agent_user_id',
+        'b.id',
+        'b.tenant_id',
+        'b.user_id',
+        'attribution.source',
+        'attribution.broker_company_id',
+        'attribution.broker_agent_user_id',
       ])
-      .where('tenant_id', '=', input.tenantId)
-      .where('id', '=', input.buyerProfileId)
-      .where('status', '=', 'ACTIVE')
+      .where('b.tenant_id', '=', input.tenantId)
+      .where('b.id', '=', input.buyerProfileId)
+      .where('b.status', '=', 'ACTIVE')
       .executeTakeFirst();
     if (!row) return null;
     return {
@@ -78,54 +82,43 @@ export class SalesRepository {
     };
   }
 
-  async createBuyerProfile(input: {
-    actorUserId: string;
-    data: CreateBuyerProfileInput;
-  }): Promise<string> {
-    return this.db.transaction().execute(async (trx) => {
-      const row = await trx
-        .insertInto('buyer_profiles')
-        .values({
-          tenant_id: input.data.tenantId,
-          user_id: input.data.userId,
-          status: 'ACTIVE',
-          source: input.data.source,
-          broker_company_id: input.data.brokerCompanyId ?? null,
-          broker_agent_user_id: input.data.brokerAgentUserId ?? null,
-          created_by: input.actorUserId,
-        })
-        .onConflict((oc) =>
-          oc.columns(['tenant_id', 'user_id']).doUpdateSet({
-            status: 'ACTIVE',
-            source: input.data.source,
-            broker_company_id: input.data.brokerCompanyId ?? null,
-            broker_agent_user_id: input.data.brokerAgentUserId ?? null,
-            updated_at: new Date(),
-          }),
-        )
-        .returning('id')
-        .executeTakeFirstOrThrow();
+  async getTransactionBuyer(input:{tenantId:string;projectId:string;transactionId:string}):Promise<BuyerProfileRecord|null> {
+    const row=await this.db.selectFrom('transactions as t').innerJoin('reservations as r',join=>join.onRef('r.id','=','t.reservation_id').onRef('r.tenant_id','=','t.tenant_id').onRef('r.project_id','=','t.project_id'))
+      .innerJoin('buyer_profiles as b',join=>join.onRef('b.id','=','t.buyer_profile_id').onRef('b.tenant_id','=','t.tenant_id'))
+      .select(['b.id','b.tenant_id','b.user_id','r.buyer_source_snapshot','r.broker_company_id_snapshot','r.broker_agent_user_id_snapshot'])
+      .where('t.id','=',input.transactionId).where('t.tenant_id','=',input.tenantId).where('t.project_id','=',input.projectId).executeTakeFirst();
+    return row?{id:row.id,tenantId:row.tenant_id,userId:row.user_id,source:row.buyer_source_snapshot??'UNRECORDED',
+      brokerCompanyId:row.broker_company_id_snapshot,brokerAgentUserId:row.broker_agent_user_id_snapshot}:null;
+  }
 
-      await trx
-        .insertInto('domain_outbox_events')
-        .values({
-          tenant_id: input.data.tenantId,
-          project_id: input.data.projectId,
-          aggregate_type: 'BUYER_PROFILE',
-          aggregate_id: row.id,
-          event_type: 'buyer.profile.upserted',
-          payload: {
-            buyerUserId: input.data.userId,
-            source: input.data.source,
-            brokerCompanyId: input.data.brokerCompanyId ?? null,
-            brokerAgentUserId: input.data.brokerAgentUserId ?? null,
-            actorUserId: input.actorUserId,
-          },
-          published_at: null,
-          attempts: 0,
-        })
-        .execute();
-      return row.id;
+  async createBuyerProfile(input: { actorUserId: string; data: CreateBuyerProfileInput }): Promise<string> {
+    return this.db.transaction().execute(async (trx) => {
+      if(input.data.source==='BROKER') {
+        const eligible=await sql<{ok:boolean}>`SELECT preneura_attribution_target_eligible(${input.data.tenantId}::uuid,${input.data.projectId}::uuid,
+          ${input.data.brokerCompanyId??null}::uuid,${input.data.brokerAgentUserId??null}::uuid) AS ok`.execute(trx);
+        if(!eligible.rows[0]?.ok)throw new ConflictException('Current brokerage or agent is not eligible for this project.');
+      }
+      const created=await trx.insertInto('buyer_profiles').values({tenant_id:input.data.tenantId,user_id:input.data.userId,status:'ACTIVE',
+        source:input.data.source,broker_company_id:input.data.brokerCompanyId??null,broker_agent_user_id:input.data.brokerAgentUserId??null,created_by:input.actorUserId})
+        .onConflict(oc=>oc.columns(['tenant_id','user_id']).doNothing()).returning(['id','status']).executeTakeFirst();
+      const profile=created??await trx.selectFrom('buyer_profiles').select(['id','status']).where('tenant_id','=',input.data.tenantId).where('user_id','=',input.data.userId).forShare().executeTakeFirstOrThrow();
+      if(profile.status!=='ACTIVE')throw new ConflictException('Buyer profile lifecycle must be managed through its authorized workflow.');
+      const bound=await trx.insertInto('buyer_project_attributions').values({tenant_id:input.data.tenantId,project_id:input.data.projectId,buyer_profile_id:profile.id,
+        source:input.data.source,broker_company_id:input.data.brokerCompanyId??null,broker_agent_user_id:input.data.brokerAgentUserId??null,created_by:input.actorUserId})
+        .onConflict(oc=>oc.columns(['buyer_profile_id','project_id']).doNothing()).returning('buyer_profile_id').executeTakeFirst();
+      if(!bound) {
+        const existing=await trx.selectFrom('buyer_project_attributions').select(['source','broker_company_id','broker_agent_user_id'])
+          .where('tenant_id','=',input.data.tenantId).where('project_id','=',input.data.projectId).where('buyer_profile_id','=',profile.id).forUpdate().executeTakeFirstOrThrow();
+        const ownDirectRetry=input.actorUserId===input.data.userId&&input.data.source==='DIRECT'&&!input.data.brokerCompanyId&&!input.data.brokerAgentUserId;
+        if(!ownDirectRetry&&(existing.source!==input.data.source||existing.broker_company_id!==(input.data.brokerCompanyId??null)||existing.broker_agent_user_id!==(input.data.brokerAgentUserId??null))) {
+          throw new ConflictException('Existing project buyer attribution requires an approved transfer.');
+        }
+        return profile.id;
+      }
+      await trx.insertInto('domain_outbox_events').values({tenant_id:input.data.tenantId,project_id:input.data.projectId,aggregate_type:'BUYER_PROFILE',aggregate_id:profile.id,
+        event_type:'buyer.profile.upserted',payload:{buyerUserId:input.data.userId,source:input.data.source,brokerCompanyId:input.data.brokerCompanyId??null,
+          brokerAgentUserId:input.data.brokerAgentUserId??null,actorUserId:input.actorUserId},published_at:null,attempts:0}).execute();
+      return profile.id;
     });
   }
 
@@ -208,9 +201,18 @@ export class SalesRepository {
     tenantId: string;
     projectId: string;
     buyerProfileId: string;
+    unitTypeId: string;
+    refundPolicyId: string;
     now: Date;
   }): Promise<{ eoiId: string; amount: string; currency: string }> {
     return this.db.transaction().execute(async (trx) => {
+      const project = await trx.selectFrom('projects').select('id')
+        .where('id', '=', input.projectId).where('tenant_id', '=', input.tenantId)
+        .where('status', '=', 'ACTIVE').forShare().executeTakeFirst();
+      if (!project) throw new ConflictException('This project is not open for EOI.');
+      const registration=await trx.selectFrom('buyer_project_attributions').select('buyer_profile_id')
+        .where('tenant_id','=',input.tenantId).where('project_id','=',input.projectId).where('buyer_profile_id','=',input.buyerProfileId).forShare().executeTakeFirst();
+      if(!registration)throw new ConflictException('Complete buyer registration for this project before creating an EOI.');
       const policy = await trx
         .selectFrom('eoi_refund_policies')
         .select(['id', 'eoi_amount', 'currency'])
@@ -220,8 +222,15 @@ export class SalesRepository {
         .where('effective_at', '<=', input.now)
         .orderBy('effective_at', 'desc')
         .orderBy('version_number', 'desc')
+        .forShare()
         .executeTakeFirst();
       if (!policy) throw new ConflictException('No active EOI refund policy is effective for this project.');
+      if (policy.id !== input.refundPolicyId) throw new ConflictException('The EOI policy changed. Review the current policy before continuing.');
+      const unitType = await trx.selectFrom('catalog_unit_types').select('id')
+        .where('id', '=', input.unitTypeId).where('tenant_id', '=', input.tenantId)
+        .where('project_id', '=', input.projectId).where('status', '=', 'ACTIVE')
+        .forShare().executeTakeFirst();
+      if (!unitType) throw new NotFoundException('Active apartment type not found in this project.');
 
       const row = await trx
         .insertInto('buyer_eois')
@@ -230,6 +239,8 @@ export class SalesRepository {
           project_id: input.projectId,
           buyer_profile_id: input.buyerProfileId,
           refund_policy_id: policy.id,
+          selected_unit_type_id: input.unitTypeId,
+          policy_accepted_by: input.actorUserId,
           amount: policy.eoi_amount as string,
           currency: policy.currency,
           status: 'PAYMENT_PENDING',
@@ -241,8 +252,20 @@ export class SalesRepository {
           expires_at: null,
           created_by: input.actorUserId,
         })
+        .onConflict((oc) => oc.columns(['buyer_profile_id', 'project_id'])
+          .where(sql<boolean>`status IN ('PAYMENT_PENDING','PAID','APPLIED','REFUND_REQUESTED')`).doNothing())
         .returning(['id', 'amount', 'currency'])
-        .executeTakeFirstOrThrow();
+        .executeTakeFirst();
+      if (!row) {
+        const existing = await trx.selectFrom('buyer_eois').select(['id', 'amount', 'currency', 'selected_unit_type_id', 'refund_policy_id'])
+          .where('buyer_profile_id', '=', input.buyerProfileId).where('tenant_id', '=', input.tenantId)
+          .where('project_id', '=', input.projectId).where('status', 'in', ['PAYMENT_PENDING','PAID','APPLIED','REFUND_REQUESTED'])
+          .executeTakeFirst();
+        if (existing?.selected_unit_type_id === input.unitTypeId && existing.refund_policy_id === input.refundPolicyId) {
+          return { eoiId: existing.id, amount: String(existing.amount), currency: existing.currency };
+        }
+        throw new ConflictException('A live EOI already exists with a different selection or policy.');
+      }
 
       await trx
         .insertInto('domain_outbox_events')
@@ -252,7 +275,8 @@ export class SalesRepository {
           aggregate_type: 'EOI',
           aggregate_id: row.id,
           event_type: 'eoi.created',
-          payload: { buyerProfileId: input.buyerProfileId, actorUserId: input.actorUserId },
+          payload: { buyerProfileId: input.buyerProfileId, actorUserId: input.actorUserId,
+            selectedUnitTypeId: input.unitTypeId, refundPolicyId: policy.id },
           published_at: null,
           attempts: 0,
         })
@@ -260,6 +284,21 @@ export class SalesRepository {
 
       return { eoiId: row.id, amount: row.amount as string, currency: row.currency };
     });
+  }
+
+  async activeEoiPolicy(input: { tenantId: string; projectId: string; now: Date }): Promise<EoiPolicySnapshot | null> {
+    const row = await this.db.selectFrom('eoi_refund_policies')
+      .select(['id', 'version_number', 'name', 'eoi_amount', 'currency',
+        'before_reservation_refund_percent', 'after_reservation_before_contract_refund_percent',
+        'after_contract_refund_percent', 'processing_fee'])
+      .where('tenant_id', '=', input.tenantId).where('project_id', '=', input.projectId)
+      .where('status', '=', 'ACTIVE').where('effective_at', '<=', input.now)
+      .orderBy('effective_at', 'desc').orderBy('version_number', 'desc').executeTakeFirst();
+    return row ? { refundPolicyId: row.id, versionNumber: row.version_number, name: row.name,
+      amount: String(row.eoi_amount), currency: row.currency,
+      beforeReservationRefundPercent: String(row.before_reservation_refund_percent),
+      afterReservationBeforeContractRefundPercent: String(row.after_reservation_before_contract_refund_percent),
+      afterContractRefundPercent: String(row.after_contract_refund_percent), processingFee: String(row.processing_fee) } : null;
   }
 
   async markEoiPaid(input: {
@@ -429,6 +468,19 @@ export class SalesRepository {
         .executeTakeFirst();
       if (!buyer) throw new NotFoundException('Buyer profile not found.');
 
+      const existing = await trx.selectFrom('reservations as r').innerJoin('transactions as t','t.reservation_id','r.id')
+        .select(['r.id','t.id as transaction_id','r.unit_type_id','r.physical_unit_id','r.apartment_snapshot','r.quoted_total','r.currency','r.reserved_at'])
+        .where('r.inventory_lock_id','=',input.lockId).where('r.tenant_id','=',input.tenantId)
+        .where('r.project_id','=',input.projectId).where('r.buyer_profile_id','=',buyer.id)
+        .where('r.queue_entry_id','=',input.queueEntryId).where('r.reserved_by','=',input.actorUserId)
+        .where('r.status','in',['ACTIVE','COMPLETED']).executeTakeFirst();
+      if (existing?.physical_unit_id && existing.apartment_snapshot) {
+        return { reservationId:existing.id,transactionId:existing.transaction_id,unitTypeId:existing.unit_type_id,
+          physicalUnitId:existing.physical_unit_id,apartment:existing.apartment_snapshot as unknown as PhysicalApartmentSnapshot,
+          quotedTotal:existing.quoted_total===null ? null : String(existing.quoted_total),currency:existing.currency,
+          reservedAt:(existing.reserved_at as Date).toISOString() };
+      }
+
       const queue = await trx
         .selectFrom('queue_entries')
         .select(['id', 'buyer_profile_id', 'eoi_id', 'status'])
@@ -443,7 +495,7 @@ export class SalesRepository {
 
       const eoi = await trx
         .selectFrom('buyer_eois')
-        .select(['id', 'status'])
+        .select(['id', 'status', 'selected_unit_type_id'])
         .where('id', '=', queue.eoi_id)
         .where('tenant_id', '=', input.tenantId)
         .where('project_id', '=', input.projectId)
@@ -460,6 +512,8 @@ export class SalesRepository {
           'id',
           'unit_type_id',
           'inventory_slot_id',
+          'physical_unit_id',
+          'allocation_quote_id',
           'buyer_user_id',
           'status',
           'expires_at',
@@ -475,44 +529,17 @@ export class SalesRepository {
       if (lock.buyer_user_id && lock.buyer_user_id !== buyer.user_id) {
         throw new ConflictException('The inventory lock belongs to a different buyer.');
       }
+      if (!lock.physical_unit_id || !lock.allocation_quote_id || eoi.selected_unit_type_id !== lock.unit_type_id) {
+        throw new ConflictException('Reservation requires the exact apartment quote selected for this EOI type.');
+      }
 
-      const price = await sql<{
-        pricingVersionId: string;
-        quotedTotal: string;
-        currency: string;
-      }>`
-        SELECT
-          pv.id AS "pricingVersionId",
-          round(sum(
-            CASE r.component
-              WHEN 'INDOOR' THEN ut.indoor_area_sqm * r.rate_per_sqm
-              WHEN 'ROOF' THEN ut.roof_area_sqm * r.rate_per_sqm
-              WHEN 'GARDEN' THEN ut.garden_area_sqm * r.rate_per_sqm
-            END
-          ), 2)::text AS "quotedTotal",
-          p.currency AS "currency"
-        FROM pricing_versions pv
-        JOIN pricing_rates r
-          ON r.pricing_version_id = pv.id
-         AND r.tenant_id = pv.tenant_id
-         AND r.project_id = pv.project_id
-        JOIN catalog_unit_types ut
-          ON ut.id = r.unit_type_id
-         AND ut.tenant_id = pv.tenant_id
-         AND ut.project_id = pv.project_id
-        JOIN projects p ON p.id = pv.project_id AND p.tenant_id = pv.tenant_id
-        WHERE pv.tenant_id = ${input.tenantId}
-          AND pv.project_id = ${input.projectId}
-          AND pv.status IN ('PUBLISHED','SCHEDULED')
-          AND pv.published_at IS NOT NULL
-          AND pv.effective_at <= ${input.now}
-          AND r.unit_type_id = ${lock.unit_type_id}
-        GROUP BY pv.id, pv.effective_at, pv.version_number, p.currency
-        ORDER BY pv.effective_at DESC, pv.version_number DESC
-        LIMIT 1
-      `.execute(trx);
-      const quote = price.rows[0];
-      if (!quote) throw new ConflictException('No effective published pricing exists for this unit type.');
+      const quote = await trx.selectFrom('allocation_quotes')
+        .select(['id','pricing_version_id as pricingVersionId','quoted_total as quotedTotal','currency','apartment_snapshot'])
+        .where('id','=',lock.allocation_quote_id).where('tenant_id','=',input.tenantId).where('project_id','=',input.projectId)
+        .where('queue_entry_id','=',queue.id).where('buyer_user_id','=',buyer.user_id)
+        .where('allocator_user_id','=',input.actorUserId).where('physical_unit_id','=',lock.physical_unit_id)
+        .forShare().executeTakeFirst();
+      if (!quote) throw new ConflictException('Owned exact apartment quote not found for this reservation.');
 
       await trx
         .updateTable('inventory_locks')
@@ -538,6 +565,9 @@ export class SalesRepository {
           inventory_lock_id: lock.id,
           inventory_slot_id: lock.inventory_slot_id,
           unit_type_id: lock.unit_type_id,
+          physical_unit_id: lock.physical_unit_id,
+          allocation_quote_id: quote.id,
+          apartment_snapshot: quote.apartment_snapshot,
           pricing_version_id: quote.pricingVersionId,
           quoted_total: quote.quotedTotal,
           currency: quote.currency,
@@ -607,6 +637,8 @@ export class SalesRepository {
           event_type: 'reservation.created',
           metadata: {
             reservationId: reservation.id,
+            physicalUnitId: lock.physical_unit_id,
+            quoteId: quote.id,
             unitTypeId: lock.unit_type_id,
             quotedTotal: quote.quotedTotal,
             currency: quote.currency,
@@ -623,7 +655,7 @@ export class SalesRepository {
             aggregate_type: 'RESERVATION',
             aggregate_id: reservation.id,
             event_type: 'reservation.created',
-            payload: { buyerProfileId: buyer.id, transactionId: transaction.id },
+            payload: { buyerProfileId: buyer.id, transactionId: transaction.id, physicalUnitId: lock.physical_unit_id, quoteId: quote.id },
             published_at: null,
             attempts: 0,
           },
@@ -633,7 +665,7 @@ export class SalesRepository {
             aggregate_type: 'TRANSACTION',
             aggregate_id: transaction.id,
             event_type: 'transaction.opened',
-            payload: { buyerProfileId: buyer.id, reservationId: reservation.id },
+            payload: { buyerProfileId: buyer.id, reservationId: reservation.id, physicalUnitId: lock.physical_unit_id, quoteId: quote.id },
             published_at: null,
             attempts: 0,
           },
@@ -643,6 +675,8 @@ export class SalesRepository {
       return {
         reservationId: reservation.id,
         transactionId: transaction.id,
+        physicalUnitId: lock.physical_unit_id,
+        apartment: quote.apartment_snapshot as unknown as PhysicalApartmentSnapshot,
         unitTypeId: lock.unit_type_id,
         quotedTotal: quote.quotedTotal,
         currency: quote.currency,

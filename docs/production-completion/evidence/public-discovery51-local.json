@@ -1,0 +1,51 @@
+{
+  "observedAt": "2026-10-12T18:57:25.013Z",
+  "scope": "First premium public-discovery foundation; not complete platform acceptance",
+  "candidateSchema": 51,
+  "candidateMarker": "0051_project_publication_authority",
+  "liveVpsSource": "49de56fadf4caab1242fe0783285792ba58d5f0b",
+  "liveVpsSchema": 49,
+  "tests": {
+    "normalTests": {
+      "passed": 67,
+      "failed": 0
+    },
+    "strictTypeLintPackages": 9,
+    "apiBuild": "PASS after51",
+    "webProductionBuild": "PASS; unchanged visual source after database-only51 guard",
+    "database": "PASS migrations0→50→51, real publication/privacy/lifecycle/Arabic search/pagination/scope/audit/revoked authority/no-delete checks",
+    "http": "PASS real Nest/Fastify anonymous read,404,400,unauthenticated publication401; separate synthetic local DB",
+    "browser": "9 PASS on production Next server; seven discovery fixture cases and two enrollment regression cases",
+    "visual": "Actual production screenshots inspected for English1440 and Arabic390; additional development Arabic320 inspected"
+  },
+  "visualFiles": [
+    {
+      "path": "C:/Users/LEGION/Downloads/Realestate/.tooling/evidence/public-discovery51/en-desktop.png",
+      "sha256": "fabb05849bb53e3aa9a4733a42066519f8b7ce6f6a62eceba01fa2a379e7a269",
+      "bytes": 176884,
+      "manuallyInspected": true
+    },
+    {
+      "path": "C:/Users/LEGION/Downloads/Realestate/.tooling/evidence/public-discovery51/ar-mobile.png",
+      "sha256": "0d9b0eb79ff16b1e7b8d51a1ee81ab6d84b9f500aeffd7f85bfa42527f4356d1",
+      "bytes": 75798,
+      "manuallyInspected": true
+    }
+  ],
+  "providerLimit": "UI fixture transport is not hosted provider/production integration. Existing unused storage configuration only constructs the local HTTP test application.",
+  "owner": {
+    "preparedInIndependentIdp": true,
+    "requiredActions": [
+      "UPDATE_PASSWORD",
+      "CONFIGURE_TOTP"
+    ],
+    "emailMarkedVerified": false,
+    "applicationAdminGranted": false,
+    "privateCredentialsPublished": false,
+    "genuineMfa": "PENDING human interaction; last VPS session count0"
+  },
+  "deployment": "New discovery source/schema not yet published/certified/rolled out; protected12 baselines unchanged.",
+  "ciInitialHead": "7c948425d1b73abe2a3b7c7ce987ba62f9efeefb",
+  "ciUpgradeFollowup": "Two attribution-upgrade jobs assumed minimum runtime equals latest schema. Additive50/51 correctly retain49 compatibility. Assertion now requires exact schema/marker ledger plus MFA safety floor49<=minimum<=latest; historical47→51 data/evidence assertion passed locally without changing migrations or frozen-history checks.",
+  "securityFollowup": "Initial CodeQL flagged response/environment-derived file contents in the offline owner utility. Handoff writes now contain only fresh local random/static values; identity correlation uses an admin-only managed IdP attribute. Existing prepared credentials are preserved; actual recheck passed with no admin/email-verification changes. New CodeQL verdict still required."
+}
