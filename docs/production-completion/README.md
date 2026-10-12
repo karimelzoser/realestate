@@ -1,7 +1,9 @@
-# Production completion handover
+# PRENEURA production completion handover
 
-Resume codex/egypt-platform-completion, draft [PR90](https://github.com/karimelzoser/realestate/pull/90). Read WORK_STATE/TASKS/CURRENT_STATUS/CONTINUE/DECISIONS/VPS_DEPLOYMENT and the full PLAN; preserve concurrent/local work.
+Start with [the verified gap audit](PRODUCTION_GAP_AUDIT.md): demo/application/VPS feature matrix, M0–M8 roadmap, premium Arabic/English UX, business readiness and ten final gates. Then read WORK_STATE, TASKS, PLAN, DECISIONS, BLOCKERS, SERVICE_READINESS and CONTINUE.
 
-The current target is the isolated realestate-os-testing VPS project. n8n and existing PRENEURA must remain untouched. Schema49 head4b2a6a7 has42 green CI runs and its image/database are prepared. Independent identity, qualified private S3, real antivirus and private redacted telemetry are running. Current63-test storage/provider-defer/runtime slice is locally verified and pending publication/public rollout. User will supply delivery credentials later; phone/external delivery remain visibly paused only in public testing. Human MFA/owner activation, public integration, off-host restore/load and full product acceptance remain.
+Resume codex/egypt-platform-completion, draft [PR90](https://github.com/karimelzoser/realestate/pull/90); preserve local/concurrent work. Public testing https://realestate-test.aipreneura.com:8443/login runs49de56f/schema49, with45 inspected CI runs passing for that source. Independent services are deployed; live business counts were0 tenants/projects/users/transactions. Full customer/provider/UX/operational acceptance is unfinished.
 
-CHATGPT_MASTER_PROMPT.md includes the full plan and current authority; continue resumes the unfinished slice without re-asking settled decisions.
+Only the isolated realestate-os-testing VPS project is authorized. Existing n8n/PRENEURA are protected; Render is deferred. Delivery credentials are deferred by the user. Human owner MFA and populated onboarding are immediate priorities. The ledger now contains19 epics/51 tasks; all accepted demo feature families remain in scope.
+
+CHATGPT_MASTER_PROMPT.md contains current execution instructions and points to the full persisted plan. Continue resumes the same unfinished acceptance without re-asking settled choices or claiming synthetic/demo evidence is live production.

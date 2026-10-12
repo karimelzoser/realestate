@@ -1,0 +1,602 @@
+{
+  "observedAt": "2026-10-12T18:04:21.828Z",
+  "sourceScope": {
+    "repo": "karimelzoser/realestate",
+    "branch": "codex/egypt-platform-completion",
+    "auditedCheckpoint": "24b33a8fe85326319d986941d7eda6298cea26cd",
+    "runtime": "49de56fadf4caab1242fe0783285792ba58d5f0b",
+    "demoMain": "1a6e61c891e040221f09c773e6de589928a9a0b7",
+    "operationalCheckpointCI": {
+      "head": "24b33a8fe85326319d986941d7eda6298cea26cd",
+      "inspected": 42,
+      "success": 42
+    }
+  },
+  "inspectionLimits": {
+    "freshVisualBrowserPass": false,
+    "reason": "CUA request-header policy failed to load; IAB unavailable and Chrome retry failed",
+    "authenticatedLiveJourney": false,
+    "method": "HTTP reads, deployed asset checks, source/task/plan review and read-only own-VPS process/business-count inspection"
+  },
+  "publicHttp": [
+    {
+      "url": "https://karimelzoser.github.io/realestate/",
+      "status": 200,
+      "headers": {
+        "contentType": "text/html; charset=utf-8",
+        "robots": null
+      }
+    },
+    {
+      "url": "https://realestate-test.aipreneura.com:8443/login",
+      "status": 200,
+      "headers": {
+        "contentType": "text/html; charset=utf-8",
+        "robots": "noindex, nofollow"
+      }
+    },
+    {
+      "url": "https://realestate-test.aipreneura.com:8443/healthz",
+      "status": 200,
+      "headers": {
+        "contentType": "application/json; charset=utf-8",
+        "robots": "noindex, nofollow"
+      },
+      "json": {
+        "status": "ready",
+        "service": "preneura-api",
+        "build": {
+          "gitSha": "49de56fadf4caab1242fe0783285792ba58d5f0b",
+          "builtAt": "2026-10-12T15:38:13.252Z",
+          "expectedGitSha": "49de56fadf4caab1242fe0783285792ba58d5f0b",
+          "matchesExpected": true
+        },
+        "checks": {
+          "database": "ok",
+          "schema": "ok",
+          "runtimeSchemaVersion": 49,
+          "databaseSchemaVersion": 49,
+          "minimumRuntimeVersion": 49,
+          "migrationMarker": "0049_reviewed_identity_enrollment",
+          "latencyMs": 1
+        }
+      }
+    },
+    {
+      "url": "https://realestate-test.aipreneura.com:8443/api/v1/auth/capabilities",
+      "status": 200,
+      "headers": {
+        "contentType": "application/json; charset=utf-8",
+        "robots": "noindex, nofollow"
+      },
+      "json": {
+        "phoneSignInEnabled": false,
+        "oidcSignInEnabled": true,
+        "oidcProvider": "ORGANIZATION",
+        "defaultOtpChannel": "whatsapp"
+      }
+    }
+  ],
+  "demo": {
+    "rootStatus": 200,
+    "standaloneStatus": 200,
+    "standaloneUtf8Bytes": 2349871,
+    "standaloneSha256": "9c4829649568ddafee45e83ec4fede302849cf37ec6bf63fbf2f53b82b6d394b",
+    "modularAssets": [
+      {
+        "path": "src/core/product-model.js",
+        "status": 200,
+        "bytes": 7411
+      },
+      {
+        "path": "src/core/role-policy.js",
+        "status": 200,
+        "bytes": 3992
+      },
+      {
+        "path": "src/core/state.js",
+        "status": 200,
+        "bytes": 3256
+      },
+      {
+        "path": "src/features/live-allocation/index.css",
+        "status": 200,
+        "bytes": 13992
+      },
+      {
+        "path": "src/features/live-allocation/index.js",
+        "status": 200,
+        "bytes": 18155
+      },
+      {
+        "path": "src/core/flow-navigation.css",
+        "status": 200,
+        "bytes": 1919
+      },
+      {
+        "path": "src/core/flow-navigation.js",
+        "status": 200,
+        "bytes": 2647
+      },
+      {
+        "path": "src/core/router.css",
+        "status": 200,
+        "bytes": 1197
+      },
+      {
+        "path": "src/core/router.js",
+        "status": 200,
+        "bytes": 5816
+      },
+      {
+        "path": "src/features/buyer-experience/index.css",
+        "status": 200,
+        "bytes": 13148
+      },
+      {
+        "path": "src/features/buyer-experience/index.js",
+        "status": 200,
+        "bytes": 50979
+      },
+      {
+        "path": "src/features/how-it-works/index.css",
+        "status": 200,
+        "bytes": 9489
+      },
+      {
+        "path": "src/features/how-it-works/index.js",
+        "status": 200,
+        "bytes": 15281
+      },
+      {
+        "path": "src/features/flow-preview/index.css",
+        "status": 200,
+        "bytes": 2652
+      },
+      {
+        "path": "src/features/flow-preview/index.js",
+        "status": 200,
+        "bytes": 12972
+      },
+      {
+        "path": "src/features/flow-preview/contract.js",
+        "status": 200,
+        "bytes": 3252
+      },
+      {
+        "path": "src/features/local-voice-agent/index.css",
+        "status": 200,
+        "bytes": 7379
+      },
+      {
+        "path": "src/features/local-voice-agent/engine.js",
+        "status": 200,
+        "bytes": 9285
+      },
+      {
+        "path": "src/features/local-voice-agent/config64.js",
+        "status": 200,
+        "bytes": 388
+      },
+      {
+        "path": "src/features/local-voice-agent/audio.js",
+        "status": 200,
+        "bytes": 10969
+      },
+      {
+        "path": "src/features/local-voice-agent/index.js",
+        "status": 200,
+        "bytes": 16908
+      },
+      {
+        "path": "src/features/local-voice-agent/lifecycle.js",
+        "status": 200,
+        "bytes": 1145
+      },
+      {
+        "path": "src/features/production-ops/index.css",
+        "status": 200,
+        "bytes": 8499
+      },
+      {
+        "path": "src/features/production-ops/index.js",
+        "status": 200,
+        "bytes": 52362
+      },
+      {
+        "path": "src/features/manager-live/index.css",
+        "status": 200,
+        "bytes": 7549
+      },
+      {
+        "path": "src/features/manager-live/index.js",
+        "status": 200,
+        "bytes": 29769
+      },
+      {
+        "path": "src/features/presentation/index.css",
+        "status": 200,
+        "bytes": 3731
+      },
+      {
+        "path": "src/features/presentation/index.js",
+        "status": 200,
+        "bytes": 17298
+      },
+      {
+        "path": "src/features/presentation/voice-polish.js",
+        "status": 200,
+        "bytes": 1333
+      },
+      {
+        "path": "src/features/local-voice-agent/english-only.css",
+        "status": 200,
+        "bytes": 3392
+      },
+      {
+        "path": "src/features/local-voice-agent/english-only.js",
+        "status": 200,
+        "bytes": 17224
+      },
+      {
+        "path": "src/features/lock-grace/index.css",
+        "status": 200,
+        "bytes": 3828
+      },
+      {
+        "path": "src/features/lock-grace/index.js",
+        "status": 200,
+        "bytes": 19472
+      },
+      {
+        "path": "src/features/lock-grace/operator-inbox.js",
+        "status": 200,
+        "bytes": 8329
+      }
+    ],
+    "literalDeclaredRoutes": [
+      {
+        "id": "b-project",
+        "role": "buyer",
+        "title": "My purchase journey",
+        "navigation": "Overview"
+      },
+      {
+        "id": "b-site",
+        "role": "buyer",
+        "title": "Choose from the live Master Plan",
+        "navigation": "Master Plan"
+      },
+      {
+        "id": "b-browse",
+        "role": "buyer",
+        "title": "Explore homes & business spaces",
+        "navigation": "Explore"
+      },
+      {
+        "id": "b-commercial",
+        "role": "buyer",
+        "title": "Explore business spaces",
+        "navigation": "Business Spaces"
+      },
+      {
+        "id": "b-building",
+        "role": "buyer",
+        "title": "Choose a floor on the building",
+        "navigation": "Buildings"
+      },
+      {
+        "id": "b-floor",
+        "role": "buyer",
+        "title": "Choose the exact physical option",
+        "navigation": "Floors"
+      },
+      {
+        "id": "b-unit",
+        "role": "buyer",
+        "title": "Unit type details & interactive 3D",
+        "navigation": "Units"
+      },
+      {
+        "id": "b-favs",
+        "role": "buyer",
+        "title": "My favourites",
+        "navigation": "Favourites"
+      },
+      {
+        "id": "b-compare",
+        "role": "buyer",
+        "title": "Compare my shortlist",
+        "navigation": "Compare"
+      },
+      {
+        "id": "b-afford",
+        "role": "buyer",
+        "title": "Affordability planner",
+        "navigation": "Affordability"
+      },
+      {
+        "id": "b-seriousness",
+        "role": "buyer",
+        "title": "Payment plans & allocation eligibility",
+        "navigation": "Payment"
+      },
+      {
+        "id": "b-ready",
+        "role": "buyer",
+        "title": "Allocation readiness",
+        "navigation": "Readiness"
+      },
+      {
+        "id": "b-queue",
+        "role": "buyer",
+        "title": "Transparent allocation queue",
+        "navigation": "Queue"
+      },
+      {
+        "id": "b-select",
+        "role": "buyer",
+        "title": "Allocation day & transparent queue",
+        "navigation": "My Selection"
+      },
+      {
+        "id": "b-reserve",
+        "role": "buyer",
+        "title": "Payment lock",
+        "navigation": "Payment Lock"
+      },
+      {
+        "id": "b-confirm",
+        "role": "buyer",
+        "title": "My property, next payment & full schedule",
+        "navigation": "Reservation"
+      },
+      {
+        "id": "b-advisor",
+        "role": "buyer",
+        "title": "Talk to your property advisor",
+        "navigation": "Advisor"
+      },
+      {
+        "id": "s-home",
+        "role": "sales",
+        "title": "Sales dashboard",
+        "navigation": "Dashboard"
+      },
+      {
+        "id": "s-clients",
+        "role": "sales",
+        "title": "Project clients",
+        "navigation": "Clients"
+      },
+      {
+        "id": "s-customer",
+        "role": "sales",
+        "title": "Customer 360",
+        "navigation": "Customer 360"
+      },
+      {
+        "id": "s-inventory",
+        "role": "sales",
+        "title": "Unified live inventory",
+        "navigation": "Visual Inventory"
+      },
+      {
+        "id": "s-channels",
+        "role": "sales",
+        "title": "Brokers & channels",
+        "navigation": "Brokers"
+      },
+      {
+        "id": "s-advisor",
+        "role": "sales",
+        "title": "Advisor conversations & co-browse",
+        "navigation": "Advisor Chat"
+      },
+      {
+        "id": "s-offer",
+        "role": "sales",
+        "title": "Offers, reservations & follow-up",
+        "navigation": "Offers & Reservations"
+      },
+      {
+        "id": "s-reserve",
+        "role": "sales",
+        "title": "Assisted reservation",
+        "navigation": "Reservation"
+      },
+      {
+        "id": "s-follow",
+        "role": "sales",
+        "title": "Follow-up & progression",
+        "navigation": "Follow-up"
+      },
+      {
+        "id": "o-event",
+        "role": "operator",
+        "title": "Event dashboard & readiness",
+        "navigation": "Event Dashboard"
+      },
+      {
+        "id": "o-bim",
+        "role": "operator",
+        "title": "Smart Project Import & BIM",
+        "navigation": "Project Data / BIM"
+      },
+      {
+        "id": "o-preflight",
+        "role": "operator",
+        "title": "Preflight validation",
+        "navigation": "Preflight"
+      },
+      {
+        "id": "o-freeze",
+        "role": "operator",
+        "title": "Event Freeze Package",
+        "navigation": "Freeze Package"
+      },
+      {
+        "id": "o-seriousness",
+        "role": "operator",
+        "title": "جدية الحجز & queue admission",
+        "navigation": "جدية الحجز"
+      },
+      {
+        "id": "o-eligibility",
+        "role": "operator",
+        "title": "Eligibility & queue rules",
+        "navigation": "Eligibility & Queue Rules"
+      },
+      {
+        "id": "o-priority",
+        "role": "operator",
+        "title": "Priority & fairness",
+        "navigation": "Priority"
+      },
+      {
+        "id": "o-release",
+        "role": "operator",
+        "title": "Inventory release & allocation simulation",
+        "navigation": "Inventory Release"
+      },
+      {
+        "id": "o-sim",
+        "role": "operator",
+        "title": "Allocation simulator & capacity",
+        "navigation": "Simulation"
+      },
+      {
+        "id": "o-queue",
+        "role": "operator",
+        "title": "Transparent live queue",
+        "navigation": "Live Queue"
+      },
+      {
+        "id": "o-lock",
+        "role": "operator",
+        "title": "Unit locks & payment control",
+        "navigation": "Unit Locks & Payments"
+      },
+      {
+        "id": "o-payment",
+        "role": "operator",
+        "title": "Payment reconciliation",
+        "navigation": "Payments"
+      },
+      {
+        "id": "o-exception",
+        "role": "operator",
+        "title": "Cases, changes & cancellations",
+        "navigation": "Cases & Changes"
+      },
+      {
+        "id": "o-cancel",
+        "role": "operator",
+        "title": "Cancellation / swap / release",
+        "navigation": "Cancel & Swap"
+      },
+      {
+        "id": "o-audit",
+        "role": "operator",
+        "title": "Audit & transaction replay",
+        "navigation": "Audit & Replay"
+      },
+      {
+        "id": "m-home",
+        "role": "manager",
+        "title": "Management overview",
+        "navigation": "Overview"
+      },
+      {
+        "id": "m-funnel",
+        "role": "manager",
+        "title": "Sales funnel & demand insights",
+        "navigation": "Funnel & Demand"
+      },
+      {
+        "id": "m-inventory",
+        "role": "manager",
+        "title": "Unified inventory",
+        "navigation": "Inventory"
+      },
+      {
+        "id": "m-demand",
+        "role": "manager",
+        "title": "Demand intelligence",
+        "navigation": "Demand"
+      },
+      {
+        "id": "m-readiness",
+        "role": "manager",
+        "title": "Event readiness & approvals",
+        "navigation": "Event Readiness"
+      },
+      {
+        "id": "m-risk",
+        "role": "manager",
+        "title": "Collections & receivables",
+        "navigation": "Collections"
+      },
+      {
+        "id": "m-price-list",
+        "role": "manager",
+        "title": "Price list & scheduled changes",
+        "navigation": "Price List"
+      },
+      {
+        "id": "m-pricing",
+        "role": "manager",
+        "title": "Pricing & payment plans",
+        "navigation": "Pricing & Payment Plans"
+      },
+      {
+        "id": "m-govern",
+        "role": "manager",
+        "title": "Pricing governance & transaction protection",
+        "navigation": "Governance"
+      },
+      {
+        "id": "m-replay",
+        "role": "manager",
+        "title": "Audit & event replay",
+        "navigation": "Audit & Replay"
+      },
+      {
+        "id": "m-sources",
+        "role": "manager",
+        "title": "Data provenance & source register",
+        "navigation": "Sources"
+      }
+    ],
+    "routeExtractionLimit": "52 unique literal def declarations found; retained aliases/dynamic pages and modern flow routes require runtime route enumeration; not an exhaustive click-through count",
+    "routeParityReferences": 62,
+    "parityMatrix": "docs/production-completion/DEMO_PARITY_MATRIX.csv"
+  },
+  "vps": {
+    "businessCounts": {
+      "tenants": 0,
+      "projects": 0,
+      "users": 0,
+      "transactions": 0
+    },
+    "runtimeSchema": 49,
+    "publicTesting": true,
+    "fullProductionGo": false,
+    "liveVerifiedJourneys": [],
+    "ownAntivirus": "healthy;0 restarts since correction at latest check",
+    "protectedContainerCount": 12,
+    "protectedContainersUnchanged": true
+  },
+  "originalLedger": {
+    "epics": 18,
+    "tasks": 42,
+    "statuses": {
+      "INTEGRATED": 2,
+      "TESTED": 4,
+      "IN_PROGRESS": 30,
+      "NOT_STARTED": 6
+    },
+    "issue": "TASKS activeTaskId E03.3 diverged from WORK_STATE E16.3; repaired in this audit"
+  },
+  "report": "docs/production-completion/PRODUCTION_GAP_AUDIT.md"
+}

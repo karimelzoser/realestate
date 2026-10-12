@@ -6,7 +6,7 @@
   "baselineProductionSha": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "planningHeadSha": "446cfe4803bedc9868ee28799ff4b376277c0d91",
   "demoMainSha": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "activeTaskId": "E03.3",
+  "activeTaskId": "E16.3",
   "taskDefaults": {
     "actorScope": "execution-agent using existing RBAC/domain boundaries",
     "requiredEvidence": [
@@ -173,6 +173,24 @@
           "acceptance": "Phone ownership is not misrepresented as National-ID ownership; cross-tenant linking and recovery are scoped/audited.",
           "existingImplementation": "Schema43 identity evidence, normalized Egypt phones/IDs/passports, consent and scoped recovery; E02 DB/normalization certification passed. Public acquisition UX and real-provider identity proof remain.",
           "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
+        },
+        {
+          "id": "E02.3",
+          "title": "Deliver premium Arabic/English design tokens and shared accessible components",
+          "priority": "P0",
+          "dependencies": [
+            "E02.1"
+          ],
+          "deliverable": "Brand-consistent tokens/typography/components/state patterns without duplicate locale/permission logic",
+          "acceptance": "Shared controls and role shells support RTL/keyboard/200% zoom/320–1440px; documented WCAG2.2 AA acceptance and visual screenshots; no inaccessible fancy-only states",
+          "status": "NOT_STARTED",
+          "actorScope": "Existing scoped roles and domain authority",
+          "requiredEvidence": [
+            "Focused schema/API/UI diff as applicable",
+            "Positive/negative/replay/race/browser tests appropriate to the workflow",
+            "Arabic/English acceptance and dated evidence",
+            "Runbook and checkpoint update"
+          ]
         }
       ]
     },
@@ -288,7 +306,7 @@
           ],
           "priority": "P0",
           "status": "IN_PROGRESS",
-          "deliverable": "One scoped buyer journey across acquisition channels",
+          "deliverable": "Public project/type discovery, consent/account/linking, saved preferences/favorites/compare, illustrative EGP affordability and direct/broker/staff entry.",
           "acceptance": "Refresh/relogin preserves progress and attribution remains authorized.",
           "existingImplementation": "Secure login, staff invite and buyer profiles exist. Public registration, browse/preferences/favorites/compare and consent journey remain.",
           "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
@@ -363,6 +381,25 @@
           "acceptance": "No arbitrary buyer selection or blanket buyer locking capability.",
           "existingImplementation": "Allocator assignment and scoped called-buyer session exist. Online capacity/service slots and manager live seats remain.",
           "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
+        },
+        {
+          "id": "E06.3",
+          "title": "Publish versioned allocation-event readiness/preflight/freeze package",
+          "priority": "P1",
+          "dependencies": [
+            "E04.1",
+            "E06.1"
+          ],
+          "deliverable": "Scoped event readiness checks, approval and immutable published rules/assets/capacity references",
+          "acceptance": "All channels use the same approved event version; missing requirements block publish and later changes cannot rewrite committed buyer evidence",
+          "status": "NOT_STARTED",
+          "actorScope": "Existing scoped roles and domain authority",
+          "requiredEvidence": [
+            "Focused schema/API/UI diff as applicable",
+            "Positive/negative/replay/race/browser tests appropriate to the workflow",
+            "Arabic/English acceptance and dated evidence",
+            "Runbook and checkpoint update"
+          ]
         }
       ]
     },
@@ -452,6 +489,26 @@
           "status": "NOT_STARTED",
           "deliverable": "Atomic post-expiry decision semantics and recovery tests",
           "acceptance": "Approval never steals another buyer's lock; one transition wins under races/restarts."
+        },
+        {
+          "id": "E08.3",
+          "title": "Complete controlled cancellation/change/swap and immutable replacement evidence",
+          "priority": "P1",
+          "dependencies": [
+            "E07.2",
+            "E09.1",
+            "E10.1"
+          ],
+          "deliverable": "Authorized cancellation/swap workflow with inventory, price, refund/credit and contract-amendment consistency",
+          "acceptance": "Concurrent swap/release/payment never double-sells or loses ledger credit; executed contracts remain immutable and replacement requires explicit valid evidence",
+          "status": "NOT_STARTED",
+          "actorScope": "Existing scoped roles and domain authority",
+          "requiredEvidence": [
+            "Focused schema/API/UI diff as applicable",
+            "Positive/negative/replay/race/browser tests appropriate to the workflow",
+            "Arabic/English acceptance and dated evidence",
+            "Runbook and checkpoint update"
+          ]
         }
       ]
     },
@@ -564,6 +621,25 @@
           "status": "NOT_STARTED",
           "deliverable": "Updates/support workflow",
           "acceptance": "No unrelated buyer/project data leaks and stale requests cannot overwrite another project view."
+        },
+        {
+          "id": "E11.3",
+          "title": "Implement consented human-advisor inbox/chat and scoped co-browse context",
+          "priority": "P1",
+          "dependencies": [
+            "E05.1",
+            "E11.2"
+          ],
+          "deliverable": "Buyer/advisor conversation with authorized shared property context, consent, retention, unread and reconnect states",
+          "acceptance": "Chat/context/attachments remain buyer/project scoped; no privileged-session, payment or legal-signature takeover; Arabic/English and interruption behavior accepted",
+          "status": "NOT_STARTED",
+          "actorScope": "Existing scoped roles and domain authority",
+          "requiredEvidence": [
+            "Focused schema/API/UI diff as applicable",
+            "Positive/negative/replay/race/browser tests appropriate to the workflow",
+            "Arabic/English acceptance and dated evidence",
+            "Runbook and checkpoint update"
+          ]
         }
       ]
     },
@@ -607,6 +683,26 @@
           "acceptance": "Counts are not derived from capped rows and older cases remain navigable without refetch storms.",
           "existingImplementation": "Scoped datasets/exports/SSE exist. Cursor/aggregate correctness and volume certification remain.",
           "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
+        },
+        {
+          "id": "E12.3",
+          "title": "Complete demand/funnel/event/pricing governance and source/journey audit controls",
+          "priority": "P1",
+          "dependencies": [
+            "E04.2",
+            "E06.3",
+            "E12.2"
+          ],
+          "deliverable": "Actionable manager/Director demand, event approvals, pricing governance, source register and correlated journey evidence",
+          "acceptance": "KPIs define authoritative numerator/denominator/time scope; overrides require named authority/reason; observed events and reconstructed snapshots are distinguished",
+          "status": "NOT_STARTED",
+          "actorScope": "Existing scoped roles and domain authority",
+          "requiredEvidence": [
+            "Focused schema/API/UI diff as applicable",
+            "Positive/negative/replay/race/browser tests appropriate to the workflow",
+            "Arabic/English acceptance and dated evidence",
+            "Runbook and checkpoint update"
+          ]
         }
       ]
     },
@@ -726,6 +822,29 @@
           "status": "NOT_STARTED",
           "deliverable": "End-to-end buyer/broker/offline/grace/document/property acceptance",
           "acceptance": "Fixtures seed data only; tested commands perform the real business transitions."
+        },
+        {
+          "id": "E15.3",
+          "title": "Deliver complete premium role-specific visual and interaction acceptance",
+          "priority": "P0",
+          "dependencies": [
+            "E02.3",
+            "E04.1",
+            "E05.1",
+            "E07.1",
+            "E11.1",
+            "E12.1"
+          ],
+          "deliverable": "Public/buyer/staff/broker/manager/admin shells and all loading/empty/error/conflict/offline/reconnect states",
+          "acceptance": "All critical journeys accepted in Arabic/English/mobile/desktop with actual screenshots, keyboard/a11y checks and measured performance; no fake data fallback, hidden primary action or login-only polish",
+          "status": "NOT_STARTED",
+          "actorScope": "Existing scoped roles and domain authority",
+          "requiredEvidence": [
+            "Focused schema/API/UI diff as applicable",
+            "Positive/negative/replay/race/browser tests appropriate to the workflow",
+            "Arabic/English acceptance and dated evidence",
+            "Runbook and checkpoint update"
+          ]
         }
       ]
     },
@@ -747,7 +866,7 @@
           "priority": "P0",
           "status": "IN_PROGRESS",
           "deliverable": "Portable production bundle plus GitHub-backed Render public testing profile",
-          "acceptance": "Fresh disposable production-config environment boots with malformed config failing closed; target server untouched.",
+          "acceptance": "Documented exact-source isolated package and fresh disposable production-config environment boot; malformed config fails closed; protected n8n/existing PRENEURA remain unchanged.",
           "note": "Existing four-process container/provenance bundle integrated and certified; full additional-service/operational scope remains.",
           "existingImplementation": "Certified non-root Compose bundle plus current root free Render Blueprint, same-origin proxy, production-guarded supervised API/worker/local gateway, schema validation, real local process fault and bilingual browser/SSE tests.",
           "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da",
@@ -787,6 +906,18 @@
             "Private PostgreSQL18.6 healthy, no public DB port, four independent database roles",
             "All12 protected containers unchanged",
             "New testing DNS A and valid DNS01 certificate issued; public app pending"
+          ],
+          "implementationHead": "49de56fadf4caab1242fe0783285792ba58d5f0b",
+          "partialEvidence": [
+            "Public application/API readiness on49de56f/schema49;45 source CI success",
+            "Independent database/identity/S3/real ClamAV/telemetry;12 protected baselines unchanged",
+            "Live business DB counts all zero; full hosted authenticated journey not yet demonstrated",
+            "Operational checkpoint24b33a8; actual scanner/OTLP requalification and current audit evidence"
+          ],
+          "remainingAcceptance": [
+            "Genuine human MFA owner/tenant onboarding",
+            "Public signed files/SSE/cookies/CSRF and complete bilingual journeys",
+            "TLS renewal, off-host coordinated restore, delivered alerts, load/soak and all final gates"
           ]
         }
       ]
@@ -828,6 +959,82 @@
           "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
         }
       ]
+    },
+    {
+      "id": "E18",
+      "title": "Business launch, customer adoption and service readiness",
+      "dependencies": [
+        "E03",
+        "E09",
+        "E10",
+        "E11",
+        "E12",
+        "E15",
+        "E16",
+        "E17"
+      ],
+      "status": "NOT_STARTED",
+      "tasks": [
+        {
+          "id": "E18.1",
+          "title": "Prepare developer/two-brokerage pilot onboarding, training and operating responsibilities",
+          "priority": "P1",
+          "dependencies": [
+            "E03.1",
+            "E03.2",
+            "E15.2"
+          ],
+          "deliverable": "Tenant setup/import/runbook, customer acceptance scenarios and operator/support training",
+          "acceptance": "A bounded Egyptian project pilot has documented scope and named responsibilities; real data/money starts only after its applicable release gates, without claiming the full platform done",
+          "status": "NOT_STARTED",
+          "actorScope": "Existing scoped roles and domain authority",
+          "requiredEvidence": [
+            "Focused schema/API/UI diff as applicable",
+            "Positive/negative/replay/race/browser tests appropriate to the workflow",
+            "Arabic/English acceptance and dated evidence",
+            "Runbook and checkpoint update"
+          ]
+        },
+        {
+          "id": "E18.2",
+          "title": "Complete tenant entitlements, usage and approved B2B invoicing/service policy",
+          "priority": "P1",
+          "dependencies": [
+            "E03.2",
+            "E12.1"
+          ],
+          "deliverable": "Auditable plan/entitlement/usage/manual B2B invoice administration and consent/retention/export/support policies",
+          "acceptance": "Access and usage follow approved tenant entitlements; no unapproved charges, unsupported legal claims or invented contractual/financial acceptance",
+          "status": "NOT_STARTED",
+          "actorScope": "Existing scoped roles and domain authority",
+          "requiredEvidence": [
+            "Focused schema/API/UI diff as applicable",
+            "Positive/negative/replay/race/browser tests appropriate to the workflow",
+            "Arabic/English acceptance and dated evidence",
+            "Runbook and checkpoint update"
+          ]
+        },
+        {
+          "id": "E18.3",
+          "title": "Define launch KPI evidence, acceptance ownership and support/incident operation",
+          "priority": "P1",
+          "dependencies": [
+            "E12.2",
+            "E16.2",
+            "E17.2"
+          ],
+          "deliverable": "Authoritative conversion/queue/collections/provider/usage metrics, launch decision and support/escalation evidence",
+          "acceptance": "Metrics have real event scope/time windows and measured pilot baselines; owners/alert response and all final production gates are recorded, with no invented ROI or GO",
+          "status": "NOT_STARTED",
+          "actorScope": "Existing scoped roles and domain authority",
+          "requiredEvidence": [
+            "Focused schema/API/UI diff as applicable",
+            "Positive/negative/replay/race/browser tests appropriate to the workflow",
+            "Arabic/English acceptance and dated evidence",
+            "Runbook and checkpoint update"
+          ]
+        }
+      ]
     }
   ],
   "deferredStage": {
@@ -841,5 +1048,17 @@
   "activeBranch": "codex/egypt-platform-completion",
   "activePr": 90,
   "currentRuntimeSchemaVersion": 49,
-  "currentHostingTarget": "isolated VPS; Render deferred"
+  "currentHostingTarget": "isolated VPS; Render deferred",
+  "auditReference": "docs/production-completion/PRODUCTION_GAP_AUDIT.md",
+  "launchMilestones": [
+    "M0",
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5",
+    "M6",
+    "M7",
+    "M8"
+  ]
 }

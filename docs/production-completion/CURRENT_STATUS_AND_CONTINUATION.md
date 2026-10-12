@@ -12,6 +12,10 @@ Current operational patch fixes the antivirus image startup requirement for a lo
 
 Human MFA/owner activation, authenticated public S3/SSE/browser journeys, TLS renewal automation, encrypted off-host restore, full product completion, load/soak and final liveGO remain outstanding. This is public testing, not approved full production. Read WORK_STATE/TASKS/VPS_DEPLOYMENT and retain the entire PLAN.
 
+## Current product audit
+
+Read [PRODUCTION_GAP_AUDIT.md](PRODUCTION_GAP_AUDIT.md): all demo/business functions mapped, M0–M8 sequence, premium Arabic/English UX and ten final gates. VPS business counts are0 tenants/projects/users/transactions; no completed live sale is claimed. TASKS and WORK_STATE now agree on E16.3 and preserve19 epics/51 tasks. Demo root/standalone and34 assets return200;52 literal route declarations are recorded. Fresh browser visual/interaction review is blocked by request-header-policy initialization failure.
+
 ## Historical checkpoints — superseded by current authority
 
 ### Prior current checkpoint
