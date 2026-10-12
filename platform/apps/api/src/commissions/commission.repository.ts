@@ -106,8 +106,8 @@ export class CommissionRepository {
       .select('t.id')
       .where('t.tenant_id', '=', input.tenantId)
       .where('t.project_id', '=', input.projectId)
-      .where('b.source', '=', 'BROKER')
-      .where('b.broker_company_id', '=', input.brokerCompanyId)
+      .where('r.buyer_source_snapshot', '=', 'BROKER')
+      .where('r.broker_company_id_snapshot', '=', input.brokerCompanyId)
       .where('r.quoted_total', 'is not', null)
       .execute();
     for (const transaction of transactions) {
@@ -307,12 +307,12 @@ export class CommissionRepository {
       )
       .select([
         't.id', 't.tenant_id', 't.project_id', 't.status', 't.opened_at', 't.buyer_profile_id',
-        'b.broker_company_id', 'b.broker_agent_user_id', 'r.quoted_total',
+        'r.broker_company_id_snapshot as broker_company_id', 'r.broker_agent_user_id_snapshot as broker_agent_user_id', 'r.quoted_total',
       ])
       .where('t.id', '=', input.transactionId)
       .where('t.tenant_id', '=', input.tenantId)
       .where('t.project_id', '=', input.projectId)
-      .where('b.source', '=', 'BROKER')
+      .where('r.buyer_source_snapshot', '=', 'BROKER')
       .executeTakeFirst();
     if (!row || !row.broker_company_id || row.quoted_total === null) return null;
     return {
@@ -379,7 +379,6 @@ export class CommissionRepository {
           completion_percent_snapshot: completion.toFixed(2),
           eligible_at: eligibleAt,
           due_at: dueAt,
-          broker_agent_user_id: context.brokerAgentUserId,
           updated_at: now,
         })
         .where('id', '=', caseId)

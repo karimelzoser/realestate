@@ -42,8 +42,8 @@ export class FinanceRepository {
         't.project_id',
         't.status',
         'b.user_id as buyer_user_id',
-        'b.broker_company_id',
-        'b.broker_agent_user_id',
+        'r.broker_company_id_snapshot as broker_company_id',
+        'r.broker_agent_user_id_snapshot as broker_agent_user_id',
         'r.quoted_total',
         'r.currency',
       ])

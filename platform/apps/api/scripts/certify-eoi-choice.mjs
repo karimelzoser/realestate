@@ -23,6 +23,7 @@ try {
   await query(`INSERT INTO projects(id,tenant_id,code,name,status,currency,timezone) VALUES
     ($1,$3,'P1','EOI project','ACTIVE','EGP','Africa/Cairo'),($2,$3,'P2','Other project','ACTIVE','EGP','Africa/Cairo')`, [projectId, secondProjectId, tenantId]);
   await query(`INSERT INTO buyer_profiles(id,tenant_id,user_id,status,source,created_by) VALUES($1,$2,$3,'ACTIVE','DIRECT',$3)`, [buyerProfileId, tenantId, actorUserId]);
+  await query(`INSERT INTO buyer_project_attributions(tenant_id,project_id,buyer_profile_id,source,created_by) VALUES($1,$2,$3,'DIRECT',$4)`,[tenantId,projectId,buyerProfileId,actorUserId]);
   await query(`INSERT INTO catalog_unit_types(id,tenant_id,project_id,code,name,indoor_area_sqm,status) VALUES
     ($1,$3,$4,'A','Selected Type A',100,'ACTIVE'),($2,$3,$5,'B','Other Project Type',100,'ACTIVE')`, [unitTypeId, otherTypeId, tenantId, projectId, secondProjectId]);
   await query(`INSERT INTO eoi_refund_policies(id,tenant_id,project_id,version_number,name,status,eoi_amount,currency,effective_at,published_at)

@@ -34,7 +34,7 @@ export class SalesBuyerListRepository {
         u.display_name,
         u.status AS account_status,
         tm.status AS membership_status,
-        bp.source,
+        attribution.source,
         contact.display_hint AS contact_display_hint,
         contact.verified_at AS contact_verified_at,
         bp.created_at,
@@ -47,6 +47,7 @@ export class SalesBuyerListRepository {
         eoi.paid_at AS eoi_paid_at,
         eoi.created_at AS eoi_created_at
       FROM buyer_profiles bp
+      JOIN buyer_project_attributions attribution ON attribution.buyer_profile_id=bp.id AND attribution.tenant_id=bp.tenant_id AND attribution.project_id=${input.projectId}::uuid
       JOIN users u ON u.id = bp.user_id
       JOIN tenant_memberships tm
         ON tm.user_id = bp.user_id AND tm.tenant_id = bp.tenant_id

@@ -1,0 +1,22 @@
+{
+  "scope": "Local disposable schema48 verification; not live approval",
+  "baselinePublishedHead": "f85f36fdc8cc5ffa2ef926b813eac44991469914",
+  "runtimeSchemaVersion": 48,
+  "checks": {
+    "normalTests": 44,
+    "packagesTypeAndLint": 9,
+    "builds": "all9 packages/all4 apps",
+    "freshMigrations": 48,
+    "upgradeFrom47": "approved project ownership recovered, existing commission owner retained, unknown legacy deal ownership left null, old history digest unchanged",
+    "realRepository": "concurrent registration/review/request, self retry, takeover rejection, scoped project independence, terminal/rejected retry, atomic approval projection",
+    "historicalAuthority": "commission, transaction detail/list, finance, exports and reminder recipients retain reservation ownership; agent economics redacted",
+    "fullStack": "FULL_STACK_ACCEPTANCE_OK",
+    "browser": "English desktop and Arabic390 RTL same-origin SSE/quote/hold/refresh/actual reservation with public-test notice",
+    "previewProcess": "single host, startup/abrupt loss checks, initial RSS197865472bytes; Linux48 exact-head certification pending"
+  },
+  "remaining": [
+    "Exact published-head schema48 GitHub CI",
+    "Actual Render account/inventory/provider/HTTPS/load/public URL",
+    "Remaining full product/onboarding/voice/legal/provider/UAT/live release acceptance"
+  ]
+}

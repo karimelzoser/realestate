@@ -8,10 +8,10 @@
   "observedHeadBeforeCheckpoint": "36941e74f1b0edba40a41947106720a459010b8e",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "activeTaskId": "E16.1",
+  "activeTaskId": "E03.3",
   "activeTaskStatus": "IN_PROGRESS",
-  "completedCheckpoint": "Schema47 published head passed39 CI runs. Current Render public-test profile validated locally:40 tests,9 package types/lint/all builds, same-origin SSE/bilingual reservation, one-host189MiB initial RSS and process/startup failure checks. Profile exact-head Linux CI and live connection/provider/HTTPS/load acceptance remain pending.",
-  "nextAction": "Publish and verify Render public test profile on GitHub; reconnect Render account and inspect target inventory when available. Continue E03.3 attribution authority and unfinished product acceptance independently.",
+  "completedCheckpoint": "Published f85f36f schema47 Render profile41 CI runs pass. Local schema48 project attribution and frozen sale ownership complete:44 normal tests,9 package types/lint/build, real concurrency/role/finance/export/reminder,47 upgrade, full-stack and bilingual browser/SSE pass. Schema48 exact-head CI pending publication.",
+  "nextAction": "Publish schema48 and verify all CI, then continue full staff/brokerage onboarding/MFA trust bootstrap and public buyer/catalog journeys while Render account/provider setup remains pending.",
   "changedFiles": [
     "platform/apps/api/src/auth",
     "platform/apps/api/src/access",
@@ -76,8 +76,8 @@
     ".github/workflows/e01-privileged-assurance-certification.yml"
   ],
   "remainingTests": [
-    "Latest profile exact-head GitHub CI including Linux drain and same-origin SSE browser",
-    "Actual Render/provider/HTTPS/memory/UAT verification and final full platform/live release acceptance"
+    "Schema48 exact published-head GitHub CI including latest migration checksum, Linux preview and browser",
+    "Hosted Render/provider/HTTPS/load verification and final full platform acceptance"
   ],
   "externalBlockerIds": [
     "PROVIDER_SETUP_PENDING",
@@ -103,10 +103,10 @@
     "currentTestingHosting": "Render, GitHub-backed latest certified candidate"
   },
   "taskPr": 90,
-  "taskImplementationHead": "47b9eb5df7680b0c30ff03a39388539a135dac70",
+  "taskImplementationHead": "f85f36fdc8cc5ffa2ef926b813eac44991469914",
   "runtimeSchemaVersion": 47,
   "migrationMarker": "0047_exact_apartment_allocation.sql",
   "localWorkPreservation": "Unfinished pre-sync locale expansion preserved in named git stash; reuse selectively with canonical locale provider, never duplicate it.",
-  "pendingMigration": null,
+  "pendingMigration": "0048_buyer_attribution_authority.sql (unreleased draft; only disposable databases)",
   "deploymentScope": "Render public testing with isolated synthetic data; no paid purchase authorization; self-hosted server remains deferred"
 }

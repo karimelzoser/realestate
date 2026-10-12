@@ -36,8 +36,8 @@ export async function scheduleMilestoneReminders(
       transaction.project_id,
       transaction.opened_at,
       buyer.user_id AS buyer_user_id,
-      buyer.broker_company_id,
-      buyer.broker_agent_user_id,
+      reservation.broker_company_id_snapshot AS broker_company_id,
+      reservation.broker_agent_user_id_snapshot AS broker_agent_user_id,
       milestone.code AS milestone_code,
       policy.target_hours_after_open,
       policy.reminder_hours_before,
@@ -51,6 +51,7 @@ export async function scheduleMilestoneReminders(
     JOIN buyer_profiles buyer
       ON buyer.id = transaction.buyer_profile_id
       AND buyer.tenant_id = transaction.tenant_id
+    JOIN reservations reservation ON reservation.id=transaction.reservation_id AND reservation.tenant_id=transaction.tenant_id AND reservation.project_id=transaction.project_id
     JOIN project_milestone_reminder_policies policy
       ON policy.tenant_id = transaction.tenant_id
       AND policy.project_id = transaction.project_id

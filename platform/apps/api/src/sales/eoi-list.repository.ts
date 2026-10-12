@@ -15,12 +15,15 @@ export class EoiListRepository {
     brokerAgentUserId?: string | null;
     buyerUserId?: string | null;
   }): Promise<EoiListItemSnapshot[]> {
+    if(input.brokerCompanyIds?.length===0)return [];
     let query = this.db
       .selectFrom('buyer_eois as e')
       .innerJoin('buyer_profiles as b', (join) =>
         join.onRef('b.id', '=', 'e.buyer_profile_id').onRef('b.tenant_id', '=', 'e.tenant_id'),
       )
       .innerJoin('users as u', 'u.id', 'b.user_id')
+      .innerJoin('buyer_project_attributions as attribution',join=>join.onRef('attribution.buyer_profile_id','=','b.id')
+        .onRef('attribution.tenant_id','=','e.tenant_id').onRef('attribution.project_id','=','e.project_id'))
       .select([
         'e.id',
         'e.selected_unit_type_id',
@@ -31,9 +34,9 @@ export class EoiListRepository {
         'e.buyer_profile_id',
         'b.user_id as buyer_user_id',
         'u.display_name as buyer_display_name',
-        'b.source as buyer_source',
-        'b.broker_company_id',
-        'b.broker_agent_user_id',
+        'attribution.source as buyer_source',
+        'attribution.broker_company_id',
+        'attribution.broker_agent_user_id',
         'e.amount',
         'e.currency',
         'e.status',
@@ -50,11 +53,11 @@ export class EoiListRepository {
 
     if (input.brokerCompanyIds && input.brokerCompanyIds.length > 0) {
       query = query
-        .where('b.source', '=', 'BROKER')
-        .where('b.broker_company_id', 'in', input.brokerCompanyIds);
+        .where('attribution.source', '=', 'BROKER')
+        .where('attribution.broker_company_id', 'in', input.brokerCompanyIds);
     }
     if (input.brokerAgentUserId) {
-      query = query.where('b.broker_agent_user_id', '=', input.brokerAgentUserId);
+      query = query.where('attribution.broker_agent_user_id', '=', input.brokerAgentUserId);
     }
     if (input.buyerUserId) {
       query = query.where('b.user_id', '=', input.buyerUserId);

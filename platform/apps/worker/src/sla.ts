@@ -14,6 +14,7 @@ export async function scheduleMilestoneSlas(
   const rows = await db
     .selectFrom('transaction_milestones as m')
     .innerJoin('transactions as t', 't.id', 'm.transaction_id')
+    .innerJoin('reservations as reservation',join=>join.onRef('reservation.id','=','t.reservation_id').onRef('reservation.tenant_id','=','t.tenant_id').onRef('reservation.project_id','=','t.project_id'))
     .innerJoin('buyer_profiles as b', (join) =>
       join.onRef('b.id', '=', 't.buyer_profile_id').onRef('b.tenant_id', '=', 't.tenant_id'),
     )
@@ -29,8 +30,8 @@ export async function scheduleMilestoneSlas(
       't.project_id',
       't.opened_at',
       'b.user_id as buyer_user_id',
-      'b.broker_company_id',
-      'b.broker_agent_user_id',
+      'reservation.broker_company_id_snapshot as broker_company_id',
+      'reservation.broker_agent_user_id_snapshot as broker_agent_user_id',
       'm.code as milestone_code',
       's.target_hours_after_open',
       's.reminder_hours_before',

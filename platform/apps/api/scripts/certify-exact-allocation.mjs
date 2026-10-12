@@ -55,6 +55,7 @@ try {
     VALUES($1,$2,$3,1,'Exact EOI policy','ACTIVE',25000,'EGP',now()-interval '1 day',now())`,[policyId,tenantId,projectId]);
   for (let i=0;i<2;i++) {
     await query(`INSERT INTO buyer_profiles(id,tenant_id,user_id,status,source,created_by) VALUES($1,$2,$3,'ACTIVE','DIRECT',$3)`,[buyerProfiles[i],tenantId,buyers[i]]);
+    await query(`INSERT INTO buyer_project_attributions(tenant_id,project_id,buyer_profile_id,source,created_by) VALUES($1,$2,$3,'DIRECT',$4)`,[tenantId,projectId,buyerProfiles[i],buyers[i]]);
     const eoi=await sales.createEoi({ actorUserId:buyers[i],tenantId,projectId,buyerProfileId:buyerProfiles[i],unitTypeId:typeA,refundPolicyId:policyId,now:new Date() });
     await query(`SELECT preneura_post_eoi_payment($1,$2,$3,$4,$5)`,[tenantId,projectId,eoi.eoiId,`SYNTHETIC-EXACT-EOI-${i}`,actors[0]]);
     await query(`INSERT INTO queue_entries(id,tenant_id,project_id,buyer_profile_id,eoi_id,status,called_at,allocator_user_id,allocator_assigned_at)

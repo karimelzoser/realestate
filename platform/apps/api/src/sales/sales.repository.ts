@@ -18,7 +18,7 @@ export interface BuyerProfileRecord {
   id: string;
   tenantId: string;
   userId: string;
-  source: 'DIRECT' | 'BROKER' | 'INTERNAL';
+  source: 'DIRECT' | 'BROKER' | 'INTERNAL' | 'UNRECORDED';
   brokerCompanyId: string | null;
   brokerAgentUserId: string | null;
 }
@@ -54,20 +54,22 @@ export class SalesRepository {
   async getBuyerProfile(input: {
     tenantId: string;
     buyerProfileId: string;
+    projectId: string;
   }): Promise<BuyerProfileRecord | null> {
     const row = await this.db
-      .selectFrom('buyer_profiles')
+      .selectFrom('buyer_profiles as b')
+      .innerJoin('buyer_project_attributions as attribution',join=>join.onRef('attribution.buyer_profile_id','=','b.id').onRef('attribution.tenant_id','=','b.tenant_id').on('attribution.project_id','=',input.projectId))
       .select([
-        'id',
-        'tenant_id',
-        'user_id',
-        'source',
-        'broker_company_id',
-        'broker_agent_user_id',
+        'b.id',
+        'b.tenant_id',
+        'b.user_id',
+        'attribution.source',
+        'attribution.broker_company_id',
+        'attribution.broker_agent_user_id',
       ])
-      .where('tenant_id', '=', input.tenantId)
-      .where('id', '=', input.buyerProfileId)
-      .where('status', '=', 'ACTIVE')
+      .where('b.tenant_id', '=', input.tenantId)
+      .where('b.id', '=', input.buyerProfileId)
+      .where('b.status', '=', 'ACTIVE')
       .executeTakeFirst();
     if (!row) return null;
     return {
@@ -80,54 +82,43 @@ export class SalesRepository {
     };
   }
 
-  async createBuyerProfile(input: {
-    actorUserId: string;
-    data: CreateBuyerProfileInput;
-  }): Promise<string> {
-    return this.db.transaction().execute(async (trx) => {
-      const row = await trx
-        .insertInto('buyer_profiles')
-        .values({
-          tenant_id: input.data.tenantId,
-          user_id: input.data.userId,
-          status: 'ACTIVE',
-          source: input.data.source,
-          broker_company_id: input.data.brokerCompanyId ?? null,
-          broker_agent_user_id: input.data.brokerAgentUserId ?? null,
-          created_by: input.actorUserId,
-        })
-        .onConflict((oc) =>
-          oc.columns(['tenant_id', 'user_id']).doUpdateSet({
-            status: 'ACTIVE',
-            source: input.data.source,
-            broker_company_id: input.data.brokerCompanyId ?? null,
-            broker_agent_user_id: input.data.brokerAgentUserId ?? null,
-            updated_at: new Date(),
-          }),
-        )
-        .returning('id')
-        .executeTakeFirstOrThrow();
+  async getTransactionBuyer(input:{tenantId:string;projectId:string;transactionId:string}):Promise<BuyerProfileRecord|null> {
+    const row=await this.db.selectFrom('transactions as t').innerJoin('reservations as r',join=>join.onRef('r.id','=','t.reservation_id').onRef('r.tenant_id','=','t.tenant_id').onRef('r.project_id','=','t.project_id'))
+      .innerJoin('buyer_profiles as b',join=>join.onRef('b.id','=','t.buyer_profile_id').onRef('b.tenant_id','=','t.tenant_id'))
+      .select(['b.id','b.tenant_id','b.user_id','r.buyer_source_snapshot','r.broker_company_id_snapshot','r.broker_agent_user_id_snapshot'])
+      .where('t.id','=',input.transactionId).where('t.tenant_id','=',input.tenantId).where('t.project_id','=',input.projectId).executeTakeFirst();
+    return row?{id:row.id,tenantId:row.tenant_id,userId:row.user_id,source:row.buyer_source_snapshot??'UNRECORDED',
+      brokerCompanyId:row.broker_company_id_snapshot,brokerAgentUserId:row.broker_agent_user_id_snapshot}:null;
+  }
 
-      await trx
-        .insertInto('domain_outbox_events')
-        .values({
-          tenant_id: input.data.tenantId,
-          project_id: input.data.projectId,
-          aggregate_type: 'BUYER_PROFILE',
-          aggregate_id: row.id,
-          event_type: 'buyer.profile.upserted',
-          payload: {
-            buyerUserId: input.data.userId,
-            source: input.data.source,
-            brokerCompanyId: input.data.brokerCompanyId ?? null,
-            brokerAgentUserId: input.data.brokerAgentUserId ?? null,
-            actorUserId: input.actorUserId,
-          },
-          published_at: null,
-          attempts: 0,
-        })
-        .execute();
-      return row.id;
+  async createBuyerProfile(input: { actorUserId: string; data: CreateBuyerProfileInput }): Promise<string> {
+    return this.db.transaction().execute(async (trx) => {
+      if(input.data.source==='BROKER') {
+        const eligible=await sql<{ok:boolean}>`SELECT preneura_attribution_target_eligible(${input.data.tenantId}::uuid,${input.data.projectId}::uuid,
+          ${input.data.brokerCompanyId??null}::uuid,${input.data.brokerAgentUserId??null}::uuid) AS ok`.execute(trx);
+        if(!eligible.rows[0]?.ok)throw new ConflictException('Current brokerage or agent is not eligible for this project.');
+      }
+      const created=await trx.insertInto('buyer_profiles').values({tenant_id:input.data.tenantId,user_id:input.data.userId,status:'ACTIVE',
+        source:input.data.source,broker_company_id:input.data.brokerCompanyId??null,broker_agent_user_id:input.data.brokerAgentUserId??null,created_by:input.actorUserId})
+        .onConflict(oc=>oc.columns(['tenant_id','user_id']).doNothing()).returning(['id','status']).executeTakeFirst();
+      const profile=created??await trx.selectFrom('buyer_profiles').select(['id','status']).where('tenant_id','=',input.data.tenantId).where('user_id','=',input.data.userId).forShare().executeTakeFirstOrThrow();
+      if(profile.status!=='ACTIVE')throw new ConflictException('Buyer profile lifecycle must be managed through its authorized workflow.');
+      const bound=await trx.insertInto('buyer_project_attributions').values({tenant_id:input.data.tenantId,project_id:input.data.projectId,buyer_profile_id:profile.id,
+        source:input.data.source,broker_company_id:input.data.brokerCompanyId??null,broker_agent_user_id:input.data.brokerAgentUserId??null,created_by:input.actorUserId})
+        .onConflict(oc=>oc.columns(['buyer_profile_id','project_id']).doNothing()).returning('buyer_profile_id').executeTakeFirst();
+      if(!bound) {
+        const existing=await trx.selectFrom('buyer_project_attributions').select(['source','broker_company_id','broker_agent_user_id'])
+          .where('tenant_id','=',input.data.tenantId).where('project_id','=',input.data.projectId).where('buyer_profile_id','=',profile.id).forUpdate().executeTakeFirstOrThrow();
+        const ownDirectRetry=input.actorUserId===input.data.userId&&input.data.source==='DIRECT'&&!input.data.brokerCompanyId&&!input.data.brokerAgentUserId;
+        if(!ownDirectRetry&&(existing.source!==input.data.source||existing.broker_company_id!==(input.data.brokerCompanyId??null)||existing.broker_agent_user_id!==(input.data.brokerAgentUserId??null))) {
+          throw new ConflictException('Existing project buyer attribution requires an approved transfer.');
+        }
+        return profile.id;
+      }
+      await trx.insertInto('domain_outbox_events').values({tenant_id:input.data.tenantId,project_id:input.data.projectId,aggregate_type:'BUYER_PROFILE',aggregate_id:profile.id,
+        event_type:'buyer.profile.upserted',payload:{buyerUserId:input.data.userId,source:input.data.source,brokerCompanyId:input.data.brokerCompanyId??null,
+          brokerAgentUserId:input.data.brokerAgentUserId??null,actorUserId:input.actorUserId},published_at:null,attempts:0}).execute();
+      return profile.id;
     });
   }
 
@@ -219,6 +210,9 @@ export class SalesRepository {
         .where('id', '=', input.projectId).where('tenant_id', '=', input.tenantId)
         .where('status', '=', 'ACTIVE').forShare().executeTakeFirst();
       if (!project) throw new ConflictException('This project is not open for EOI.');
+      const registration=await trx.selectFrom('buyer_project_attributions').select('buyer_profile_id')
+        .where('tenant_id','=',input.tenantId).where('project_id','=',input.projectId).where('buyer_profile_id','=',input.buyerProfileId).forShare().executeTakeFirst();
+      if(!registration)throw new ConflictException('Complete buyer registration for this project before creating an EOI.');
       const policy = await trx
         .selectFrom('eoi_refund_policies')
         .select(['id', 'eoi_amount', 'currency'])

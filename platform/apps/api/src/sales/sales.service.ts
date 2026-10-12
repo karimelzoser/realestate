@@ -118,7 +118,7 @@ export class SalesService {
     data: CreateBuyerEoiInput;
   }): Promise<{ eoiId: string; amount: string; currency: string }> {
     await this.requireProject(input.data.tenantId, input.data.projectId);
-    const buyer = await this.requireBuyer(input.data.tenantId, input.data.buyerProfileId);
+    const buyer = await this.requireBuyer(input.data.tenantId, input.data.buyerProfileId, input.data.projectId);
 
     if (buyer.userId === input.actorUserId) {
       await this.access.assert({
@@ -183,7 +183,7 @@ export class SalesService {
     data: CheckInQueueInput;
   }): Promise<{ queueEntryId: string }> {
     await this.requireProject(input.data.tenantId, input.data.projectId);
-    await this.requireBuyer(input.data.tenantId, input.data.buyerProfileId);
+    await this.requireBuyer(input.data.tenantId, input.data.buyerProfileId, input.data.projectId);
     await this.access.assert({
       userId: input.actorUserId,
       permission: 'queue.checkin',
@@ -275,7 +275,8 @@ export class SalesService {
     await this.requireProject(input.tenantId, input.projectId);
     const progress = await this.repository.getTransactionProgress(input);
     if (!progress) throw new NotFoundException('Transaction not found.');
-    const buyer = await this.requireBuyer(input.tenantId, progress.buyerProfileId);
+    const buyer = await this.repository.getTransactionBuyer({tenantId:input.tenantId,projectId:input.projectId,transactionId:input.transactionId});
+    if(!buyer)throw new NotFoundException('Transaction buyer evidence not found.');
 
     await this.assertTransactionRead({
       actorUserId: input.actorUserId,
@@ -332,8 +333,8 @@ export class SalesService {
     }
   }
 
-  private async requireBuyer(tenantId: string, buyerProfileId: string): Promise<BuyerProfileRecord> {
-    const buyer = await this.repository.getBuyerProfile({ tenantId, buyerProfileId });
+  private async requireBuyer(tenantId: string, buyerProfileId: string, projectId: string): Promise<BuyerProfileRecord> {
+    const buyer = await this.repository.getBuyerProfile({ tenantId, buyerProfileId, projectId });
     if (!buyer) throw new NotFoundException('Buyer profile not found.');
     return buyer;
   }

@@ -265,13 +265,14 @@ export class BrokerageOnboardingRepository {
     });
   }
 
-  async buyerAttribution(tenantId: string, buyerProfileId: string): Promise<{
+  async buyerAttribution(tenantId: string, buyerProfileId: string, projectId: string): Promise<{
     brokerCompanyId: string | null; brokerAgentUserId: string | null;
   } | null> {
     const result = await sql<{ broker_company_id: string | null; broker_agent_user_id: string | null }>`
-      SELECT broker_company_id, broker_agent_user_id
-      FROM buyer_profiles
-      WHERE id = ${buyerProfileId}::uuid AND tenant_id = ${tenantId}::uuid
+        SELECT attribution.broker_company_id, attribution.broker_agent_user_id
+        FROM buyer_project_attributions attribution JOIN buyer_profiles buyer ON buyer.id=attribution.buyer_profile_id AND buyer.tenant_id=attribution.tenant_id
+        WHERE attribution.buyer_profile_id=${buyerProfileId}::uuid AND attribution.tenant_id=${tenantId}::uuid
+          AND attribution.project_id=${projectId}::uuid AND buyer.status='ACTIVE'
     `.execute(this.db);
     const row = result.rows[0];
     return row ? { brokerCompanyId: row.broker_company_id, brokerAgentUserId: row.broker_agent_user_id } : null;
@@ -355,6 +356,7 @@ export class BrokerageOnboardingRepository {
         SELECT preneura_approve_brokerage_attribution_transfer(
           ${input.transferId}::uuid, ${input.actorUserId}::uuid, ${input.note}
         ) AS id
+        WHERE EXISTS(SELECT 1 FROM brokerage_attribution_transfers WHERE id=${input.transferId}::uuid AND tenant_id=${input.tenantId}::uuid)
       `.execute(this.db);
       return Boolean(result.rows[0]?.id);
     }
@@ -365,7 +367,11 @@ export class BrokerageOnboardingRepository {
       WHERE id = ${input.transferId}::uuid AND tenant_id = ${input.tenantId}::uuid AND status = 'REQUESTED'
       RETURNING id
     `.execute(this.db);
-    return Boolean(result.rows[0]);
+    if(result.rows[0])return true;
+    const retry=await sql<{ok:boolean}>`SELECT EXISTS(SELECT 1 FROM brokerage_attribution_transfers
+      WHERE id=${input.transferId}::uuid AND tenant_id=${input.tenantId}::uuid AND status='REJECTED'
+        AND reviewed_by=${input.actorUserId}::uuid AND review_note IS NOT DISTINCT FROM ${input.note}) AS ok`.execute(this.db);
+    return Boolean(retry.rows[0]?.ok);
   }
 
   private async listTransfers(tenantId: string, brokerCompanyIds: string[] | null): Promise<BrokerageAttributionTransferSnapshot[]> {

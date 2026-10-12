@@ -94,7 +94,7 @@ export class BrokerageOnboardingService {
   async requestTransfer(input: {
     actorUserId: string; tenantId: string; data: BrokerageAttributionTransferInput;
   }): Promise<{ transferId: string }> {
-    const current = await this.repository.buyerAttribution(input.tenantId, input.data.buyerProfileId);
+    const current = await this.repository.buyerAttribution(input.tenantId, input.data.buyerProfileId, input.data.projectId);
     if (!current) throw new NotFoundException('Buyer profile was not found.');
     if (current.brokerCompanyId === input.data.toBrokerCompanyId &&
         current.brokerAgentUserId === (input.data.toBrokerAgentUserId ?? null)) {
@@ -113,11 +113,13 @@ export class BrokerageOnboardingService {
 
     const developer = await this.access.can({
       userId: input.actorUserId,
-      permission: 'buyers.manage',
+      permission: 'broker.attribution.review',
       context: { tenantId: input.tenantId, projectId: input.data.projectId },
     });
     if (!developer.allowed) {
-      const managedCompanies = await this.brokerManagerCompanies(input.actorUserId, input.tenantId);
+      const assignments = await this.access.matchingAssignments({userId:input.actorUserId,permission:'broker.buyers.manage',
+        context:{tenantId:input.tenantId,projectId:input.data.projectId}});
+      const managedCompanies = assignments.filter(assignment=>assignment.role==='BROKER_MANAGER').map(assignment=>assignment.brokerCompanyId);
       const sameBrokerageReassignment = current.brokerCompanyId !== null &&
         current.brokerCompanyId === input.data.toBrokerCompanyId &&
         managedCompanies.includes(current.brokerCompanyId);
@@ -137,6 +139,8 @@ export class BrokerageOnboardingService {
       if (error instanceof Error && error.message.includes('brokerage_attribution_transfers_one_pending')) {
         throw new BadRequestException('Buyer already has a pending attribution transfer.');
       }
+      if(error instanceof Error && error.message.includes('active attribution requester'))throw new ForbiddenException('Active scoped attribution request authority is required.');
+      if(error instanceof Error && error.message.includes('buyer attribution changed'))throw new BadRequestException('Buyer attribution changed. Refresh before requesting a transfer.');
       throw error;
     }
   }
@@ -148,7 +152,7 @@ export class BrokerageOnboardingService {
     if (!transfer) throw new NotFoundException('Attribution transfer was not found.');
     await this.access.assert({
       userId: input.actorUserId,
-      permission: 'buyers.manage',
+      permission: 'broker.attribution.review',
       context: { tenantId: input.tenantId, projectId: transfer.projectId },
     });
     try {
@@ -164,10 +168,13 @@ export class BrokerageOnboardingService {
       if (error instanceof Error && (
         error.message.includes('buyer attribution changed after transfer request') ||
         error.message.includes('target brokerage has no active agreement') ||
-        error.message.includes('target broker agent is not active')
+          error.message.includes('target broker agent is not active') ||
+          error.message.includes('target brokerage or agent is not eligible') ||
+          error.message.includes('attribution transfer decision is immutable')
       )) {
         throw new BadRequestException(error.message);
       }
+      if(error instanceof Error && error.message.includes('active developer attribution reviewer'))throw new ForbiddenException('Active developer attribution review authority is required.');
       throw error;
     }
     return this.repository.workspace(input.tenantId, null);

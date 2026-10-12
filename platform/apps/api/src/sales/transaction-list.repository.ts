@@ -44,10 +44,10 @@ export class TransactionListRepository {
       .innerJoin('users as buyer_user', 'buyer_user.id', 'b.user_id')
       .leftJoin('broker_companies as broker_company', (join) =>
         join
-          .onRef('broker_company.id', '=', 'b.broker_company_id')
+          .onRef('broker_company.id', '=', 'r.broker_company_id_snapshot')
           .onRef('broker_company.tenant_id', '=', 't.tenant_id'),
       )
-      .leftJoin('users as broker_agent', 'broker_agent.id', 'b.broker_agent_user_id')
+      .leftJoin('users as broker_agent', 'broker_agent.id', 'r.broker_agent_user_id_snapshot')
       .innerJoin('catalog_unit_types as u', (join) =>
         join
           .onRef('u.id', '=', 'r.unit_type_id')
@@ -62,10 +62,10 @@ export class TransactionListRepository {
         't.opened_at',
         'b.user_id as buyer_user_id',
         'buyer_user.display_name as buyer_display_name',
-        'b.source as buyer_source',
-        'b.broker_company_id',
+        'r.buyer_source_snapshot as buyer_source',
+        'r.broker_company_id_snapshot as broker_company_id',
         'broker_company.name as broker_company_name',
-        'b.broker_agent_user_id',
+        'r.broker_agent_user_id_snapshot as broker_agent_user_id',
         'broker_agent.display_name as broker_agent_display_name',
         'r.unit_type_id',
         'r.physical_unit_id',
@@ -88,10 +88,10 @@ export class TransactionListRepository {
     }
     if (input.brokerCompanyIds) {
       if (input.brokerCompanyIds.length === 0) return [];
-      query = query.where('b.source', '=', 'BROKER').where('b.broker_company_id', 'in', input.brokerCompanyIds);
+      query = query.where('r.buyer_source_snapshot', '=', 'BROKER').where('r.broker_company_id_snapshot', 'in', input.brokerCompanyIds);
     }
     if (input.brokerAgentUserId) {
-      query = query.where('b.broker_agent_user_id', '=', input.brokerAgentUserId);
+      query = query.where('r.broker_agent_user_id_snapshot', '=', input.brokerAgentUserId);
     }
 
     const rows = await query
@@ -106,7 +106,7 @@ export class TransactionListRepository {
       buyerProfileId: row.buyer_profile_id,
       buyerUserId: row.buyer_user_id,
       buyerDisplayName: row.buyer_display_name,
-      buyerSource: row.buyer_source,
+      buyerSource: row.buyer_source ?? 'UNRECORDED',
       brokerCompanyId: row.broker_company_id,
       brokerCompanyName: row.broker_company_name,
       brokerAgentUserId: row.broker_agent_user_id,

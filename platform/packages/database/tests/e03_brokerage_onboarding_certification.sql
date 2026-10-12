@@ -91,19 +91,20 @@ BEGIN
     (agent_b, 'BROKER_AGENT', 'BROKER_COMPANY', tenant_a, company_target, 'ACTIVE', admin_user);
 
   INSERT INTO tenant_memberships (tenant_id, user_id, status) VALUES
-    (tenant_a, buyer_user, 'ACTIVE');
+    (tenant_a, buyer_user, 'ACTIVE'),(tenant_a,admin_user,'ACTIVE'),(tenant_a,agent_a,'ACTIVE'),(tenant_a,agent_b,'ACTIVE');
+  INSERT INTO access_role_assignments(user_id,role_code,scope_type,tenant_id,project_id,status)
+  VALUES(admin_user,'MANAGER','PROJECT',tenant_a,project_a,'ACTIVE');
 
   INSERT INTO buyer_profiles (
     id, tenant_id, user_id, status, source, broker_company_id, broker_agent_user_id, created_by
   ) VALUES (
     buyer_profile, tenant_a, buyer_user, 'ACTIVE', 'BROKER', company_a, agent_a, admin_user
   );
+  INSERT INTO buyer_project_attributions(tenant_id,project_id,buyer_profile_id,source,broker_company_id,broker_agent_user_id,created_by)
+  VALUES(tenant_a,project_a,buyer_profile,'BROKER',company_a,agent_a,admin_user);
 
-  INSERT INTO brokerage_attribution_history (
-    tenant_id, buyer_profile_id, broker_company_id, broker_agent_user_id, event_type, actor_user_id
-  ) VALUES (
-    tenant_a, buyer_profile, company_a, agent_a, 'INITIAL', admin_user
-  );
+  IF NOT EXISTS(SELECT 1 FROM brokerage_attribution_history WHERE buyer_profile_id=buyer_profile AND event_type='INITIAL') THEN
+    RAISE EXCEPTION 'initial buyer attribution history was not derived'; END IF;
 
   INSERT INTO brokerage_attribution_transfers (
     id, tenant_id, project_id, buyer_profile_id,
@@ -119,8 +120,8 @@ BEGIN
   PERFORM preneura_approve_brokerage_attribution_transfer(v_transfer_id, admin_user, 'Approved in certification');
 
   IF NOT EXISTS (
-    SELECT 1 FROM buyer_profiles
-    WHERE id = buyer_profile AND broker_company_id = company_target AND broker_agent_user_id = agent_b
+    SELECT 1 FROM buyer_project_attributions
+    WHERE buyer_profile_id=buyer_profile AND project_id=project_a AND broker_company_id=company_target AND broker_agent_user_id=agent_b
   ) THEN
     RAISE EXCEPTION 'approved transfer did not update buyer attribution';
   END IF;
@@ -149,6 +150,7 @@ BEGIN
     IF SQLERRM = 'attribution history unexpectedly mutable' THEN RAISE; END IF;
   END;
 
+  BEGIN
   INSERT INTO brokerage_attribution_transfers (
     id, tenant_id, project_id, buyer_profile_id,
     from_broker_company_id, from_broker_agent_user_id,
@@ -156,17 +158,22 @@ BEGIN
     reason, requested_by
   ) VALUES (
     v_stale_transfer_id, tenant_a, project_a, buyer_profile,
-    company_target, agent_b, company_a, agent_a,
+    company_target, NULL, company_a, agent_a,
     'Certification stale request', admin_user
   );
 
-  UPDATE buyer_profiles SET broker_agent_user_id = NULL WHERE id = buyer_profile;
-  BEGIN
-    PERFORM preneura_approve_brokerage_attribution_transfer(v_stale_transfer_id, admin_user, NULL);
-    RAISE EXCEPTION 'stale transfer unexpectedly approved';
+    RAISE EXCEPTION 'stale transfer unexpectedly requested';
   EXCEPTION WHEN OTHERS THEN
-    IF SQLERRM = 'stale transfer unexpectedly approved' THEN RAISE; END IF;
-    IF position('buyer attribution changed after transfer request' IN SQLERRM) = 0 THEN RAISE; END IF;
+    IF SQLERRM = 'stale transfer unexpectedly requested' THEN RAISE; END IF;
+    IF position('buyer attribution changed before transfer request' IN SQLERRM) = 0 THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    UPDATE buyer_project_attributions SET broker_agent_user_id=NULL WHERE buyer_profile_id=buyer_profile AND project_id=project_a;
+    RAISE EXCEPTION 'direct attribution update unexpectedly allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM='direct attribution update unexpectedly allowed' THEN RAISE; END IF;
+    IF position('approved-transfer-derived' IN SQLERRM)=0 THEN RAISE; END IF;
   END;
 
   IF NOT EXISTS (

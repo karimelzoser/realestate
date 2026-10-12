@@ -271,7 +271,7 @@ export interface TransactionListItemSnapshot {
   buyerProfileId: string;
   buyerUserId: string;
   buyerDisplayName: string;
-  buyerSource: BuyerSource;
+  buyerSource: BuyerSource | 'UNRECORDED';
   brokerCompanyId: string | null;
   brokerCompanyName: string | null;
   brokerAgentUserId: string | null;

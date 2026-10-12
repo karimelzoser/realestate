@@ -6,7 +6,7 @@
   "baselineProductionSha": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "planningHeadSha": "446cfe4803bedc9868ee28799ff4b376277c0d91",
   "demoMainSha": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "activeTaskId": "E16.1",
+  "activeTaskId": "E03.3",
   "taskDefaults": {
     "actorScope": "execution-agent using existing RBAC/domain boundaries",
     "requiredEvidence": [
@@ -197,13 +197,21 @@
           "id": "E03.3",
           "title": "Prevent legacy profile upsert from bypassing approved attribution transfer",
           "priority": "P0",
-          "status": "NOT_STARTED",
+          "status": "IN_PROGRESS",
           "dependencies": [
             "E03.2"
           ],
           "deliverable": "Immutable existing attribution on generic profile create/upsert plus database controlled-transfer authority and deal snapshot evidence",
           "acceptance": "Buyer/direct or another broker cannot reset/steal an existing attribution; only authorized approved transfer changes it, with stale/concurrent and historical commission tests.",
-          "existingImplementation": "Schema45 history is append-only and transfer API is controlled, but SalesRepository.createBuyerProfile conflict upsert still rewrites source/company/agent; no buyer-profile attribution update guard was found in45."
+          "existingImplementation": "Local schema48: shared identity with independent project attribution, insert-or-read registration, developer-only approved review, immutable history/revisions, frozen reservation/commission ownership, scoped transaction/finance/export/reminder reads.",
+          "remainingAcceptance": "Exact published-head schema48 CI; broader onboarding product/UAT remains in E03.2.",
+          "evidencePaths": [
+            "platform/apps/api/scripts/certify-attribution-authority.mjs",
+            "platform/packages/database/tests/e03_attribution_upgrade_assert.sql",
+            ".github/workflows/e03-attribution-authority-certification.yml",
+            "docs/production-completion/ADR-ATTRIBUTION-AUTHORITY.md",
+            "docs/production-completion/evidence/e03-attribution-local.json"
+          ]
         }
       ]
     },
@@ -288,6 +296,19 @@
             "Dedicated 500-way lock, queue, payment allocation/compensation and 100 replay concurrency passed",
             "Emitted API/worker/gateway/web FULL_STACK_ACCEPTANCE_OK including new EOI HTTP boundary"
           ]
+        },
+        {
+          "id": "E05.3",
+          "title": "Separate applied-EOI retries from an explicit new purchase intention",
+          "priority": "P1",
+          "status": "NOT_STARTED",
+          "dependencies": [
+            "E05.2",
+            "E09.1"
+          ],
+          "deliverable": "Explicit replay-safe purchase intention and configurable project purchase limits with correct EOI accounting",
+          "acceptance": "A terminal/applied EOI is never silently repaid or reused; new purchase behavior is explicit, scoped and compatible with project sales rules and ledger credit.",
+          "existingImplementation": "Current one-live-EOI index includes APPLIED permanently. Multiple-property certification uses independent projects; repeat buying within a project requires a separate intention/policy path."
         }
       ]
     },
@@ -712,7 +733,7 @@
           "note": "Existing four-process container/provenance bundle integrated and certified; full additional-service/operational scope remains.",
           "existingImplementation": "Certified non-root Compose bundle plus current root free Render Blueprint, same-origin proxy, production-guarded supervised API/worker/local gateway, schema validation, real local process fault and bilingual browser/SSE tests.",
           "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da",
-          "remainingAcceptance": "Latest published-head Render/Linux/browser CI; Render account connection, actual workspace inventory/provider configuration, hosted memory/cookie/OIDC/SSE checks and public URL. Final durable production remains separate.",
+          "remainingAcceptance": "Published profile passed41 CI runs including Linux drain/memory/browser. Actual Render inventory/provider configuration, hosted cookie/OIDC/SSE/load verification and public URL remain. Durable final production remains separate.",
           "evidencePaths": [
             "render.yaml",
             "platform/deploy/render-preview.mjs",
@@ -781,7 +802,7 @@
     "deploymentAuthorized": true,
     "scope": "Render isolated public testing; no paid purchase authorization; no self-hosted server access"
   },
-  "currentCandidateSha": "47b9eb5df7680b0c30ff03a39388539a135dac70",
+  "currentCandidateSha": "f85f36fdc8cc5ffa2ef926b813eac44991469914",
   "activeBranch": "codex/egypt-platform-completion",
   "activePr": 90,
   "currentRuntimeSchemaVersion": 47

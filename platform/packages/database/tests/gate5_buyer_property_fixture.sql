@@ -68,9 +68,16 @@ SET status = 'PUBLISHED',
     updated_at = '2026-01-01T00:00:00+00'
 WHERE id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 
-INSERT INTO buyer_profiles (id, tenant_id, user_id, status, source, created_by) VALUES
-  ('10000000-0000-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','ACTIVE','DIRECT','11111111-1111-4111-8111-111111111111'),
-  ('20000000-0000-4000-8000-000000000002','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','22222222-2222-4222-8222-222222222222','ACTIVE','DIRECT','22222222-2222-4222-8222-222222222222');
+\if :{?FULL_STACK_BROKER_ATTRIBUTION}
+\ir full_stack_broker_setup.sql
+INSERT INTO buyer_profiles(id,tenant_id,user_id,status,source,broker_company_id,broker_agent_user_id,created_by) VALUES
+('10000000-0000-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','ACTIVE','BROKER','33000000-0000-4000-8000-000000000001','32000000-0000-4000-8000-000000000002','32000000-0000-4000-8000-000000000001');
+\else
+INSERT INTO buyer_profiles(id,tenant_id,user_id,status,source,created_by) VALUES
+('10000000-0000-4000-8000-000000000001','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','ACTIVE','DIRECT','11111111-1111-4111-8111-111111111111');
+\endif
+INSERT INTO buyer_profiles(id,tenant_id,user_id,status,source,created_by) VALUES
+('20000000-0000-4000-8000-000000000002','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','22222222-2222-4222-8222-222222222222','ACTIVE','DIRECT','22222222-2222-4222-8222-222222222222');
 
 INSERT INTO eoi_refund_policies (
   id, tenant_id, project_id, version_number, name, status, eoi_amount, currency,
