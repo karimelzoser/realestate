@@ -37,7 +37,7 @@ function repositoryFixture(subjectOwner: string | null = null, userSubject: stri
   };
 }
 
-const request = { userId: 'target', provider: 'google', providerSubject: 'verified-subject' };
+const request = { userId: 'target', provider: 'google', issuer: 'https://identity.example.test/realm', providerSubject: 'verified-subject' };
 
 test('an unrelated MFA identity cannot enroll during ordinary privileged step-up', async () => {
   const fixture = repositoryFixture();

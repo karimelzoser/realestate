@@ -7,8 +7,8 @@
     "applicationRuntimeSource": "PR #81 emitted full-stack acceptance",
     "deploymentBundleSha": "8750f94180b89cf58a1963f739c24aa0a56babbd",
     "deploymentBundleSource": "PR #82 self-hosted deployment bundle",
-    "runtimeSchemaVersion": 48,
-    "migrationMarker": "0048_buyer_attribution_authority.sql",
+    "runtimeSchemaVersion": 49,
+    "migrationMarker": "0049_reviewed_identity_enrollment.sql",
     "status": "DEVELOPMENT"
   },
   "deployment": {

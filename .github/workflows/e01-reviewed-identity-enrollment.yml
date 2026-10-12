@@ -1,0 +1,85 @@
+name: E01 Reviewed Identity Enrollment
+on:
+  workflow_dispatch:
+  push:
+    branches: ['main','codex/egypt-platform-completion','completion/**','feature/**','release/**']
+    paths: ['platform/**','.github/workflows/e01-reviewed-identity-enrollment.yml']
+  pull_request:
+    branches: ['main','completion/**','feature/**','release/**']
+    paths: ['platform/**','.github/workflows/e01-reviewed-identity-enrollment.yml']
+permissions:
+  contents: read
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: preneura_identity_certification
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d preneura_identity_certification"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/preneura_identity_certification
+      MIGRATION_ACTOR: github-identity-enrollment-certification
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.9.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: platform/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @preneura/database migrate
+      - run: pnpm test
+      - run: pnpm --filter @preneura/api build
+      - run: node apps/api/scripts/certify-identity-enrollment.mjs
+      - name: Certify offline first-admin bootstrap against a separate empty database
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -Eeuo pipefail
+          createdb -h 127.0.0.1 -U postgres preneura_bootstrap_certification
+          export DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/preneura_bootstrap_certification
+          pnpm --filter @preneura/database migrate
+          node apps/api/scripts/certify-admin-bootstrap.mjs
+      - run: pnpm typecheck && pnpm lint
+      - name: Build enrollment production UI fixture
+        env:
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:3042
+          NEXT_PUBLIC_APP_ENV: public-test
+        run: pnpm --filter @preneura/web build
+      - run: pnpm --filter @preneura/web exec playwright install --with-deps chromium
+      - name: English and Arabic mobile enrollment UI acceptance
+        env:
+          E01_WEB_URL: http://127.0.0.1:3042
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:3042
+        run: |
+          set -Eeuo pipefail
+          NODE_ENV=production pnpm --filter @preneura/web exec next start --hostname 127.0.0.1 --port 3042 > /tmp/e01-enrollment-web.log 2>&1 &
+          web_pid=$!
+          trap 'kill "$web_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3042/mfa-enrollment >/dev/null; then break; fi
+            sleep 1
+          done
+          pnpm --filter @preneura/web exec playwright test e2e/identity-enrollment.spec.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e01-identity-enrollment-browser
+          path: platform/apps/web/test-results
+          retention-days: 14

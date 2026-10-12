@@ -47,6 +47,7 @@ export abstract class AuthRepository {
   abstract countChallengesSince(kind: AliasKind, identifierHmac: Uint8Array, since: Date): Promise<number>;
   abstract findOrProvisionExternalIdentity(input: {
     provider: string;
+    issuer: string;
     providerSubject: string;
     displayName: string;
     verifiedEmail?: string | null;
@@ -54,6 +55,7 @@ export abstract class AuthRepository {
   abstract linkExternalIdentityToUser(input: {
     userId: string;
     provider: string;
+    issuer: string;
     providerSubject: string;
     verifiedEmail?: string | null;
     allowNewLink?: boolean;
@@ -107,6 +109,7 @@ export class PostgresAuthRepository extends AuthRepository {
 
   async findOrProvisionExternalIdentity(input: {
     provider: string;
+    issuer: string;
     providerSubject: string;
     displayName: string;
     verifiedEmail?: string | null;
@@ -116,6 +119,7 @@ export class PostgresAuthRepository extends AuthRepository {
       .innerJoin('users as user', 'user.id', 'identity.user_id')
       .select(['identity.user_id', 'user.status'])
       .where('identity.provider', '=', input.provider)
+      .where('identity.issuer', '=', input.issuer)
       .where('identity.provider_subject', '=', input.providerSubject)
       .executeTakeFirst();
 
@@ -138,10 +142,11 @@ export class PostgresAuthRepository extends AuthRepository {
         .values({
           user_id: createdUser.id,
           provider: input.provider,
+          issuer: input.issuer,
           provider_subject: input.providerSubject,
           email_at_link_time: input.verifiedEmail ?? null,
         })
-        .onConflict((oc) => oc.columns(['provider', 'provider_subject']).doNothing())
+        .onConflict((oc) => oc.doNothing())
         .returning('user_id')
         .executeTakeFirst();
 
@@ -155,6 +160,7 @@ export class PostgresAuthRepository extends AuthRepository {
         .innerJoin('users as user', 'user.id', 'identity.user_id')
         .select(['identity.user_id', 'user.status'])
         .where('identity.provider', '=', input.provider)
+      .where('identity.issuer', '=', input.issuer)
         .where('identity.provider_subject', '=', input.providerSubject)
         .executeTakeFirstOrThrow();
 
@@ -165,6 +171,7 @@ export class PostgresAuthRepository extends AuthRepository {
   async linkExternalIdentityToUser(input: {
     userId: string;
     provider: string;
+    issuer: string;
     providerSubject: string;
     verifiedEmail?: string | null;
     allowNewLink?: boolean;
@@ -174,6 +181,7 @@ export class PostgresAuthRepository extends AuthRepository {
         .selectFrom('auth_external_identities')
         .select('user_id')
         .where('provider', '=', input.provider)
+        .where('issuer', '=', input.issuer)
         .where('provider_subject', '=', input.providerSubject)
         .executeTakeFirst();
       if (subjectOwner) {
@@ -184,6 +192,7 @@ export class PostgresAuthRepository extends AuthRepository {
         .selectFrom('auth_external_identities')
         .select('provider_subject')
         .where('provider', '=', input.provider)
+        .where('issuer', '=', input.issuer)
         .where('user_id', '=', input.userId)
         .executeTakeFirst();
       if (existingForUser) {
@@ -202,10 +211,11 @@ export class PostgresAuthRepository extends AuthRepository {
         .values({
           user_id: input.userId,
           provider: input.provider,
+          issuer: input.issuer,
           provider_subject: input.providerSubject,
           email_at_link_time: input.verifiedEmail ?? null,
         })
-        .onConflict((oc) => oc.columns(['provider', 'provider_subject']).doNothing())
+        .onConflict((oc) => oc.doNothing())
         .returning('user_id')
         .executeTakeFirst();
 
@@ -215,6 +225,7 @@ export class PostgresAuthRepository extends AuthRepository {
         .selectFrom('auth_external_identities')
         .select('user_id')
         .where('provider', '=', input.provider)
+        .where('issuer', '=', input.issuer)
         .where('provider_subject', '=', input.providerSubject)
         .executeTakeFirst();
       return winner?.user_id === input.userId ? 'ALREADY_LINKED' : 'CONFLICT';

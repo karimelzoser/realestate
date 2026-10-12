@@ -7,6 +7,8 @@ import { GoogleOidcService } from './google-oidc.service.js';
 import { DevelopmentOtpDelivery, GatewayOtpDelivery, OtpDeliveryPort } from './otp-delivery.js';
 import { SessionActivityService } from './session-activity.service.js';
 import { SessionAuthGuard } from './session-auth.guard.js';
+import { IdentityEnrollmentRepository } from './identity-enrollment.repository.js';
+import { IdentityEnrollmentController } from './identity-enrollment.controller.js';
 
 const otpDeliveryProvider: Provider = {
   provide: OtpDeliveryPort,
@@ -24,9 +26,10 @@ const otpDeliveryProvider: Provider = {
 };
 
 @Module({
-  controllers: [AuthController, GoogleAuthController],
+  controllers: [AuthController, GoogleAuthController, IdentityEnrollmentController],
   providers: [
     PostgresAuthRepository,
+    IdentityEnrollmentRepository,
     { provide: AuthRepository, useExisting: PostgresAuthRepository },
     otpDeliveryProvider,
     AuthService,

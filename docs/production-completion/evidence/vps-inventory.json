@@ -1,0 +1,145 @@
+{
+  "date": "2026-10-12",
+  "provider": "Hostinger",
+  "virtualMachineId": 1387868,
+  "host": "srv1387868.hstgr.cloud",
+  "ipv4": "187.77.85.198",
+  "sshHostKeySha256": "lnLsG35TFrPlbpZBhFQTz1t4q0BvdhKDJwSldR8MDVg",
+  "dedicatedLocalSshKeyPath": "C:/Users/LEGION/Downloads/Realestate/.tooling/vps-access/realestate-os-20261012",
+  "access": "Dedicated SSH key added through the connected Hostinger account; password authentication failed. No project changed.",
+  "protectedProjects": [
+    "n8n",
+    "existing PRENEURA platform"
+  ],
+  "protectedContainers": [
+    {
+      "name": "platform-opa",
+      "id": "80a74aa1d5241949bd241541833fc2f78c6ddaea709bd4987da92896c3c3e4e7",
+      "startedAt": "2026-09-23T15:30:58.841689966Z",
+      "restarts": 0,
+      "image": "openpolicyagent/opa:1.20.2"
+    },
+    {
+      "name": "platform-keycloak",
+      "id": "c2a5692096f5b7bd1606230468f36dc8915dad30df4a98bad13e673df1d43132",
+      "startedAt": "2026-09-23T15:25:26.019949417Z",
+      "restarts": 0,
+      "image": "quay.io/keycloak/keycloak:26.7.4"
+    },
+    {
+      "name": "platform-temporal",
+      "id": "ee5bdc71c91ba0479539000a59af67d0ee7110f82d4a3c4086e4310c4534a805",
+      "startedAt": "2026-09-23T14:57:20.618467754Z",
+      "restarts": 0,
+      "image": "temporalio/server:1.32.0"
+    },
+    {
+      "name": "platform-nats",
+      "id": "04087890de8ffb96cdffaed0ed9d14579d48a63f964e36fa73eefa80f7f0c58a",
+      "startedAt": "2026-09-22T23:19:37.364902132Z",
+      "restarts": 0,
+      "image": "nats:2.15.0-alpine"
+    },
+    {
+      "name": "platform-valkey",
+      "id": "8c11f778f77947b2ae6d6e2abedec545abef400a4f849140b0404740dcbac456",
+      "startedAt": "2026-09-22T23:18:44.0400317Z",
+      "restarts": 0,
+      "image": "valkey/valkey:8.1.10-alpine"
+    },
+    {
+      "name": "platform-postgres",
+      "id": "57355c6f41349962c019c22ff410e7263cbb6a76d910794b39751f9ae4ac3cfd",
+      "startedAt": "2026-09-22T23:17:07.310060443Z",
+      "restarts": 0,
+      "image": "pgvector/pgvector:0.8.6-pg16-bookworm"
+    },
+    {
+      "name": "n8n-n8n-worker-2-1",
+      "id": "eb66a046e53204d11b7d7abd7622c2a7e5a870632c4fbf5e7c24cfe8260dcbb2",
+      "startedAt": "2026-09-22T23:09:40.631680666Z",
+      "restarts": 0,
+      "image": "docker.n8n.io/n8nio/n8n"
+    },
+    {
+      "name": "n8n-n8n-worker-1",
+      "id": "a3d4f741b0747ba287b5726997daa9f6e7793add41eae3d5846f48611352808d",
+      "startedAt": "2026-09-22T23:09:40.624764714Z",
+      "restarts": 0,
+      "image": "docker.n8n.io/n8nio/n8n"
+    },
+    {
+      "name": "n8n-n8n-1",
+      "id": "32bf01d1dc7d9014ddccc4bcfcf0b51ff1e7e4ff22bfd67ffa9c6c6ed91406fd",
+      "startedAt": "2026-09-22T23:09:40.639191561Z",
+      "restarts": 0,
+      "image": "docker.n8n.io/n8nio/n8n"
+    },
+    {
+      "name": "n8n-traefik-1",
+      "id": "7d3707769dda58e69c3d4f0b98d8a702d3f03302f12d789724594f9f6121a80c",
+      "startedAt": "2026-09-22T23:09:40.600007996Z",
+      "restarts": 0,
+      "image": "traefik"
+    },
+    {
+      "name": "n8n-postgres-1",
+      "id": "33510fcfa008d50dc8ded1efed9e21d278e80a9305def8318d485298c4548e58",
+      "startedAt": "2026-09-22T23:09:40.653309193Z",
+      "restarts": 0,
+      "image": "postgres:15"
+    },
+    {
+      "name": "n8n-redis-1",
+      "id": "c48e26d6ba4eee272fba33a25e34cfb990e0ac7a1095e218b94f68836b140000",
+      "startedAt": "2026-09-22T23:09:40.600081046Z",
+      "restarts": 0,
+      "image": "redis:7"
+    }
+  ],
+  "observed": {
+    "totalMemoryMiB": 7940,
+    "availableMemoryMiB": 5575,
+    "diskFreeGiB": 80,
+    "dockerVersion": "29.2.1",
+    "composeVersion": "5.0.2",
+    "existingPublicPorts": [
+      80,
+      443
+    ]
+  },
+  "target": {
+    "directory": "/opt/realestate-os-testing",
+    "composeProject": "realestate-os-testing",
+    "database": "Separate PostgreSQL18; existing PostgreSQL15/16 are forbidden targets",
+    "publicRouting": "Full isolation, HTTPS8443 at realestate-test.aipreneura.com; no shared proxy/network"
+  },
+  "status": "PRIVATE_POSTGRES_INFRASTRUCTURE_HEALTHY; application not deployed",
+  "protectedContainersUnchangedAfterInfrastructure": true,
+  "newInfrastructure": {
+    "directory": "/opt/realestate-os-testing",
+    "project": "realestate-os-testing",
+    "container": "realestate-os-testing-postgres-1",
+    "postgresVersion": "18.6",
+    "memoryLimitMiB": 512,
+    "cpuLimit": 0.5,
+    "hostPorts": [],
+    "databaseRoles": [
+      "realestate_os_owner",
+      "realestate_os_migrator",
+      "realestate_os_app",
+      "realestate_os_idp"
+    ],
+    "network": "realestate-os-testing_backend",
+    "volume": "realestate-os-testing_postgres-data"
+  },
+  "tls": {
+    "hostname": "realestate-test.aipreneura.com",
+    "issuer": "Lets Encrypt YE1",
+    "validUntil": "2027-01-10T11:41:50Z",
+    "method": "DNS01",
+    "privateKeyLocation": "VPS isolated TLS directory only; not downloaded or committed",
+    "status": "ISSUED; application edge not yet deployed; renewal automation pending",
+    "temporaryChallengeCleanup": "Pending precise value-scoped DNS cleanup; never use zone-wide deletion"
+  }
+}

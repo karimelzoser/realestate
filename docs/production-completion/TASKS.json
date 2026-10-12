@@ -119,6 +119,24 @@
             "30 normal tests pass; strict types/lint and emitted API build",
             "Real emitted full-stack acceptance passes on disposable PostgreSQL18.6 with cookie mutations carrying trusted Origin and attack logout remaining blocked"
           ]
+        },
+        {
+          "id": "E01.5",
+          "title": "Reviewed initial privileged MFA enrollment and trusted first-admin bootstrap",
+          "dependencies": [
+            "E01.3",
+            "E01.4"
+          ],
+          "priority": "P0",
+          "status": "IN_PROGRESS",
+          "deliverable": "Issuer-scoped immutable identity bindings, signed nonce/PKCE/mode flow, expiring verified enrollment, fresh AAL2 platform-admin review, bilingual staff/reviewer UI and offline one-shot initial-owner bootstrap",
+          "acceptance": "No self-enrollment or phone-OTP assurance escalation; issuer substitution, stale/missing claims, competing reviewers, conflicts, replay and expiry fail closed; initial owner genuinely authenticates MFA and signs in again after approval; hosted provider/browser acceptance required",
+          "evidence": [
+            "Local signed loopback IdP and PostgreSQL49 identity certification passed",
+            "Separate empty-DB offline admin bootstrap certification passed",
+            "48 normal tests, nine-package types/lint and Next production build passed; new GitHub workflow prepared",
+            "English/Arabic mobile owned-status/admin-review UI-only browser acceptance passed; actual IdP/DB authority certified separately."
+          ]
         }
       ]
     },
@@ -197,14 +215,14 @@
           "id": "E03.3",
           "title": "Prevent legacy profile upsert from bypassing approved attribution transfer",
           "priority": "P0",
-          "status": "IN_PROGRESS",
+          "status": "TESTED",
           "dependencies": [
             "E03.2"
           ],
           "deliverable": "Immutable existing attribution on generic profile create/upsert plus database controlled-transfer authority and deal snapshot evidence",
           "acceptance": "Buyer/direct or another broker cannot reset/steal an existing attribution; only authorized approved transfer changes it, with stale/concurrent and historical commission tests.",
           "existingImplementation": "Local schema48: shared identity with independent project attribution, insert-or-read registration, developer-only approved review, immutable history/revisions, frozen reservation/commission ownership, scoped transaction/finance/export/reminder reads.",
-          "remainingAcceptance": "Exact published-head schema48 CI; broader onboarding product/UAT remains in E03.2.",
+          "remainingAcceptance": "Full brokerage onboarding UI/UAT remains in E03.2; scoped authority/deal snapshot acceptance passes42 exact-head CI runs.",
           "evidencePaths": [
             "platform/apps/api/scripts/certify-attribution-authority.mjs",
             "platform/packages/database/tests/e03_attribution_upgrade_assert.sql",
@@ -753,6 +771,23 @@
           "acceptance": "Coordinated restore verifies DB/identity/object/config evidence and actionable alert paths.",
           "existingImplementation": "CI backup/restore/observability/rollback boundaries exist. Real topology/PITR/offline artifact and operational evidence remain.",
           "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
+        },
+        {
+          "id": "E16.3",
+          "title": "Deploy and verify a fully isolated public-testing project on the authorized VPS",
+          "dependencies": [
+            "E16.1",
+            "E01.5"
+          ],
+          "priority": "P0",
+          "status": "IN_PROGRESS",
+          "deliverable": "Own bounded app/service containers, private PostgreSQL18.6 with separated roles/volume/network, dedicated HTTPS8443 and independent identity/storage/scanner/backup/observability",
+          "acceptance": "No edits/restarts to n8n or existing PRENEURA; exact-release schema/readiness and protected-container baselines; genuine provider, bilingual browser/full-journey, private storage/scanner and backup/restore/load acceptance",
+          "evidence": [
+            "Private PostgreSQL18.6 healthy, no public DB port, four independent database roles",
+            "All12 protected containers unchanged",
+            "New testing DNS A and valid DNS01 certificate issued; public app pending"
+          ]
         }
       ]
     },
@@ -802,8 +837,9 @@
     "deploymentAuthorized": true,
     "scope": "Render isolated public testing; no paid purchase authorization; no self-hosted server access"
   },
-  "currentCandidateSha": "f85f36fdc8cc5ffa2ef926b813eac44991469914",
+  "currentCandidateSha": "febcee5f53e5e18644e4eb4f72fa7fef1a4be14b",
   "activeBranch": "codex/egypt-platform-completion",
   "activePr": 90,
-  "currentRuntimeSchemaVersion": 47
+  "currentRuntimeSchemaVersion": 49,
+  "currentHostingTarget": "isolated VPS; Render deferred"
 }

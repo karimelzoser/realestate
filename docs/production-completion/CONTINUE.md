@@ -1,10 +1,8 @@
 # Continue protocol
 
-1. Read WORK_STATE.json, TASKS.json, CURRENT_STATUS_AND_CONTINUATION.md, PLAN, DECISIONS, PROGRESS and SERVICE_READINESS.
-2. Inspect/fetch active branch codex/egypt-platform-completion (PR90), preserve local work, reconcile concurrent remote changes. Main is synthetic demo. Never reimplement an existing domain from stale task statuses.
-3. Resume WORK_STATE active acceptance: E16.1 Render public testing profile/connection verification, then E03.3 attribution bypass and unfinished product journeys. Schema47 staff exact allocation and schema46 type EOI are implemented; all39 inspected published-head CI runs passed. Locale/identity/developer/brokerage foundations schema45 already exist.
-4. Preserve business invariants; append migrations; add focused positive/negative/concurrency evidence; run affected gates and mandatory normal checks.
-5. Commit focused changes and refresh checkpoint/evidence after each tested slice. Continue independent product work without recurring questions.
-6. Keep actual provider/live dependencies honest. Railway platform-core preview is a different repo; realestate staging has no app deployment. Render PR91 is an older-base profile. Render public testing is now authorized on the latest certified candidate with isolated synthetic data. Prepare and validate its deployment profile now; use connected Render inventory when available. No paid purchase is authorized and the existing self-hosted server stays deferred.
-
-Public fully integrated production is the final goal. A DEVELOPMENT manifest, green structural CI, configured credentials or a simulated demo are not a live GO.
+1. Read WORK_STATE.json, TASKS.json, CURRENT_STATUS_AND_CONTINUATION.md, PLAN, DECISIONS, PROGRESS, SERVICE_READINESS and VPS_DEPLOYMENT.md.
+2. Inspect/fetch codex/egypt-platform-completion, PR90; preserve all local/concurrent work. Main is the synthetic Pages demo. Published schema48/42 green CI is the last certified authority; local49 is under publication/review. Do not redo completed EOI/exact allocation/attribution foundations.
+3. Resume E16.3 isolated VPS preparation/deployment and complete E01.5 enrollment hosted acceptance. Use the dedicated local SSH key recorded in WORK_STATE; never store or print credentials. Respect protected-container baselines and separate directory/project/DB/network/volumes. No n8n/PRENEURA edits, restarts or migrations. Render is deferred.
+4. Use HTTPS8443 at realestate-test.aipreneura.com. Certificate is issued through DNS01; no existing proxy access is permitted. Complete renewal automation and private provider/service dependencies honestly.
+5. Append migrations, run meaningful role/negative/replay/race/browser/domain checks, publish focused reviewed changes using an expected-head lease, update evidence/state. Continue independent full-product work when a provider/owner action is pending.
+6. Finish all full PLAN acceptance, genuine integration, off-host restore and bounded load/soak before public production GO. A running private database, synthetic certification or green structural CI is not full production readiness.

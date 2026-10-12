@@ -178,7 +178,7 @@ export default function PlatformControlPlaneClient() {
 
       <section className={styles.content}>
         <div className={styles.hero}>
-          <div><span className={styles.eyebrow}>Super Admin</span><h1>Multi-client platform control</h1><p>Provision clients and projects, monitor platform health, and open explicitly audited support access only when tenant-level inspection is required.</p></div>
+          <div><span className={styles.eyebrow}>Super Admin</span><h1>Multi-client platform control</h1><a href="/admin/identity-enrollment">Review staff MFA enrollment / مراجعة هويات الموظفين</a><p>Provision clients and projects, monitor platform health, and open explicitly audited support access only when tenant-level inspection is required.</p></div>
           <div className={styles.boundary}><strong>Data-access boundary</strong><span>Control-plane metrics do not grant silent buyer-data access. Tenant operational reads require a reasoned, expiring support session.</span></div>
         </div>
 

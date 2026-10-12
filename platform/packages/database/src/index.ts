@@ -14,7 +14,7 @@ export type RealtimeTopic = 'CATALOG' | 'INVENTORY' | 'PRICING' | 'QUEUE' | 'TRA
 
 export interface UsersTable { id: Generated<string>; display_name: string; status: 'ACTIVE' | 'DISABLED' | 'PENDING'; created_at: Generated<Date>; updated_at: Generated<Date>; }
 export interface AuthLoginAliasesTable { id: Generated<string>; user_id: string; kind: 'PHONE' | 'NATIONAL_ID'; identifier_hmac: Uint8Array; verified_at: Timestamp; created_at: Generated<Date>; }
-export interface AuthExternalIdentitiesTable { id: Generated<string>; user_id: string; provider: string; provider_subject: string; email_at_link_time: string | null; linked_at: Generated<Date>; }
+export interface AuthExternalIdentitiesTable { id: Generated<string>; user_id: string; provider: string; issuer: string | null; provider_subject: string; email_at_link_time: string | null; linked_at: Generated<Date>; }
 export interface AuthOtpChallengesTable { id: Generated<string>; user_id: string | null; requested_kind: 'PHONE' | 'NATIONAL_ID'; requested_identifier_hmac: Uint8Array; otp_digest: Uint8Array; delivery_channel: 'SMS' | 'WHATSAPP'; delivery_attempted: Generated<boolean>; attempts_remaining: number; expires_at: Timestamp; consumed_at: Timestamp | null; created_at: Generated<Date>; }
 export interface AuthSessionsTable { id: Generated<string>; user_id: string; token_digest: Uint8Array; expires_at: Timestamp; revoked_at: Timestamp | null; created_at: Generated<Date>; last_seen_at: Generated<Date>; }
 export interface AuthSessionAssuranceTable { session_id: string; auth_method: 'OTP' | 'OIDC_GOOGLE'; assurance_level: 'AAL1' | 'AAL2'; provider_acr: string | null; provider_amr: JsonValue; verified_at: Generated<Date>; created_at: Generated<Date>; }

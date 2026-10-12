@@ -55,7 +55,7 @@ export async function apiFetch<T>(
       requiredAssurance === 'AAL2' &&
       typeof window !== 'undefined'
     ) {
-      window.location.assign(`${apiBase}/v1/auth/google/start?assurance=aal2`);
+      window.location.assign('/mfa-enrollment');
     }
 
     throw new ApiError(message, response.status, code, requiredAssurance);

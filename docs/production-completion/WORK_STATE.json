@@ -8,10 +8,10 @@
   "observedHeadBeforeCheckpoint": "36941e74f1b0edba40a41947106720a459010b8e",
   "observedCandidateHead": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "activeTaskId": "E03.3",
+  "activeTaskId": "E16.3",
   "activeTaskStatus": "IN_PROGRESS",
-  "completedCheckpoint": "Published f85f36f schema47 Render profile41 CI runs pass. Local schema48 project attribution and frozen sale ownership complete:44 normal tests,9 package types/lint/build, real concurrency/role/finance/export/reminder,47 upgrade, full-stack and bilingual browser/SSE pass. Schema48 exact-head CI pending publication.",
-  "nextAction": "Publish schema48 and verify all CI, then continue full staff/brokerage onboarding/MFA trust bootstrap and public buyer/catalog journeys while Render account/provider setup remains pending.",
+  "completedCheckpoint": "Published schema48 attribution candidate febcee5 has all42 inspected CI runs passing. Local schema49 adds reviewed MFA enrollment, issuer/nonce/freshness validation and offline initial-owner bootstrap; 48 normal tests, strict nine-package checks, frontend build and real DB/IdP/bootstrap certs pass. Separate VPS PostgreSQL18.6 healthy; all12 existing container baselines unchanged; DNS and certificate prepared.",
+  "nextAction": "Publish/certify schema49 checkpoint; prepare the isolated VPS frontend/API/worker/gateway, separate identity/storage/scanner/observability/backup services. User selected full isolation on dedicated HTTPS8443 at realestate-test.aipreneura.com. Never edit/restart existing n8n or PRENEURA projects. Continue full Egypt product acceptance and genuine provider integrations.",
   "changedFiles": [
     "platform/apps/api/src/auth",
     "platform/apps/api/src/access",
@@ -64,6 +64,10 @@
     {
       "action": "Trusted-origin mutation security",
       "result": "Fastify real-hook and header edge regressions; strict type/lint/API build; 30 normal tests and emitted full-stack acceptance including untrusted/missing-Origin logout rejection"
+    },
+    {
+      "action": "Schema49 local security and browser certification",
+      "result": "IDENTITY_ENROLLMENT_CERTIFICATION_OK including signed RS256 IdP, real DB races, raw-SQL reviewer guard, real callback/session preservation and /api cookies; ADMIN_BOOTSTRAP_CERTIFICATION_OK; 48 normal tests; nine-package types/lint; production web build; English/Arabic mobile enrollment UI-only transport passed."
     }
   ],
   "evidencePaths": [
@@ -76,8 +80,9 @@
     ".github/workflows/e01-privileged-assurance-certification.yml"
   ],
   "remainingTests": [
-    "Schema48 exact published-head GitHub CI including latest migration checksum, Linux preview and browser",
-    "Hosted Render/provider/HTTPS/load verification and final full platform acceptance"
+    "Schema49 exact-head GitHub CI and genuine hosted provider/session/browser acceptance",
+    "Isolated VPS migrations under non-superuser role and real application/provider/HTTPS/SSE testing",
+    "Full product journey, off-host restore, load/soak and live Gate7"
   ],
   "externalBlockerIds": [
     "PROVIDER_SETUP_PENDING",
@@ -98,15 +103,33 @@
       "en"
     ],
     "demoHosting": "GitHub Pages, synthetic only",
-    "laterProductionHosting": "Final hosting decision after production acceptance; existing self-hosted server reserved",
+    "laterProductionHosting": "Isolated VPS after full production acceptance; existing workloads protected",
     "railwayRequired": false,
-    "currentTestingHosting": "Render, GitHub-backed latest certified candidate"
+    "currentTestingHosting": "Isolated VPS, HTTPS8443 at realestate-test.aipreneura.com"
   },
   "taskPr": 90,
-  "taskImplementationHead": "f85f36fdc8cc5ffa2ef926b813eac44991469914",
-  "runtimeSchemaVersion": 47,
-  "migrationMarker": "0047_exact_apartment_allocation.sql",
+  "taskImplementationHead": "febcee5f53e5e18644e4eb4f72fa7fef1a4be14b",
+  "runtimeSchemaVersion": 48,
+  "migrationMarker": "0048_buyer_attribution_authority.sql",
   "localWorkPreservation": "Unfinished pre-sync locale expansion preserved in named git stash; reuse selectively with canonical locale provider, never duplicate it.",
-  "pendingMigration": "0048_buyer_attribution_authority.sql (unreleased draft; only disposable databases)",
-  "deploymentScope": "Render public testing with isolated synthetic data; no paid purchase authorization; self-hosted server remains deferred"
+  "pendingMigration": "0049_reviewed_identity_enrollment.sql (locally certified; not published yet)",
+  "deploymentScope": "Authorized fully isolated VPS project realestate-os-testing; existing n8n/PRENEURA protected; Render deferred",
+  "currentRuntimeSchemaVersion": 49,
+  "hostingDecision": {
+    "active": "isolated VPS",
+    "render": "deferred at user instruction",
+    "server": "187.77.85.198",
+    "directory": "/opt/realestate-os-testing",
+    "composeProject": "realestate-os-testing",
+    "publicHost": "realestate-test.aipreneura.com",
+    "httpsPort": 8443,
+    "protected": [
+      "n8n",
+      "existing PRENEURA platform"
+    ],
+    "sshKeyPath": "C:/Users/LEGION/Downloads/Realestate/.tooling/vps-access/realestate-os-20261012",
+    "privateDatabase": "healthy; unmigrated application DB",
+    "certificate": "Issued through DNS01; valid through 2027-01-10. Automatic renewal/targeted TXT cleanup pending.",
+    "publicApplication": "not yet deployed"
+  }
 }

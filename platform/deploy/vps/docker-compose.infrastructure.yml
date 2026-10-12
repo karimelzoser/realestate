@@ -1,0 +1,35 @@
+name: realestate-os-testing
+services:
+  postgres:
+    image: postgres:18.6-bookworm
+    restart: unless-stopped
+    init: true
+    mem_limit: 512m
+    cpus: '0.50'
+    pids_limit: 256
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: realestate_os_owner
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?A dedicated database owner password is required}
+      PRENEURA_MIGRATOR_PASSWORD: ${PRENEURA_MIGRATOR_PASSWORD:?Dedicated migrator password required}
+      PRENEURA_APP_PASSWORD: ${PRENEURA_APP_PASSWORD:?Dedicated application password required}
+      PRENEURA_IDP_PASSWORD: ${PRENEURA_IDP_PASSWORD:?Dedicated identity database password required}
+      POSTGRES_INITDB_ARGS: '--data-checksums --auth-host=scram-sha-256'
+    command: ['postgres','-c','shared_buffers=128MB','-c','max_connections=80','-c','password_encryption=scram-sha-256','-c','log_statement=none','-c','log_min_error_statement=panic']
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./init-databases.sh:/docker-entrypoint-initdb.d/10-realestate-databases.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL','pg_isready -U realestate_os_owner -d postgres']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+
+networks:
+  backend:
+    name: realestate-os-testing_backend
+
+volumes:
+  postgres-data:
+    name: realestate-os-testing_postgres-data

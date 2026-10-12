@@ -1,11 +1,10 @@
 # Copy-and-paste implementation instructions
 
-## Latest execution authority —12 October2026
+## Current authority — 12 October 2026
 
-Resume `codex/egypt-platform-completion`, PR90. Published schema47 head `47b9eb5df7680b0c30ff03a39388539a135dac70` passed all39 inspected CI runs. Required apartment-type EOI and the staff exact-apartment quote/hold/reservation foundation are implemented; do not restart them from historical statuses. Read WORK_STATE/TASKS/CURRENT_STATUS first and recheck remote HEAD.
+The user now authorizes the VPS deployment and explicitly defers Render. Use only /opt/realestate-os-testing, project realestate-os-testing, and a separate PostgreSQL18.6/database/identity/storage/volumes/network. Never edit, restart or redeploy n8n or the existing PRENEURA project. Full isolation is selected: HTTPS8443 at realestate-test.aipreneura.com; no existing Traefik network or ports80/443. Read VPS_DEPLOYMENT.md and evidence/vps-inventory.json. Private PG is healthy and all12 existing container baselines are unchanged; DNS A and a valid certificate are prepared. Public application services are not yet deployed.
 
-The latest user explicitly authorizes GitHub + Render public testing now and requests preparation of both. Use root render.yaml and RENDER_PUBLIC_TESTING.md for an isolated synthetic test environment; no paid purchase is authorized and the existing self-hosted server remains deferred. This overrides earlier generic statements postponing all hosting/deployment. Complete and publish reviewable configuration/tests before deployment, preserve normal production auth/authorization and do not invent provider/live evidence. Continue unfinished product acceptance independently when account/provider setup is pending. Full integrated public production remains the final objective and needs the full plan plus real liveGO evidence.
-
+Published schema48 head febcee5f53e5e18644e4eb4f72fa7fef1a4be14b passed all42 inspected GitHub CI runs. Local schema49 adds reviewed staff MFA enrollment, issuer/nonce/freshness checks and one-shot offline owner bootstrap; real DB/signed-IdP/bootstrap certifications, 48 normal tests and nine-package types/lint/frontend build pass. Publish and reverify this new candidate before claiming hosted readiness. EOI chooses apartment TYPE; allocation chooses the exact apartment. Arabic/English UI and English voice remain the agreed scope. Full product/provider/backup/load/live acceptance is still required.
 
 You are the engineering delivery lead for PRENEURA Real Estate OS. I authorize you to continue the existing repository into the complete production platform and deployment-ready package described in the completion plan appended below. This is an execution assignment: inspect, implement, test, document and persist progress. Do not stop at proposing another plan or completing a small convenient subset.
 
@@ -22,7 +21,7 @@ Planning documents are on branch `plan/egypt-platform-completion`, under `docs/p
 - All source, plans, progress, tests, service definitions and deployment tooling belong in GitHub.
 - Keep a shareable GitHub Pages demonstration using synthetic data. Do not use Pages as a backend, live financial/identity application or commercial SaaS host.
 - Do not use Railway or require a Railway MCP connector.
-- We have a self-hosted server. Prepare the entire platform and deployment package first. Server deployment is a later separately authorized stage; do not connect to, modify or deploy to the server now.
+- VPS deployment is now explicitly authorized. Deploy only the separate realestate-os-testing project; preserve n8n and the existing PRENEURA platform. Use separate HTTPS8443 and the prepared testing hostname. Render is deferred.
 - Prepare Docker Compose/images, GitHub CI/artifacts and ordinary SSH/CLI deployment scripts so later installation does not depend on a hosting MCP. Never claim this removes real hosting capacity/cost limits.
 - When I say **continue**, use the persisted plan/state and resume without asking me to repeat settled details or give permission for routine authorized source/test/documentation work.
 

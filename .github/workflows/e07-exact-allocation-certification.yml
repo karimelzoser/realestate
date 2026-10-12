@@ -93,7 +93,7 @@ jobs:
             if curl -fsS http://127.0.0.1:4120/v1/health >/dev/null && curl -fsS http://127.0.0.1:3030/login >/dev/null; then break; fi
             sleep 1
           done
-          pnpm --filter @preneura/web exec playwright test
+          pnpm --filter @preneura/web exec playwright test e2e/exact-allocation.spec.mjs
       - name: Preserve browser evidence
         if: always()
         uses: actions/upload-artifact@v4
