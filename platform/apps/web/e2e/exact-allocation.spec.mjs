@@ -4,8 +4,16 @@ test('assigned exact apartment selection works in English and persists into Arab
   await context.addCookies([{name:'preneura_session',value:'exact-allocation-browser-token-00000000001',url:base,httpOnly:true,sameSite:'Lax'}]);
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto('/workspace/allocation');
+  await expect(page.getByRole('complementary',{name:'Testing environment'})).toContainText('Public testing');
   await expect(page.getByRole('heading',{name:'Reception & Allocation'})).toBeVisible();
   await expect(page.getByRole('heading',{name:'EOI Type A'})).toBeVisible();
+  const live=await page.evaluate(()=>new Promise(resolve=>{
+    const source=new EventSource('/v1/me/notifications/events',{withCredentials:true});
+    const timeout=setTimeout(()=>{source.close();resolve(false);},30000);
+    source.addEventListener('heartbeat',()=>{clearTimeout(timeout);source.close();resolve(true);});
+    source.onerror=()=>{clearTimeout(timeout);source.close();resolve(false);};
+  }));
+  expect(live,'authorized notifications must stream through the same-origin proxy').toBe(true);
   await page.getByRole('combobox',{name:'Building',exact:true}).selectOption({label:'Building One · B1'});
   const floor=page.getByRole('combobox',{name:'Floor',exact:true});
   await floor.selectOption({index:1});
@@ -22,6 +30,7 @@ test('assigned exact apartment selection works in English and persists into Arab
   await page.setViewportSize({width:390,height:844});
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang','ar');
+  await expect(page.getByRole('complementary',{name:'بيئة الاختبار'})).toContainText('بيئة اختبار عامة');
   await expect(page.getByRole('heading',{name:'عرض سعر الشقة المحددة · B1-F1-U2'})).toBeVisible();
   await expect(page.getByRole('button',{name:'إنشاء الحجز',exact:true})).toBeEnabled();
   await expect(page.getByRole('button',{name:'تغيير الاختيار',exact:true})).toBeVisible();

@@ -1,5 +1,12 @@
 # PRENEURA — full production completion plan
 
+## Latest execution authority —12 October2026
+
+Resume `codex/egypt-platform-completion`, PR90. Published schema47 head `47b9eb5df7680b0c30ff03a39388539a135dac70` passed all39 inspected CI runs. Required apartment-type EOI and the staff exact-apartment quote/hold/reservation foundation are implemented; do not restart them from historical statuses. Read WORK_STATE/TASKS/CURRENT_STATUS first and recheck remote HEAD.
+
+The latest user explicitly authorizes GitHub + Render public testing now and requests preparation of both. Use root render.yaml and RENDER_PUBLIC_TESTING.md for an isolated synthetic test environment; no paid purchase is authorized and the existing self-hosted server remains deferred. This overrides earlier generic statements postponing all hosting/deployment. Complete and publish reviewable configuration/tests before deployment, preserve normal production auth/authorization and do not invent provider/live evidence. Continue unfinished product acceptance independently when account/provider setup is pending. Full integrated public production remains the final objective and needs the full plan plus real liveGO evidence.
+
+
 Prepared 11 October 2026 for https://github.com/karimelzoser/realestate.
 
 ## 1. Accepted product and delivery decisions
@@ -19,7 +26,7 @@ These decisions come from the user and supersede conflicting older repository de
 There are two separate completion outcomes:
 
 - **SOFTWARE_READY_FOR_DEPLOYMENT:** implemented scope, tested integrations/contracts, reviewed migrations, built artifacts and complete operational/deployment package.
-- **LIVE_PRODUCTION_GO:** subsequently deployed exact artifacts on the user's server, verified live providers, capacity/recovery/security/operations evidence, and an approved release decision.
+- **LIVE_PRODUCTION_GO:** deployed exact artifacts on the accepted durable production target, verified live providers, capacity/recovery/security/operations evidence, and an approved release decision.
 
 Do not confuse either with a green static demo or structural CI check. A prompt cannot prevent network outages or remove required credentials; it can preserve work and avoid unnecessary clarification.
 
@@ -94,7 +101,7 @@ GitHub Pages serves static files. GitHub also restricts use for commercial SaaS/
 
 Required GitHub Pages outcome: the existing link remains usable; publish a modern demo preview at a separate path if necessary, and replace the root only after parity/visual/regression acceptance. Test repository base paths, deep links, refresh, assets and mobile layouts. Build a static demo bundle that reuses production UI/contracts through an explicitly injected demo data adapter. Fixtures may use IndexedDB/browser state, but may not pretend to prove cross-device server locking. Keep simulation and real API clients separate at build/configuration level.
 
-Production web and backend run later on the existing self-hosted server, behind a real HTTPS domain. Prefer web/API paths on one origin, or same-site subdomains with tested cookie/CORS behavior. Do not make the commercial app depend on cross-site cookies from `github.io`; do not move sessions into browser localStorage as a shortcut.
+Public testing web and backend now target Render. The existing self-hosted server remains reserved for later; final hosting follows full acceptance and ownership/capacity decisions. Prefer web/API paths on one origin, or same-site subdomains with tested cookie/CORS behavior. Do not make the commercial app depend on cross-site cookies from `github.io`; do not move sessions into browser localStorage as a shortcut.
 
 Prepare GitHub Actions builds and GHCR/versioned archives. Prepare `deploy.sh`, `preflight.sh`, `migrate.sh`, `smoke.sh`, `rollback.sh`, `backup.sh`, `restore-rehearsal.sh` and a validated Compose deployment bundle. Remote deployment uses ordinary SSH/CLI, not a hosting MCP. No server connection is needed during this stage. Workflows must not automatically deploy production merely because a feature branch was pushed.
 

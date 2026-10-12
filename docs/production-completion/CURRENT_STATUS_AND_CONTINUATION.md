@@ -2,9 +2,9 @@
 
 ## Current checkpoint
 
-GitHub candidate branch `codex/egypt-platform-completion`, draft [PR #90](https://github.com/karimelzoser/realestate/pull/90), is at `bd5ca4f1eeda2ef566f56f7d869fbc16a45ceb30`, schema46. All34 inspected CI runs passed. Schema46 requires apartment-type EOI choice with immutable acceptance and protects cookie mutations with trusted Origin checks.
+Published branch `codex/egypt-platform-completion`, draft [PR90](https://github.com/karimelzoser/realestate/pull/90), is at schema47 head `47b9eb5df7680b0c30ff03a39388539a135dac70`. All39 inspected GitHub runs passed, including real DB exact allocation and production-browser English/Arabic reservation. Apartment-type EOI46 and staff exact-apartment47 foundations are implemented and certified.
 
-The next local slice is unreleased schema47 exact apartment allocation: scoped hierarchy/paging, quotes, requested-apartment concurrency, replay-safe holds/reservations, original price retention, buyer eligibility revalidation, physical identity propagation and executed-contract hash binding. Local real PostgreSQL18 certification,34 normal tests, all9 package type/lint checks and English desktop/Arabic mobile browser selection/hold/refresh/reservation passed. GitHub exact-head CI for47 is pending publication. A DEVELOPMENT manifest and green CI do not certify final production or real provider operation.
+Current local work prepares root Render free public-testing Blueprint, same-origin API proxy/SSE, supervised co-located processes, generated identity/recovery keys and visible bilingual test notice.40 normal tests,9 package type/lint checks, official schema validation, local process-loss test and English/Arabic browser/SSE journey pass; profile published-head CI/hosted verification remain pending. Read RENDER_PUBLIC_TESTING.md for rollout inputs and limits. No public deployment or final GO is claimed.
 
 ## Product goal and accepted boundaries
 
@@ -32,13 +32,13 @@ Do not recreate these domains because an old task file says `NOT_STARTED`. Exist
 
 The evidence snapshot records non-secret IDs/statuses. No Railway services, variables, buckets, domains or deployments were changed. Hosting bills/resource quotas and connector usage are separate constraints; switching away from MCP does not remove hosting costs or limits.
 
-## Render: repository profile, not a verified live deployment
+## Render: current public testing profile, hosted verification pending
 
 Draft [PR #91](https://github.com/karimelzoser/realestate/pull/91) at `1bb7cf650baeed781f598e8c2a9d17e04299ceb9` adds a Frankfurt Blueprint for Next web, API, worker, notification gateway and managed PostgreSQL 18. It is stacked on `feature/production-runtime-readiness`, **not PR #90**. Its public deployment package cannot be treated as the complete Egypt candidate.
 
 The Render workspace's live state is **unverified in this inspection**; no connected Render inventory or authenticated target session was available. The PR's statement that the workspace is empty is not fresh independent evidence.
 
-Before adopting the profile, regenerate it from the final candidate and certify actual runtime requirements: AAL2/identity/recovery secrets, source/build/schema identity, storage/scanner, messaging channels/templates, callback/cookie/CORS behavior, orderly explicit migration and worker rollout, observability and rollback. Do not assume generated encryption material has the required byte length/encoding. Do not assume a configured SMS OTP channel works when only WhatsApp credentials are supplied. Independent auto-deploys must not allow a worker/API schema mismatch.
+Root render.yaml now replaces the older PR91 approach for public testing and retains normal production guards. The current profile is being certified on PR90. Required runtime inputs include: AAL2/identity/recovery secrets, source/build/schema identity, storage/scanner, messaging channels/templates, callback/cookie/CORS behavior, orderly explicit migration and worker rollout, observability and rollback. Do not assume generated encryption material has the required byte length/encoding. Do not assume a configured SMS OTP channel works when only WhatsApp credentials are supplied. Independent auto-deploys must not allow a worker/API schema mismatch.
 
 Render free Postgres expires after 30 days and background workers have no free compute plan. Free hosting is therefore unsuitable as a durable full-platform production promise. See [Render free limits](https://render.com/docs/free), [workers](https://render.com/docs/background-workers) and [Blueprint reference](https://render.com/docs/blueprint-spec). Render is selected for public testing; preserve the portable package for final production. Installed/enabled Render plugin has no callable MCP tools in this session; no CLI/key is present. Account OAuth/reload is pending and independent GitHub/deployment preparation continues.
 

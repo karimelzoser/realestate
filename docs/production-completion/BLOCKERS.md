@@ -1,13 +1,13 @@
-# External and deferred dependencies
+# External and deployment dependencies
 
-## DEPLOYMENT_DEFERRED
+## RENDER_CONNECTION_PENDING / LIVE_DEPLOYMENT_PENDING
 
-Server deployment is intentionally excluded from the current software stage. Do not connect to/change the server, DNS, secrets or production data. Prepare all deployment definitions and rehearse only in disposable environments. Later deployment needs explicit authorization and verified host/domain/secret configuration.
+GitHub + Render isolated public testing is authorized now. Render is installed/enabled but this session has no exposed Render tools and no authenticated CLI; account OAuth/reload is required. Continue code/configuration/certification independently. No resources have been created and no public URL verified. The existing self-hosted server remains deferred; no paid purchase, real customer-data migration or final production cutover is authorized by the testing scope. Final production still needs the full plan and actual provider/capacity/recovery/security evidence.
 
 ## PROVIDER_SETUP_PENDING
 
-Approved merchant/messaging/signature/identity arrangements, credentials, provider sandbox/live accounts, template approvals and finance/legal/domain-owner acceptance are not supplied by this handover. Build adapters/configuration/contracts and tests; record what actually remains unverified. Missing credentials must not stop unrelated code, UI, tests and package preparation. Do not fake provider verification.
+Trusted MFA/identity, private storage/scanner, messaging templates/channels, merchant/refund/settlement and any signature/voice credentials and sandbox/live acceptance remain external. Build adapters, configuration and tests; record actual evidence. Missing credentials must not stop unrelated source/UI/test/package work. Do not fake provider success.
 
 ## INDEPENDENT_REVIEW_PENDING
 
-High-risk security/finance/locking/signature changes need independent review; business contracts/verification/settlement policies need the appropriate owner. Prepare concrete reviewable code and evidence before requesting indispensable signoff.
+Prepare concrete security/finance/signature code and evidence for review and final owner/legal/provider acceptance. This is distinct from routine authorized implementation or public synthetic testing.

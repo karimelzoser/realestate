@@ -13,7 +13,7 @@ import {
   safeRequestLog,
 } from './security/http-security.js';
 
-async function bootstrap(): Promise<void> {
+async function bootstrap(): Promise<NestFastifyApplication> {
   validateApiRuntimeConfig();
 
   const adapter = new FastifyAdapter({
@@ -71,6 +71,7 @@ async function bootstrap(): Promise<void> {
     throw new Error('PORT must be a valid TCP port.');
   }
   await app.listen({ port, host: '0.0.0.0' });
+  return app;
 }
 
-void bootstrap();
+export const apiStartup = bootstrap();

@@ -67,7 +67,9 @@ jobs:
         run: pnpm typecheck
       - name: Build production browser client
         env:
-          NEXT_PUBLIC_API_URL: http://127.0.0.1:4120
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:3030
+          NEXT_PUBLIC_APP_ENV: public-test
+          PRENEURA_API_UPSTREAM: http://127.0.0.1:4120
         run: pnpm --filter @preneura/web build
       - name: Install certification browser
         run: pnpm --filter @preneura/web exec playwright install --with-deps chromium
@@ -76,7 +78,9 @@ jobs:
           PORT: '4120'
           WEB_ORIGIN: http://127.0.0.1:3030
           OBJECT_STORAGE_BUCKET: acceptance-documents
-          NEXT_PUBLIC_API_URL: http://127.0.0.1:4120
+          NEXT_PUBLIC_API_URL: http://127.0.0.1:3030
+          NEXT_PUBLIC_APP_ENV: public-test
+          PRENEURA_API_UPSTREAM: http://127.0.0.1:4120
         run: |
           set -Eeuo pipefail
           node apps/api/scripts/seed-exact-allocation-browser.mjs

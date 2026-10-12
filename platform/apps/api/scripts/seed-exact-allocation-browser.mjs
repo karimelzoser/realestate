@@ -9,6 +9,7 @@ try {
     WHERE p.code='EXACT' AND t.code LIKE 'EXACT-%' AND q.status='CALLED' AND q.allocator_user_id IS NOT NULL
     ORDER BY t.created_at DESC,q.id LIMIT 1`)).rows[0];
   if(!row)throw new Error('Run real exact-allocation certification first to create the synthetic called-buyer graph.');
+  await db.query(`DELETE FROM auth_sessions WHERE token_digest=digest('exact-allocation-browser-token-00000000001','sha256')`);
   const sessionId=randomUUID();
   await db.query(`INSERT INTO auth_sessions(id,user_id,token_digest,expires_at)
     VALUES($1,$2,digest('exact-allocation-browser-token-00000000001','sha256'),now()+interval '1 hour')`,[sessionId,row.user_id]);

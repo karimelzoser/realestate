@@ -8,7 +8,14 @@ export function validateWorkerRuntimeConfig(env: Env = process.env): void {
 
   const failures: string[] = [];
   requireUrl(env, 'DATABASE_URL', ['postgres:', 'postgresql:'], false, failures);
-  requireUrl(env, 'NOTIFICATION_GATEWAY_URL', ['https:', 'http:'], true, failures);
+  const localGateway = env.NOTIFICATION_GATEWAY_TRANSPORT === 'loopback';
+  requireUrl(env, 'NOTIFICATION_GATEWAY_URL', ['https:', 'http:'], !localGateway, failures);
+  if (localGateway && env.NOTIFICATION_GATEWAY_URL !== 'http://127.0.0.1:4300/deliver') {
+    failures.push('loopback notification transport requires http://127.0.0.1:4300/deliver.');
+  }
+  if (env.NOTIFICATION_GATEWAY_TRANSPORT && !['loopback', 'network'].includes(env.NOTIFICATION_GATEWAY_TRANSPORT)) {
+    failures.push('NOTIFICATION_GATEWAY_TRANSPORT must be network or loopback.');
+  }
   requireSecret(env, 'NOTIFICATION_GATEWAY_TOKEN', MIN_SECRET_LENGTH, failures);
 
   // Inventory expiry is a correctness reconciliation loop, not a browser timer or

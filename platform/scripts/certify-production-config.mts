@@ -17,6 +17,8 @@ const apiBase: Env = {
   PRENEURA_EXPECTED_RELEASE_SHA: releaseSha,
   AUTH_IDENTIFIER_HMAC_KEY: longSecret,
   AUTH_OTP_PEPPER: longSecret,
+  IDENTITY_DOCUMENT_HMAC_KEY: longSecret,
+  IDENTITY_RECOVERY_OTP_PEPPER: longSecret,
   COOKIE_SIGNING_SECRET: longSecret,
   AUTH_STEP_UP_BASE_MAX_AGE_SECONDS: '600',
   CONTACT_ENCRYPTION_KEY_BASE64: encryptionKey,
@@ -101,6 +103,12 @@ expectFail('api.missing-release-pin', 'PRENEURA_EXPECTED_RELEASE_SHA', () =>
 expectFail('api.invalid-release-pin', 'commit identity', () =>
   assertApiRuntimeConfiguration({ ...apiBase, PRENEURA_EXPECTED_RELEASE_SHA: 'not-a-sha' }),
 );
+expectFail('api.missing-identity-key', 'IDENTITY_DOCUMENT_HMAC_KEY', () =>
+  assertApiRuntimeConfiguration({ ...apiBase, IDENTITY_DOCUMENT_HMAC_KEY: undefined }),
+);
+expectFail('api.missing-recovery-pepper', 'IDENTITY_RECOVERY_OTP_PEPPER', () =>
+  assertApiRuntimeConfiguration({ ...apiBase, IDENTITY_RECOVERY_OTP_PEPPER: undefined }),
+);
 expectPass('api.development-skips-production-contract', () =>
   assertApiRuntimeConfiguration({ NODE_ENV: 'development' }),
 );
@@ -123,6 +131,9 @@ expectFail('worker.invalid-inventory-batch', 'INVENTORY_LOCK_EXPIRY_BATCH_SIZE',
 );
 
 expectPass('gateway.valid', () => assertNotificationGatewayRuntimeConfiguration({ ...gatewayBase }));
+expectFail('gateway.invalid-bind-host', 'NOTIFICATION_GATEWAY_BIND_HOST', () =>
+  assertNotificationGatewayRuntimeConfiguration({ ...gatewayBase, NOTIFICATION_GATEWAY_BIND_HOST: 'public.invalid' }),
+);
 expectFail('gateway.short-token', '32 characters', () =>
   assertNotificationGatewayRuntimeConfiguration({ ...gatewayBase, NOTIFICATION_GATEWAY_TOKEN: 'short' }),
 );

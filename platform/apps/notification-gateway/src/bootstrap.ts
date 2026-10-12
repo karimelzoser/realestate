@@ -1,4 +1,5 @@
 import { assertNotificationGatewayRuntimeConfiguration } from './runtime-config.js';
 
 assertNotificationGatewayRuntimeConfiguration();
-await import('./main.js');
+const runtime = await import('./main.js');
+export const notificationGatewayServer = runtime.server;

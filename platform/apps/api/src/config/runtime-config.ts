@@ -21,6 +21,8 @@ export function validateApiRuntimeConfig(env: NodeJS.ProcessEnv = process.env): 
 
   requireSecret(env, 'AUTH_IDENTIFIER_HMAC_KEY', failures);
   requireSecret(env, 'AUTH_OTP_PEPPER', failures);
+  requireSecret(env, 'IDENTITY_DOCUMENT_HMAC_KEY', failures);
+  requireSecret(env, 'IDENTITY_RECOVERY_OTP_PEPPER', failures);
   requireSecret(env, 'COOKIE_SIGNING_SECRET', failures);
   requireIntegerRange(env, 'AUTH_STEP_UP_BASE_MAX_AGE_SECONDS', 60, 1800, failures);
   requireSecret(env, 'CONTACT_HMAC_KEY', failures);

@@ -16,6 +16,8 @@ const mandatoryTests = [
   { path: 'apps/api/test/http-origin.test.ts', minimumDeclaredTests: 4 },
   { path: 'apps/api/test/exact-allocation.test.ts', minimumDeclaredTests: 4 },
   { path: 'apps/web/scripts/locale-money.test.mjs', minimumDeclaredTests: 4 },
+  { path: 'apps/web/scripts/api-proxy-config.test.mjs', minimumDeclaredTests: 3 },
+  { path: 'apps/worker/test/runtime-config.test.ts', minimumDeclaredTests: 3 },
 ];
 const workspaceManifests = [
   'apps/api/package.json',

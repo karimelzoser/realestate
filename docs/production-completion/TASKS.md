@@ -1,13 +1,13 @@
 # Production completion task ledger
 
-Active candidate: codex/egypt-platform-completion, draft PR90. Inspected schema45 head: e8f5216e0964be01b2f2aa754944df9423c390da. TASKS.json is the machine-readable graph; partial baseline implementations are now recorded rather than mislabeled absent.
+Active candidate: `codex/egypt-platform-completion`, draft PR90. Published schema47 head `47b9eb5df7680b0c30ff03a39388539a135dac70` passed all39 inspected CI runs. TASKS.json is the authoritative machine-readable graph; existing domain foundations remain open only for their named remaining acceptance.
 
-Active acceptance: **E05.2 selected apartment-type EOI**, then E07 exact-apartment selection/locking. E02 locale/identity and E03 onboarding foundations already exist; their remaining product acceptance is recorded explicitly.
+Current slice: E16.1 Render public testing profile/connection/deployment verification. Continue E03.3 attribution bypass closure and remaining product acceptance independently. EOI-type46 and staff exact apartment47 foundations are implemented and certified; master-plan/online allocation/public buyer journeys remain open.
 
 | Epic | Status |
 |---|---|
 | E00 Repository authority and interruption-safe execution | INTEGRATED |
-| E01 Security, release and testing defect closure | TESTED |
+| E01 Security, release and testing defect closure | IN_PROGRESS (hosted assurance/cookie UAT pending) |
 | E02 Egypt identity and Arabic/English foundations | IN_PROGRESS |
 | E03 Developer/brokerage onboarding | IN_PROGRESS |
 | E04 Catalog, exact physical inventory, assets and pricing | IN_PROGRESS |

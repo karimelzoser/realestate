@@ -166,12 +166,18 @@ importers:
 
   .:
     devDependencies:
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
       turbo:
         specifier: 2.11.7
         version: 2.11.7
       typescript:
         specifier: 7.0.2
         version: 7.0.2
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
 
   apps/api:
     dependencies:

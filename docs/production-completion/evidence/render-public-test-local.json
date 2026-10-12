@@ -1,0 +1,39 @@
+{
+  "scope": "Local disposable Render profile verification; no hosted provider or load approval",
+  "baselinePublishedSha": "47b9eb5df7680b0c30ff03a39388539a135dac70",
+  "renderProfile": {
+    "plans": [
+      "free",
+      "free",
+      "free"
+    ],
+    "backendRuntime": "one Node process: API, worker, local token-authenticated gateway",
+    "productionAuthRetained": true,
+    "automaticDeploys": false,
+    "officialSchemaSha256": "8a3fb8da6b4f55fe686fbefa790e011d3dd7895f013f355953c572a21ab6494a"
+  },
+  "memory": {
+    "discardedFourProcessInitialRssBytes": 517947392,
+    "finalSingleHostInitialRssBytes": 197726208,
+    "measurement": "Windows working set after readiness, one local smoke sample",
+    "hostedLoadVerified": false
+  },
+  "checks": {
+    "normalTests": 40,
+    "packagesStrictTypeAndLint": 9,
+    "builds": "all9 packages/all4 apps",
+    "productionConfigNegatives": "missing identity/recovery keys and unsafe gateway binding rejected",
+    "process": "real database/migration verification, abrupt host loss, occupied API port closes all services",
+    "gracefulLinuxSignalDrain": "pending GitHub certification",
+    "browser": "same-origin SSE heartbeat plus English desktop/Arabic390 RTL quote, acknowledgment, hold, refresh, actual reservation and public-test labeling"
+  },
+  "external": {
+    "renderToolsExposed": false,
+    "renderCliAuthenticated": false,
+    "resourcesCreated": 0,
+    "publicUrl": null,
+    "providerEvidence": false,
+    "paidPurchaseAuthorized": false,
+    "selfHostedAccess": false
+  }
+}

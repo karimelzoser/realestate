@@ -6,7 +6,7 @@
   "baselineProductionSha": "c2746523eb434898cbb4c46cf5df452d122ba78f",
   "planningHeadSha": "446cfe4803bedc9868ee28799ff4b376277c0d91",
   "demoMainSha": "1a6e61c891e040221f09c773e6de589928a9a0b7",
-  "activeTaskId": "E07.1",
+  "activeTaskId": "E16.1",
   "taskDefaults": {
     "actorScope": "execution-agent using existing RBAC/domain boundaries",
     "requiredEvidence": [
@@ -707,11 +707,18 @@
           ],
           "priority": "P0",
           "status": "IN_PROGRESS",
-          "deliverable": "Reproducible self-hosted deployment bundle and CLI/SSH workflow",
+          "deliverable": "Portable production bundle plus GitHub-backed Render public testing profile",
           "acceptance": "Fresh disposable production-config environment boots with malformed config failing closed; target server untouched.",
           "note": "Existing four-process container/provenance bundle integrated and certified; full additional-service/operational scope remains.",
-          "existingImplementation": "Compose/non-root images, explicit migrations, proxy/SSE/readiness packaging certified. Render profile from PR91 must be adapted to candidate and one hosting path selected later.",
-          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da"
+          "existingImplementation": "Certified non-root Compose bundle plus current root free Render Blueprint, same-origin proxy, production-guarded supervised API/worker/local gateway, schema validation, real local process fault and bilingual browser/SSE tests.",
+          "baselineEvidenceHead": "e8f5216e0964be01b2f2aa754944df9423c390da",
+          "remainingAcceptance": "Latest published-head Render/Linux/browser CI; Render account connection, actual workspace inventory/provider configuration, hosted memory/cookie/OIDC/SSE checks and public URL. Final durable production remains separate.",
+          "evidencePaths": [
+            "render.yaml",
+            "platform/deploy/render-preview.mjs",
+            ".github/workflows/render-public-test-profile-certification.yml",
+            "docs/production-completion/RENDER_PUBLIC_TESTING.md"
+          ]
         },
         {
           "id": "E16.2",
@@ -769,12 +776,13 @@
   ],
   "deferredStage": {
     "id": "DEPLOY-LIVE",
-    "status": "DEPLOYMENT_DEFERRED",
-    "reason": "Software and deployment package must be complete before separate user authorization",
-    "deploymentAuthorized": false
+    "status": "PUBLIC_TEST_DEPLOYMENT_AUTHORIZED",
+    "reason": "Latest user explicitly requests GitHub + Render public testing now. Full production/self-hosted cutover remains deferred pending full acceptance.",
+    "deploymentAuthorized": true,
+    "scope": "Render isolated public testing; no paid purchase authorization; no self-hosted server access"
   },
-  "currentCandidateSha": "bd5ca4f1eeda2ef566f56f7d869fbc16a45ceb30",
+  "currentCandidateSha": "47b9eb5df7680b0c30ff03a39388539a135dac70",
   "activeBranch": "codex/egypt-platform-completion",
   "activePr": 90,
-  "currentRuntimeSchemaVersion": 46
+  "currentRuntimeSchemaVersion": 47
 }

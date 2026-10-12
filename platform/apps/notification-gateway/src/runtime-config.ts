@@ -9,6 +9,9 @@ type TemplateBinding = {
 const PLACEHOLDER_PATTERN = /(replace|change[-_ ]?me|placeholder|example-secret|your[-_ ]|dummy)/i;
 
 export function assertNotificationGatewayRuntimeConfiguration(env: Env = process.env): void {
+  if (env.NOTIFICATION_GATEWAY_BIND_HOST && !['0.0.0.0', '127.0.0.1'].includes(env.NOTIFICATION_GATEWAY_BIND_HOST)) {
+    throw new Error('NOTIFICATION_GATEWAY_BIND_HOST must be 0.0.0.0 or 127.0.0.1.');
+  }
   if (env.NODE_ENV !== 'production') return;
 
   requiredUrl(env, 'DATABASE_URL', ['postgres:', 'postgresql:']);
@@ -23,7 +26,7 @@ export function assertNotificationGatewayRuntimeConfiguration(env: Env = process
   validateOptionalWebhook(env, 'SMS_PROVIDER_URL', 'SMS_PROVIDER_TOKEN');
   validateOptionalWebhook(env, 'EMAIL_PROVIDER_URL', 'EMAIL_PROVIDER_TOKEN');
 
-  const port = Number(env.PORT ?? '4300');
+  const port = Number(env.NOTIFICATION_GATEWAY_PORT ?? env.PORT ?? '4300');
   if (!Number.isInteger(port) || port <= 0 || port > 65_535) {
     throw new Error('PORT must be a valid TCP port.');
   }

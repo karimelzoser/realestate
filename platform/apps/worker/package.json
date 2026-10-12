@@ -9,7 +9,8 @@
     "build:deps": "pnpm --filter @preneura/database build && pnpm --filter @preneura/observability build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "tsc --noEmit -p tsconfig.json",
-    "start": "node --import @preneura/observability/register dist/main.js"
+    "start": "node --import @preneura/observability/register dist/main.js",
+    "test": "node --import tsx --test test/runtime-config.test.ts"
   },
   "dependencies": {
     "@preneura/database": "workspace:*",
