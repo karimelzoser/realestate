@@ -44,5 +44,8 @@
     "privateCredentialsPublished": false,
     "genuineMfa": "PENDING human interaction; last VPS session count0"
   },
-  "deployment": "New discovery source/schema not yet published/certified/rolled out; protected12 baselines unchanged."
+  "deployment": "New discovery source/schema not yet published/certified/rolled out; protected12 baselines unchanged.",
+  "ciInitialHead": "7c948425d1b73abe2a3b7c7ce987ba62f9efeefb",
+  "ciUpgradeFollowup": "Two attribution-upgrade jobs assumed minimum runtime equals latest schema. Additive50/51 correctly retain49 compatibility. Assertion now requires exact schema/marker ledger plus MFA safety floor49<=minimum<=latest; historical47→51 data/evidence assertion passed locally without changing migrations or frozen-history checks.",
+  "securityFollowup": "Initial CodeQL flagged response/environment-derived file contents in the offline owner utility. Handoff writes now contain only fresh local random/static values; identity correlation uses an admin-only managed IdP attribute. Existing prepared credentials are preserved; actual recheck passed with no admin/email-verification changes. New CodeQL verdict still required."
 }

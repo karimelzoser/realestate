@@ -11,7 +11,7 @@
   "activeTaskId": "E04.1",
   "activeTaskStatus": "IN_PROGRESS",
   "completedCheckpoint": "Owner IdP candidate prepared privately; human MFA/admin grant still pending. First premium bilingual public-discovery foundation locally verified:67 normal tests,9 package strict checks, production API/web builds, real DB+HTTP publication/privacy/lifecycle/paging/audit/revocation checks and9 production browser cases with actual EN desktop/AR mobile screenshot review. VPS remains49de56f/schema49; new source not yet rolled out.",
-  "nextAction": "Certify the published exact source and discovery51/owner-preparation/execution plan; inspect exact-head CI, then build/rehearse51 and roll only own isolated API/worker/web after preserving all stable secrets and migration checksums. Verify hosted discovery and add manager publication UI/type/media catalog. If owner completes genuine MFA, inspect fresh exact issuer/subject/session and perform reviewed offline bootstrap, revoke pre-approval sessions and require sign-in again. Continue all M1–M8 gates.",
+  "nextAction": "Certify corrected exact-source CI after additive compatibility assertion fix, then build/rehearse/roll own discovery51 image and migrations while preserving secrets/protected baselines. Follow EXECUTION_PLAN all milestones; genuine owner MFA is still pending. Continue publication/type/media UX and full product acceptance.",
   "changedFiles": [
     ".github/workflows/e04-public-discovery.yml",
     "docs/production-completion/BLOCKERS.md",
@@ -116,6 +116,14 @@
     {
       "action": "Initial goal implementation and qualification",
       "result": "Owner private candidate prepared without verified-email/admin claims; real publication50→authority51 local DB/HTTP checks, normal67/strict9/API+production web/browser9 pass; actual screenshots inspected. No discovery rollout or full platform GO yet."
+    },
+    {
+      "action": "CI additive-upgrade follow-up",
+      "result": "Initial discovery7c9484 has two failed upgrade assertions requiring minimum=latest. Schema/marker remain exactly latest; minimum now validates the existing MFA49 safety floor and <=latest compatibility. Local historical47-seeded evidence upgraded through51 with E03_ATTRIBUTION_UPGRADE_CERTIFICATION_OK. No applied migration/history checks weakened."
+    },
+    {
+      "action": "CodeQL owner handoff follow-up",
+      "result": "Removed HTTP/environment-derived metadata writes; generated credentials only, admin-only IdP correlation and unchanged legacy subject. Actual isolated owner recheck passed with unchanged credentials/no app grant/email verification; corrected exact-head security verdict pending."
     }
   ],
   "evidencePaths": [

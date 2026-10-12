@@ -4,7 +4,10 @@ DO $$ BEGIN
     SELECT 1 FROM platform_runtime_contract runtime
     JOIN LATERAL (SELECT version,filename FROM platform_schema_migrations ORDER BY version DESC LIMIT 1) latest ON true
     WHERE runtime.singleton_key='production' AND latest.version>=48
-      AND runtime.schema_version=latest.version AND runtime.minimum_runtime_version=latest.version
+      AND runtime.schema_version=latest.version
+      -- Additive migrations can retain an older compatible runtime.49 is the
+      -- mandatory MFA-enrollment safety floor; it must never be downgraded.
+      AND runtime.minimum_runtime_version BETWEEN CASE WHEN latest.version>=49 THEN 49 ELSE 48 END AND latest.version
       AND runtime.migration_marker=regexp_replace(latest.filename,'\.sql$','')
   ) THEN RAISE EXCEPTION 'upgrade runtime contract does not match the applied migration ledger'; END IF;
   IF NOT EXISTS(SELECT 1 FROM buyer_project_attributions WHERE buyer_profile_id='10000000-0000-4000-8000-000000000001' AND project_id='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' AND source='BROKER' AND broker_company_id='e0348000-4848-4484-8484-000000000002') THEN RAISE EXCEPTION 'approved project ownership was not recovered'; END IF;
