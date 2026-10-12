@@ -17,3 +17,8 @@ test('local transport retains token, inventory reconciliation and cadence requir
   assert.throws(()=>validateWorkerRuntimeConfig({...base,NOTIFICATION_GATEWAY_TRANSPORT:'loopback',NOTIFICATION_GATEWAY_URL:'http://127.0.0.1:4300/deliver',NOTIFICATION_GATEWAY_TOKEN:''}),/TOKEN/);
   assert.throws(()=>validateWorkerRuntimeConfig({...base,INVENTORY_LOCK_EXPIRY_SCAN_MS:'0'}),/EXPIRY/);
 });
+test('external delivery pause is restricted to labeled public testing and retains all correctness loops',()=>{
+  assert.throws(()=>validateWorkerRuntimeConfig({...base,NOTIFICATION_EXTERNAL_DELIVERY_ENABLED:'false'}),/paused only/);
+  assert.doesNotThrow(()=>validateWorkerRuntimeConfig({...base,NOTIFICATION_EXTERNAL_DELIVERY_ENABLED:'false',APP_ENV:'public-test'}));
+  assert.throws(()=>validateWorkerRuntimeConfig({...base,NOTIFICATION_EXTERNAL_DELIVERY_ENABLED:'false',APP_ENV:'public-test',INVENTORY_LOCK_EXPIRY_SCAN_MS:'0'}),/EXPIRY/);
+});

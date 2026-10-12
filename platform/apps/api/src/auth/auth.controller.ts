@@ -22,6 +22,11 @@ import { AuthService } from './auth.service.js';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Get('capabilities')
+  capabilities(): ReturnType<AuthService['publicCapabilities']> {
+    return this.authService.publicCapabilities();
+  }
+
   @Post('login/start')
   async startLogin(@Body() body: unknown): Promise<StartLoginResponse> {
     const parsed = startLoginSchema.safeParse(body);

@@ -1,0 +1,27 @@
+name: realestate-os-testing
+services:
+  edge:
+    image: nginx:1.30.5-alpine
+    entrypoint: ['nginx','-g','daemon off;']
+    user: '101:101'
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    mem_limit: 64m
+    cpus: '0.15'
+    pids_limit: 64
+    tmpfs: ['/tmp:size=32m,uid=101,gid=101']
+    ports: ['8443:8443','8444:8444']
+    volumes:
+      - ./nginx-vps.conf:/etc/nginx/nginx.conf:ro
+      - ./tls/config:/etc/letsencrypt:ro
+    networks: [backend]
+    logging:
+      driver: json-file
+      options: {max-size: 10m,max-file: '3'}
+networks:
+  backend:
+    external: true
+    name: realestate-os-testing_backend

@@ -3,6 +3,9 @@ import { resolve } from 'node:path';
 
 const root = process.cwd();
 const mandatoryTests = [
+  { path: 'deploy/vps/scanner.test.mjs', minimumDeclaredTests: 6 },
+  { path: 'apps/api/test/storage-integrity.test.ts', minimumDeclaredTests: 4 },
+  { path: 'apps/api/test/auth-provider-availability.test.ts', minimumDeclaredTests: 4 },
   { path: 'apps/api/test/oidc-request-binding.test.ts', minimumDeclaredTests: 4 },
   {
     path: 'apps/api/test/auth-assurance.test.ts',
@@ -19,7 +22,7 @@ const mandatoryTests = [
   { path: 'apps/api/test/attribution-authority.test.ts', minimumDeclaredTests: 4 },
   { path: 'apps/web/scripts/locale-money.test.mjs', minimumDeclaredTests: 4 },
   { path: 'apps/web/scripts/api-proxy-config.test.mjs', minimumDeclaredTests: 3 },
-  { path: 'apps/worker/test/runtime-config.test.ts', minimumDeclaredTests: 3 },
+  { path: 'apps/worker/test/runtime-config.test.ts', minimumDeclaredTests: 4 },
 ];
 const workspaceManifests = [
   'apps/api/package.json',
@@ -62,7 +65,7 @@ if (!String(rootPackage.scripts?.lint ?? '').includes('static-policy-lint.mjs'))
 if (!String(apiPackage.scripts?.test ?? '').includes('auth-assurance.test.ts')) {
   throw new Error('API test command must execute the privileged-assurance suite explicitly.');
 }
-for (const file of ['identity-enrollment.test.ts','oidc-request-binding.test.ts', 'developer-onboarding.test.ts', 'eoi-choice.test.ts', 'http-origin.test.ts','exact-allocation.test.ts','attribution-authority.test.ts']) {
+for (const file of ['identity-enrollment.test.ts','storage-integrity.test.ts','auth-provider-availability.test.ts','oidc-request-binding.test.ts', 'developer-onboarding.test.ts', 'eoi-choice.test.ts', 'http-origin.test.ts','exact-allocation.test.ts','attribution-authority.test.ts']) {
   if (!String(apiPackage.scripts?.test ?? '').includes(file)) throw new Error(`API test command must execute ${file}.`);
 }
 const webPackage = JSON.parse(await readFile(resolve(root, 'apps/web/package.json'), 'utf8'));

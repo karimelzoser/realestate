@@ -1,0 +1,63 @@
+name: realestate-os-testing
+x-app: &app
+  image: ${PRENEURA_RUNTIME_IMAGE:?Certified runtime image required}
+  restart: unless-stopped
+  init: true
+  user: node
+  read_only: true
+  security_opt: ['no-new-privileges:true']
+  cap_drop: [ALL]
+  tmpfs: ['/tmp:size=32m']
+  pids_limit: 128
+  networks: [backend]
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: '3'}
+services:
+  api:
+    <<: *app
+    entrypoint: ['node','--import','@preneura/observability/register','dist/main.js']
+    working_dir: /srv/preneura/apps/api
+    env_file: [.env.api]
+    mem_limit: 384m
+    cpus: '0.40'
+    expose: ['4100']
+    healthcheck:
+      test: ['CMD','node','-e',"fetch('http://127.0.0.1:4100/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+  worker:
+    <<: *app
+    entrypoint: ['node','--import','@preneura/observability/register','dist/main.js']
+    working_dir: /srv/preneura/apps/worker
+    env_file: [.env.worker]
+    mem_limit: 256m
+    cpus: '0.25'
+  web:
+    <<: *app
+    entrypoint: ['node','node_modules/next/dist/bin/next','start','--port','3000']
+    working_dir: /srv/preneura/apps/web
+    environment: {NODE_ENV: production, PORT: '3000'}
+    mem_limit: 384m
+    cpus: '0.30'
+    tmpfs: ['/tmp:size=32m','/srv/preneura/apps/web/.next/cache:size=64m,uid=1000,gid=1000']
+    expose: ['3000']
+    healthcheck:
+      test: ['CMD','node','-e',"fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+  notification-gateway:
+    <<: *app
+    profiles: [delivery]
+    entrypoint: ['node','--import','@preneura/observability/register','dist/bootstrap.js']
+    working_dir: /srv/preneura/apps/notification-gateway
+    env_file: [.env.gateway]
+    mem_limit: 192m
+    cpus: '0.15'
+    expose: ['4300']
+networks:
+  backend:
+    external: true
+    name: realestate-os-testing_backend

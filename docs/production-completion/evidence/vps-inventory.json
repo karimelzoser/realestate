@@ -131,7 +131,10 @@
       "realestate_os_idp"
     ],
     "network": "realestate-os-testing_backend",
-    "volume": "realestate-os-testing_postgres-data"
+    "volume": "realestate-os-testing_postgres-data",
+    "schemaVersion": 49,
+    "migrationMarker": "0049_reviewed_identity_enrollment",
+    "migrations": "49 applied by the non-superuser migration role; app cannot CREATE schema or assume migrator"
   },
   "tls": {
     "hostname": "realestate-test.aipreneura.com",
@@ -141,5 +144,57 @@
     "privateKeyLocation": "VPS isolated TLS directory only; not downloaded or committed",
     "status": "ISSUED; application edge not yet deployed; renewal automation pending",
     "temporaryChallengeCleanup": "Pending precise value-scoped DNS cleanup; never use zone-wide deletion"
+  },
+  "releaseArtifact": {
+    "sourceSha": "4b2a6a7857b16571df1ff5d20bf96dfceafd5a4f",
+    "image": "realestate-os-testing-web:4b2a6a7857b16571df1ff5d20bf96dfceafd5a4f",
+    "digest": "sha256:d1d86fb2d7e1bebe23e18eb64247242c4ce73cd74166d12c0ffc35ddb8031e97",
+    "bytes": 526895565,
+    "user": "node",
+    "schemaVersion": 49
+  },
+  "identity": {
+    "container": "realestate-os-testing-identity-1",
+    "version": "26.8.0",
+    "database": "realestate_os_identity",
+    "status": "HEALTHY; isolated realm imported; human/provider MFA acceptance pending"
+  },
+  "storage": {
+    "selected": "SeaweedFS4.48",
+    "container": "realestate-os-testing-object-storage-1",
+    "user": "1000:1000",
+    "status": "Actual SDK/private-provider certification passed",
+    "tests": [
+      "HEAD/GET/PUT",
+      "physical checksum",
+      "eight competing create-only writes: one winner",
+      "checksum mismatch rejected",
+      "signed-header tampering rejected",
+      "upload replay rejected",
+      "anonymous access rejected",
+      "CORS"
+    ],
+    "rejected": "Garage2.4.1 failed conditional overwrite protection; only our Garage container stopped and its volumes retained",
+    "pending": [
+      "restart/restore persistence",
+      "public HTTPS/S3 browser path",
+      "real antivirus engine integration",
+      "encrypted off-host backups"
+    ]
+  },
+  "providerDecision": "User will provide delivery-provider credentials later; prepare integration, pause phone/external delivery honestly only in public-test, retain normal production guards.",
+  "scanner": {
+    "engine": "ClamAV1.5.4",
+    "status": "HEALTHY; actual clean/EICAR/physical-digest/authentication certification passed",
+    "configuration": "Private token, exact object-origin/prefix whitelist, no redirects, bounded input, one active scan; definition-freshness protection locally tested and pending source rollout"
+  },
+  "telemetry": {
+    "collectorVersion": "0.162.0",
+    "status": "RUNNING privately; query/authorization/cookie redaction configured; actual application ingestion pending"
+  },
+  "databaseRoleBoundary": {
+    "worker": "No auth session reads or role writes",
+    "gateway": "Contacts and delivery ledger only; no transaction reads",
+    "status": "Configured and privilege probes passed; domain write-path acceptance still required"
   }
 }

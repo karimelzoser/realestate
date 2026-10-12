@@ -35,6 +35,9 @@ export function validateApiRuntimeConfig(env: NodeJS.ProcessEnv = process.env): 
   requireAbsoluteUrl(env, 'AUTH_OTP_GATEWAY_URL', failures);
   requireAbsoluteUrl(env, 'CONTACT_VERIFICATION_GATEWAY_URL', failures);
   requireSecret(env, 'NOTIFICATION_GATEWAY_TOKEN', failures);
+  if (env.AUTH_PHONE_LOGIN_ENABLED !== undefined && !['true','false'].includes(env.AUTH_PHONE_LOGIN_ENABLED)) failures.push('AUTH_PHONE_LOGIN_ENABLED must be true or false.');
+  if (env.AUTH_PHONE_LOGIN_ENABLED === 'false' && env.APP_ENV !== 'public-test') failures.push('Phone sign-in can be paused only in the explicitly labeled public-test environment.');
+  if (env.OTP_CHANNEL !== undefined && !['sms','whatsapp'].includes(env.OTP_CHANNEL)) failures.push('OTP_CHANNEL must be sms or whatsapp.');
 
   requireHttpsUrl(env, 'OIDC_ISSUER', failures);
   requireNonPlaceholder(env, 'OIDC_CLIENT_ID', failures);

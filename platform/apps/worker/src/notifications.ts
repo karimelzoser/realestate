@@ -93,6 +93,7 @@ async function claimNotifications(
       ])
       .where('status', '=', 'PENDING')
       .where('scheduled_for', '<=', now)
+      .$if(process.env.NOTIFICATION_EXTERNAL_DELIVERY_ENABLED === 'false', query => query.where('channel','=','IN_APP'))
       .orderBy('scheduled_for', 'asc')
       .orderBy('id', 'asc')
       .forUpdate()

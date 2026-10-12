@@ -51,7 +51,8 @@ export class GoogleOidcService {
     url.searchParams.set('nonce', nonce);
     url.searchParams.set('code_challenge', codeChallenge);
     url.searchParams.set('code_challenge_method', 'S256');
-    url.searchParams.set('kc_idp_hint', 'google');
+    const providerHint = (process.env.OIDC_IDP_HINT ?? 'google').trim();
+    if (providerHint) url.searchParams.set('kc_idp_hint', providerHint);
     url.searchParams.set('prompt', input.requireAal2 ? 'login' : 'select_account');
 
     if (input.requireAal2) {
@@ -136,7 +137,7 @@ export class GoogleOidcService {
     const displayName =
       typeof verified.payload.name === 'string'
         ? verified.payload.name
-        : email ?? 'Google User';
+        : email ?? 'PRENEURA User';
 
     if (input.enrollmentBaseSessionId) {
       if (!input.targetUserId || assurance.assuranceLevel !== 'AAL2') throw new UnauthorizedException('Enrollment requires an owned base session and fresh MFA proof.');

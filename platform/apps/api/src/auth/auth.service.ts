@@ -2,6 +2,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import {
@@ -47,6 +48,9 @@ export class AuthService {
   ) {}
 
   async startLogin(rawInput: StartLoginInput): Promise<StartLoginResponse> {
+    if (process.env.AUTH_PHONE_LOGIN_ENABLED === 'false') {
+      throw new ServiceUnavailableException('Phone sign-in is awaiting delivery-provider configuration.');
+    }
     const input = startLoginSchema.parse(rawInput);
     const normalized = this.normalizeIdentifier(input.method, input.identifier);
     const kind: AliasKind = input.method === 'phone' ? 'PHONE' : 'NATIONAL_ID';
@@ -119,6 +123,15 @@ export class AuthService {
       challengeId,
       expiresInSeconds,
       message: genericLoginMessage,
+    };
+  }
+
+  publicCapabilities(): { phoneSignInEnabled: boolean; oidcSignInEnabled: boolean; oidcProvider: 'GOOGLE' | 'ORGANIZATION'; defaultOtpChannel: 'sms' | 'whatsapp' } {
+    return {
+      phoneSignInEnabled: process.env.AUTH_PHONE_LOGIN_ENABLED !== 'false',
+      oidcSignInEnabled: Boolean(process.env.OIDC_ISSUER && process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET && process.env.OIDC_REDIRECT_URI),
+      oidcProvider: (process.env.OIDC_IDP_HINT ?? 'google') === 'google' ? 'GOOGLE' : 'ORGANIZATION',
+      defaultOtpChannel: process.env.OTP_CHANNEL === 'whatsapp' ? 'whatsapp' : 'sms',
     };
   }
 

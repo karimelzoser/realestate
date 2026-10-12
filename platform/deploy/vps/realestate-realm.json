@@ -1,0 +1,62 @@
+{
+  "realm": "realestate",
+  "displayName": "PRENEURA Real Estate — Public Testing",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "passwordPolicy": "length(14) and notUsername(undefined) and passwordHistory(5)",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["en","ar"],
+  "defaultLocale": "en",
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 43200,
+  "accessTokenLifespan": 300,
+  "attributes": {"acr.loa.map":"{\"urn:preneura:aal2\":2}"},
+  "browserFlow": "realestate-browser",
+  "authenticationFlows": [
+    {"alias":"realestate-browser","providerId":"basic-flow","topLevel":true,"builtIn":false,"authenticationExecutions":[
+      {"authenticator":"auth-cookie","requirement":"ALTERNATIVE","priority":10,"authenticatorFlow":false},
+      {"flowAlias":"realestate-auth","requirement":"ALTERNATIVE","priority":20,"authenticatorFlow":true}
+    ]},
+    {"alias":"realestate-auth","providerId":"basic-flow","topLevel":false,"builtIn":false,"authenticationExecutions":[
+      {"flowAlias":"realestate-level1","requirement":"CONDITIONAL","priority":10,"authenticatorFlow":true},
+      {"flowAlias":"realestate-level2","requirement":"CONDITIONAL","priority":20,"authenticatorFlow":true}
+    ]},
+    {"alias":"realestate-level1","providerId":"basic-flow","topLevel":false,"builtIn":false,"authenticationExecutions":[
+      {"authenticator":"conditional-level-of-authentication","authenticatorConfig":"realestate-loa1","requirement":"REQUIRED","priority":10,"authenticatorFlow":false},
+      {"authenticator":"auth-username-password-form","requirement":"REQUIRED","priority":20,"authenticatorFlow":false}
+    ]},
+    {"alias":"realestate-level2","providerId":"basic-flow","topLevel":false,"builtIn":false,"authenticationExecutions":[
+      {"authenticator":"conditional-level-of-authentication","authenticatorConfig":"realestate-loa2","requirement":"REQUIRED","priority":10,"authenticatorFlow":false},
+      {"authenticator":"auth-otp-form","requirement":"REQUIRED","priority":20,"authenticatorFlow":false}
+    ]}
+  ],
+  "authenticatorConfig": [
+    {"alias":"realestate-loa1","config":{"loa-condition-level":"1","loa-max-age":"0"}},
+    {"alias":"realestate-loa2","config":{"loa-condition-level":"2","loa-max-age":"0"}}
+  ],
+  "requiredActions": [{"alias":"CONFIGURE_TOTP","name":"Configure authenticator","providerId":"CONFIGURE_TOTP","enabled":true,"defaultAction":true,"priority":10}],
+  "clients": [{
+    "clientId":"realestate-web",
+    "name":"PRENEURA Real Estate",
+    "enabled":true,
+    "protocol":"openid-connect",
+    "publicClient":false,
+    "secret":"${REAL_ESTATE_OIDC_CLIENT_SECRET}",
+    "standardFlowEnabled":true,
+    "implicitFlowEnabled":false,
+    "directAccessGrantsEnabled":false,
+    "serviceAccountsEnabled":false,
+    "redirectUris":["https://realestate-test.aipreneura.com:8443/api/v1/auth/google/callback"],
+    "webOrigins":["https://realestate-test.aipreneura.com:8443"],
+    "defaultClientScopes":["profile","email","roles","acr"],
+    "attributes":{"pkce.code.challenge.method":"S256","default.acr.values":"urn:preneura:aal2","minimum.acr.value":"urn:preneura:aal2","oauth2.device.authorization.grant.enabled":"false","oidc.ciba.grant.enabled":"false"}
+  }]
+}

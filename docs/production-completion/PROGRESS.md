@@ -147,3 +147,10 @@ The user superseded Render with explicit VPS authorization, protecting both n8n 
 ### Published schema49 CI follow-up
 
 Head ba0d2365917b4d4e2e96d343553aca960bb0d061 passed42 of44 inspected runs, including both reviewed identity/first-owner/production mobile browser certifications. Both failures are the E03 historical-upgrade fixture pinning schema48 after the runtime advances to49. Corrected that assertion to require schema/minimum-runtime/marker exactly match the latest applied append-only migration ledger (at least48); actual project ownership/frozen legacy sale/history checks are unchanged. Local47-to49 upgrade certification passes. Publish the focused fix and require exact-head green CI before deploying application services.
+
+
+## 12 October 2026 — qualified isolated storage/scanner/identity and delivery deferral
+
+User deferred delivery credentials while integration/preparation continues. New phone-capability UI and public-test-only pause reject phone login before lookup/challenge creation; external jobs stay pending with zero attempts while real in-app delivery continues. Actual disposable-DB pause and English/Arabic mobile UI cases passed. Storage now checks physical SHA256 in a bounded stream and signs create-only, content-type, checksum/metadata headers consistently.63 normal tests, nine-package strict checks and API/Next production builds pass locally.
+
+Own Keycloak26.8.0 imported/healthy with actual private configuration checks for password/OTP/LoA/PKCE/grants/client secret. Garage2.4.1 failed conditional overwrite qualification; only its newly created container was stopped, data volumes retained. Non-root SeaweedFS4.48 passed real SDK atomic8-way write, checksum/replay/header/anonymous/CORS cases. Real ClamAV1.5.4 and scanner passed clean/EICAR/hash/auth checks. Private redacted telemetry is running. Worker/gateway database roles deny auth/session/role and unrelated transaction access. Public API/worker/web/edge rollout and public browser/S3/SSE, owner human MFA, stable-secret/renewal/restore/load and full product acceptance remain. All existing projects remain protected.

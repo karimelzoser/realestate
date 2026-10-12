@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocale } from '../locale-provider';
 import { normalizeLocalizedDigits } from '../../lib/locale';
 import { authMessages } from '../../lib/messages';
@@ -21,6 +21,18 @@ export default function LoginPage() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [capabilities, setCapabilities] = useState<{ phoneSignInEnabled: boolean; oidcSignInEnabled: boolean; oidcProvider: 'GOOGLE' | 'ORGANIZATION'; defaultOtpChannel: 'sms' | 'whatsapp' } | null>(null);
+  const [availabilityError, setAvailabilityError] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch(`${apiBase}/v1/auth/capabilities`, { credentials: 'include', signal: controller.signal }).then(async response => {
+      if (!response.ok) throw new Error('Unavailable');
+      const value = await response.json();
+      if (typeof value.phoneSignInEnabled !== 'boolean' || typeof value.oidcSignInEnabled !== 'boolean' || !['GOOGLE','ORGANIZATION'].includes(value.oidcProvider) || !['sms','whatsapp'].includes(value.defaultOtpChannel)) throw new Error('Invalid capabilities');
+      setCapabilities(value);
+    }).catch(() => { if (!controller.signal.aborted) setAvailabilityError(true); });
+    return () => controller.abort();
+  }, []);
 
   const label = method === 'phone' ? copy.phoneLabel : copy.nationalIdLabel;
   const placeholder = method === 'phone' ? '+20 10 1234 5678' : copy.nationalIdPlaceholder;
@@ -50,7 +62,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ method, identifier, channel: 'sms' }),
+        body: JSON.stringify({ method, identifier, channel: capabilities?.defaultOtpChannel ?? 'sms' }),
       });
       const body = (await response.json()) as { challengeId?: string };
 
@@ -116,6 +128,9 @@ export default function LoginPage() {
 
           {step === 'identifier' ? (
             <>
+              {!capabilities ? <p role="status">{availabilityError ? (locale === 'ar' ? 'تعذر الاتصال بخدمة تسجيل الدخول. أعد تحميل الصفحة.' : 'Unable to connect to sign-in. Reload this page.') : (locale === 'ar' ? 'جارٍ التحقق من طرق الدخول المتاحة…' : 'Checking available sign-in methods…')}</p> : null}
+              {capabilities && !capabilities.phoneSignInEnabled ? <p role="status">{locale === 'ar' ? 'الدخول بالهاتف بانتظار إعداد خدمة إرسال الرموز. يمكنك استخدام حساب مؤسستك إذا كان متاحًا.' : 'Phone sign-in is awaiting message-provider setup. You can use your organization account if available.'}</p> : null}
+              {capabilities?.phoneSignInEnabled ? <>
               <div className="login-tabs" role="tablist" aria-label={copy.methodLabel}>
                 <button
                   className={`login-tab ${method === 'phone' ? 'active' : ''}`}
@@ -157,12 +172,14 @@ export default function LoginPage() {
                   {busy ? copy.checking : copy.continueOtp}
                 </button>
               </form>
-
-              <div className="divider">{copy.or}</div>
+              </> : null}
+              {capabilities?.oidcSignInEnabled ? <>
+              {capabilities.phoneSignInEnabled ? <div className="divider">{copy.or}</div> : null}
               <a className="google-button" href={`${apiBase}/v1/auth/google/start`}>
-                <span className="google-g" aria-hidden="true">G</span>
-                {copy.continueGoogle}
+                <span className="google-g" aria-hidden="true">{capabilities.oidcProvider === 'GOOGLE' ? 'G' : '↗'}</span>
+                {capabilities.oidcProvider === 'GOOGLE' ? copy.continueGoogle : (locale === 'ar' ? 'الدخول بحساب مؤسستك' : 'Sign in with your organization')}
               </a>
+              </> : null}
 
               <p className="security-note">{copy.securityNote}</p>
             </>

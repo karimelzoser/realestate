@@ -15,6 +15,7 @@ for(const locale of ['en','ar'])test(`enrollment ${locale}: owned status and rev
       await route.fulfill({json:{reviewed:true}});
     }else await route.fulfill({json:[{...row,...reviewed?{status:'APPROVED',decisionNote:reviewBody.note}:{}}]});
   });
+  await page.route('**/v1/auth/capabilities',route=>route.fulfill({json:{phoneSignInEnabled:false,oidcSignInEnabled:true,oidcProvider:'ORGANIZATION',defaultOtpChannel:'whatsapp'}}));
   await page.goto(`${web}/mfa-enrollment`);
   await expect(page.locator('html')).toHaveAttribute('data-locale-ready','true',{timeout:30000});
   await expect(page.getByRole('heading',{name:locale==='en'?'Secure staff sign-in':'تسجيل دخول آمن للموظفين'})).toBeVisible();
@@ -26,6 +27,10 @@ for(const locale of ['en','ar'])test(`enrollment ${locale}: owned status and rev
   await expect(approve).toBeEnabled();await approve.click();
   await expect(page.getByText(locale==='en'?'Decision recorded.':'تم تسجيل القرار.')).toBeVisible();
   expect(reviewBody.decision).toBe('APPROVED');
+  await page.goto(`${web}/login`);
+  await expect(page.getByRole('link',{name:locale==='en'?'Sign in with your organization':'الدخول بحساب مؤسستك'})).toBeVisible();
+  await expect(page.getByText(locale==='en'?'Phone sign-in is awaiting message-provider setup. You can use your organization account if available.':'الدخول بالهاتف بانتظار إعداد خدمة إرسال الرموز. يمكنك استخدام حساب مؤسستك إذا كان متاحًا.')).toBeVisible();
+  await expect(page.getByRole('textbox')).toHaveCount(0);
   expect(await page.evaluate(()=>document.documentElement.dir)).toBe(locale==='ar'?'rtl':'ltr');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
   expect(errors).toEqual([]);

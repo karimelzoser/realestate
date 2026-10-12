@@ -45,8 +45,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @preneura/database migrate
       - run: pnpm test
-      - run: pnpm --filter @preneura/api build
+      - run: pnpm --filter @preneura/api build && pnpm --filter @preneura/worker build
       - run: node apps/api/scripts/certify-identity-enrollment.mjs
+      - run: node apps/worker/scripts/certify-provider-pause.mjs
       - name: Certify offline first-admin bootstrap against a separate empty database
         env:
           PGPASSWORD: postgres

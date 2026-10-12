@@ -17,6 +17,8 @@ export function validateWorkerRuntimeConfig(env: Env = process.env): void {
     failures.push('NOTIFICATION_GATEWAY_TRANSPORT must be network or loopback.');
   }
   requireSecret(env, 'NOTIFICATION_GATEWAY_TOKEN', MIN_SECRET_LENGTH, failures);
+  if (env.NOTIFICATION_EXTERNAL_DELIVERY_ENABLED !== undefined && !['true','false'].includes(env.NOTIFICATION_EXTERNAL_DELIVERY_ENABLED)) failures.push('NOTIFICATION_EXTERNAL_DELIVERY_ENABLED must be true or false.');
+  if (env.NOTIFICATION_EXTERNAL_DELIVERY_ENABLED === 'false' && env.APP_ENV !== 'public-test') failures.push('External delivery can be paused only in the explicitly labeled public-test environment.');
 
   // Inventory expiry is a correctness reconciliation loop, not a browser timer or
   // cache refresh. Bound both cadence and batch size so production cannot disable

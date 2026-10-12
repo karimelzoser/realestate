@@ -1,0 +1,26 @@
+name: realestate-os-testing
+services:
+  telemetry:
+    image: otel/opentelemetry-collector-contrib:0.162.0
+    command: ['--config=/etc/otel/config.yml']
+    restart: unless-stopped
+    init: true
+    mem_limit: 128m
+    cpus: '0.15'
+    pids_limit: 64
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    volumes:
+      - ./otel-collector.yml:/etc/otel/config.yml:ro
+    expose: ['4318','9464','13133']
+    networks: [backend]
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+networks:
+  backend:
+    external: true
+    name: realestate-os-testing_backend
