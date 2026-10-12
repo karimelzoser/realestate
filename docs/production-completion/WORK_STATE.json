@@ -10,7 +10,7 @@
   "observedDemoMainHead": "1a6e61c891e040221f09c773e6de589928a9a0b7",
   "activeTaskId": "E16.3",
   "activeTaskStatus": "IN_PROGRESS",
-  "completedCheckpoint": "Published schema48 attribution candidate febcee5 has all42 inspected CI runs passing. Local schema49 adds reviewed MFA enrollment, issuer/nonce/freshness validation and offline initial-owner bootstrap; 48 normal tests, strict nine-package checks, frontend build and real DB/IdP/bootstrap certs pass. Separate VPS PostgreSQL18.6 healthy; all12 existing container baselines unchanged; DNS and certificate prepared.",
+  "completedCheckpoint": "Schema49 enrollment/VPS preparation published at ba0d236; 48 normal and two bilingual mobile UI cases plus real signed-IdP/DB/bootstrap tests pass locally. CI exposes an old schema48-only attribution upgrade assertion; corrected to verify the exact applied migration ledger, and local genuine47-to49 historical ownership upgrade passes. Separate private VPS PG/TLS prepared; public app still pending.",
   "nextAction": "Publish/certify schema49 checkpoint; prepare the isolated VPS frontend/API/worker/gateway, separate identity/storage/scanner/observability/backup services. User selected full isolation on dedicated HTTPS8443 at realestate-test.aipreneura.com. Never edit/restart existing n8n or PRENEURA projects. Continue full Egypt product acceptance and genuine provider integrations.",
   "changedFiles": [
     "platform/apps/api/src/auth",
@@ -68,6 +68,10 @@
     {
       "action": "Schema49 local security and browser certification",
       "result": "IDENTITY_ENROLLMENT_CERTIFICATION_OK including signed RS256 IdP, real DB races, raw-SQL reviewer guard, real callback/session preservation and /api cookies; ADMIN_BOOTSTRAP_CERTIFICATION_OK; 48 normal tests; nine-package types/lint; production web build; English/Arabic mobile enrollment UI-only transport passed."
+    },
+    {
+      "action": "Schema49 published-head upgrade follow-up",
+      "result": "Attribution authority and all domain regressions pass; the historical upgrade assertion incorrectly pinned48. It now requires runtime/schema/marker exactly match the latest append-only applied ledger and schema>=48. Local schema47 historical evidence upgraded to49 with E03_ATTRIBUTION_UPGRADE_CERTIFICATION_OK."
     }
   ],
   "evidencePaths": [
@@ -108,11 +112,11 @@
     "currentTestingHosting": "Isolated VPS, HTTPS8443 at realestate-test.aipreneura.com"
   },
   "taskPr": 90,
-  "taskImplementationHead": "febcee5f53e5e18644e4eb4f72fa7fef1a4be14b",
-  "runtimeSchemaVersion": 48,
-  "migrationMarker": "0048_buyer_attribution_authority.sql",
+  "taskImplementationHead": "ba0d2365917b4d4e2e96d343553aca960bb0d061",
+  "runtimeSchemaVersion": 49,
+  "migrationMarker": "0049_reviewed_identity_enrollment.sql",
   "localWorkPreservation": "Unfinished pre-sync locale expansion preserved in named git stash; reuse selectively with canonical locale provider, never duplicate it.",
-  "pendingMigration": "0049_reviewed_identity_enrollment.sql (locally certified; not published yet)",
+  "pendingMigration": null,
   "deploymentScope": "Authorized fully isolated VPS project realestate-os-testing; existing n8n/PRENEURA protected; Render deferred",
   "currentRuntimeSchemaVersion": 49,
   "hostingDecision": {
@@ -130,6 +134,7 @@
     "sshKeyPath": "C:/Users/LEGION/Downloads/Realestate/.tooling/vps-access/realestate-os-20261012",
     "privateDatabase": "healthy; unmigrated application DB",
     "certificate": "Issued through DNS01; valid through 2027-01-10. Automatic renewal/targeted TXT cleanup pending.",
-    "publicApplication": "not yet deployed"
+    "publicApplication": "not yet deployed",
+    "builder": "Dedicated realestate-os-testing-builder, memory2GiB, CPU0.75; existing default builders/projects unchanged"
   }
 }
