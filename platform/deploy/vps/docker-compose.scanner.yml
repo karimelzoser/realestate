@@ -16,6 +16,12 @@ services:
       - ./clamd.conf:/etc/clamav/clamd.conf:ro
     tmpfs: ['/tmp:size=96m']
     expose: ['3310']
+    healthcheck:
+      test: ['CMD','clamdscan','--ping=1']
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 120s
     networks: [backend]
   scanner:
     image: ${PRENEURA_RUNTIME_IMAGE:?Certified application image is required}

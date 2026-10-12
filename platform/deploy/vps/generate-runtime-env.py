@@ -34,6 +34,7 @@ telemetry = {
     'OTEL_EXPORTER_OTLP_INSECURE': 'true',
     'OTEL_SERVICE_VERSION': source_sha,
     'OTEL_TRACE_SAMPLE_RATIO': '0.1',
+    'OTEL_NODE_RESOURCE_DETECTORS': 'env,host,os,process',
 }
 gateway_token = secrets.token_hex(32)
 contact_key = base64.b64encode(secrets.token_bytes(32)).decode()

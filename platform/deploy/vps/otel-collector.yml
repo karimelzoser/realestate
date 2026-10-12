@@ -20,6 +20,15 @@ processors:
           - delete_key(attributes, "http.request.header.authorization")
           - delete_key(attributes, "http.request.header.cookie")
           - delete_key(attributes, "http.response.header.set-cookie")
+    log_statements:
+      - context: log
+        statements:
+          - replace_pattern(attributes["url.full"], "\\?.*$", "") where attributes["url.full"] != nil
+          - replace_pattern(attributes["http.url"], "\\?.*$", "") where attributes["http.url"] != nil
+          - delete_key(attributes, "url.query")
+          - delete_key(attributes, "http.request.header.authorization")
+          - delete_key(attributes, "http.request.header.cookie")
+          - delete_key(attributes, "http.response.header.set-cookie")
   batch:
     timeout: 5s
     send_batch_size: 128
@@ -44,3 +53,7 @@ service:
       receivers: [otlp]
       processors: [memory_limiter, batch]
       exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, transform/redact, batch]
+      exporters: [debug]

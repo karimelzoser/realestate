@@ -2,16 +2,19 @@
 
 ## Current authority — 12 October 2026
 
-The user authorizes only the fully isolated realestate-os-testing VPS project under /opt/realestate-os-testing. Never edit, restart or redeploy n8n or existing PRENEURA. Use independent network/volumes/PostgreSQL18.6/roles/Keycloak26.8.0/private storage/scanner/telemetry. Render is deferred. HTTPS8443 and S3 HTTPS8444 use realestate-test.aipreneura.com and the separate DNS01 certificate. Existing80/443/proxy remain untouched.
+The active target is only the isolated realestate-os-testing project under /opt/realestate-os-testing. Existing n8n and PRENEURA containers, databases, identity realms, networks and ports80/443 are protected. All12 protected container IDs/start times/restart counts were rechecked and remain unchanged. Render is deferred.
 
-Last certified source is schema49 head4b2a6a7857b16571df1ff5d20bf96dfceafd5a4f, with all42 inspected CI runs passing. Its non-root runtime image built on the bounded0.75CPU/2GiB builder, and all49 migrations are applied only to the new database. Independent identity config, atomic/checksum/private S3 and actual ClamAV clean/EICAR/hash/auth checks pass. The rejected Garage candidate is stopped; SeaweedFS4.48 is qualified for the tested operations. The application/edge are not yet deployed.
+Public testing is live at https://realestate-test.aipreneura.com:8443/login. API, worker and frontend run exact source49de56fadf4caab1242fe0783285792ba58d5f0b; all45 inspected GitHub runs passed. Public /healthz reports ready, matching source and schema49/minimum49/marker0049_reviewed_identity_enrollment. Independent PostgreSQL18.6, Keycloak26.8.0, qualified SeaweedFS4.48, authenticated real ClamAV scanner and redacted telemetry are running. S3 uses separate HTTPS8444.63 local normal tests,9 package strict checks/builds, real-DB delivery-pause and English/Arabic mobile UI cases passed.
 
-Current working slice adds physical-byte/immutable-upload protections, real scanner freshness/SSRF controls, separate service environments/DB privileges and honest public-test delivery deferral.63 normal tests,9 package strict checks/builds, actual-DB pause and two English/Arabic mobile UI cases pass locally; publish and certify the new source before rollout. User will supply external delivery credentials later. Keep phone/external delivery paused visibly; do not fabricate success. Human MFA/owner activation, complete product journeys, public S3/SSE, encrypted off-host restore, load/soak and final liveGO remain outstanding. Read WORK_STATE/TASKS/VPS_DEPLOYMENT and ADR-VPS-STORAGE-AND-PROVIDER-DEFER first; retain the entire PLAN.
+Fresh GitHub/Railway/Render reconciliation confirms this is the latest realestate completion head. Railway realestate staging has0 services/0 deployments; its separate platform-core preview has newer failed frontend attempts and last successful source86facdb. Those distinct commerce/support/automation branches were not copied into realestate. Render Preneura returned no services and no PostgreSQL databases; no hosted Render application snapshot is available. PR91 is an older divergent deployment alternative, not the full Egypt candidate. See evidence/hosting-source-reconciliation-20261012.json.
 
-Earlier hosting/status descriptions below are historical and are superseded by the authority above. Preserve their evidence dates; use WORK_STATE for the unfinished current task.
+Current operational patch fixes the antivirus image startup requirement for a local socket, adds an explicit real PING health check, bounds signature-reload memory and completes the redacted OTLP logs pipeline. Genuine clean/EICAR/hash/auth certification passed after the isolated scanner rollout. Phone sign-in/external delivery remain visibly paused in public-test until the user supplies provider credentials. No synthetic successful delivery or fabricated AAL2 owner session is allowed.
 
+Human MFA/owner activation, authenticated public S3/SSE/browser journeys, TLS renewal automation, encrypted off-host restore, full product completion, load/soak and final liveGO remain outstanding. This is public testing, not approved full production. Read WORK_STATE/TASKS/VPS_DEPLOYMENT and retain the entire PLAN.
 
-## Current checkpoint
+## Historical checkpoints — superseded by current authority
+
+### Prior current checkpoint
 
 Published branch `codex/egypt-platform-completion`, draft [PR90](https://github.com/karimelzoser/realestate/pull/90), is at schema47 head `47b9eb5df7680b0c30ff03a39388539a135dac70`. All39 inspected GitHub runs passed, including real DB exact allocation and production-browser English/Arabic reservation. Apartment-type EOI46 and staff exact-apartment47 foundations are implemented and certified.
 
